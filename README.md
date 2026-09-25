@@ -17,6 +17,6 @@
 * **Orquestación AI:** LangGraph (Multi-Agent System)
 * **Frontend / Dashboard:** Streamlit (Human-In-The-Loop Validation)
 * **Almacenamiento Cloud:** OCI Object Storage (Oracle Cloud Infrastructure) & Vector DB (RAG Search)
-* **Ingesta de Datos:** Logs estructurados en JSON / CSV
+* **Ingesta de Datos:** Logs estructurados en JSON / CSV.
 
 
