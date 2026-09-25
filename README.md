@@ -3,7 +3,7 @@
 > **Equipo:** G10-LATAM-equipo 9 | **Líder:** Gonzalo Costela  
 > **Ecosistema:** No Country Simulation  
 
-**InsightEdu Lab** es un motor inteligente impulsado por una arquitectura **Multi-Agente orquestada con LangGraph** que transforma el historial de chat de comunidades educativas digitales (Discord, Slack, Telegram) en un activo estratégico B2B.
+**InsightEdu Lab**  es un motor inteligente impulsado por una arquitectura **Multi-Agente orquestada con LangGraph** que transforma el historial de chat de comunidades educativas digitales (Discord, Slack, Telegram) en un activo estratégico B2B.
 
 ---
 
