@@ -19,3 +19,4 @@
 * **Almacenamiento Cloud:** OCI Object Storage (Oracle Cloud Infrastructure) & Vector DB (RAG Search)
 * **Ingesta de Datos:** Logs estructurados en JSON / CSV
 
+
