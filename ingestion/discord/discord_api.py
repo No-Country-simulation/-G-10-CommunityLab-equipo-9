@@ -28,14 +28,16 @@ class DiscordAPI:
     """Uso:
         with DiscordAPI(token) as api:
             bot = api.get("/users/@me")
+
+    Sin token sirve para los webhooks: su URL ya incluye su propia clave, así
+    que no hace falta enviar el token del bot.
     """
 
-    def __init__(self, bot_token: str):
-        self._http = httpx.Client(
-            base_url=API_BASE,
-            headers={"Authorization": f"Bot {bot_token}", "User-Agent": USER_AGENT},
-            timeout=TIMEOUT_SEGUNDOS,
-        )
+    def __init__(self, bot_token: str | None = None):
+        headers = {"User-Agent": USER_AGENT}
+        if bot_token:
+            headers["Authorization"] = f"Bot {bot_token}"
+        self._http = httpx.Client(base_url=API_BASE, headers=headers, timeout=TIMEOUT_SEGUNDOS)
 
     def __enter__(self) -> "DiscordAPI":
         return self
@@ -44,19 +46,32 @@ class DiscordAPI:
         self._http.close()
 
     def get(self, ruta: str, params: dict | None = None):
-        """Hace un GET y devuelve el JSON de la respuesta.
+        """Hace un GET y devuelve el JSON de la respuesta."""
+        return self._pedir("GET", ruta, params=params)
 
-        - 429 (demasiadas peticiones): espera lo que indica Discord y reintenta.
-        - 5xx (falla de Discord): espera 2, 4… segundos y reintenta.
+    def post(self, ruta: str, json: dict, params: dict | None = None):
+        """Hace un POST con un cuerpo JSON y devuelve el JSON de la respuesta."""
+        return self._pedir("POST", ruta, json=json, params=params)
+
+    def _pedir(self, metodo: str, ruta: str, **opciones):
+        """Envía la petición y aplica las reglas de reintento.
+
+        - 429 (demasiadas peticiones): Discord no procesó la petición; espera lo
+          que indica y reintenta.
+        - 5xx (falla de Discord): reintenta solo los GET, esperando 2, 4… segundos.
+          Un POST pudo guardarse antes del fallo y repetirlo lo duplicaría.
         - Otro error (401, 403, 404…): lanza DiscordAPIError sin reintentar.
+
+        La ruta puede ser relativa a API_BASE ("/users/@me") o una URL completa,
+        como la de un webhook.
         """
         for intento in range(1, MAX_INTENTOS + 1):
-            respuesta = self._http.get(ruta, params=params)
+            respuesta = self._http.request(metodo, ruta, **opciones)
 
             if respuesta.status_code == 429:
                 time.sleep(float(respuesta.headers.get("Retry-After", 1)))
                 continue
-            if respuesta.status_code >= 500:
+            if respuesta.status_code >= 500 and metodo == "GET":
                 time.sleep(2**intento)
                 continue
             if respuesta.is_error:
@@ -65,6 +80,6 @@ class DiscordAPI:
             # Si ya no quedan peticiones en esta ventana, espera antes de la siguiente.
             if respuesta.headers.get("X-RateLimit-Remaining") == "0":
                 time.sleep(float(respuesta.headers.get("X-RateLimit-Reset-After", 0)))
-            return respuesta.json()
+            return respuesta.json() if respuesta.content else None
 
         raise DiscordAPIError(respuesta.status_code, f"falló tras {MAX_INTENTOS} intentos")

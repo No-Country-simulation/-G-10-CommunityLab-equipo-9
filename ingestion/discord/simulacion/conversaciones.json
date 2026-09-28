@@ -1,0 +1,39 @@
+{
+  "_descripcion": "Conversaciones ficticias de un bootcamp de programación. simular_alumnos.py publica cada mensaje, en orden, con el webhook de su canal. Incluyen a propósito errores de ortografía, jerga, emojis, código, enlaces, mensajes partidos, preguntas repetidas, frustración, dudas mezcladas con logros y mensajes en el canal equivocado, para estudiar datos sucios (pendiente P1).",
+  "dudas": [
+    { "autor": "Ana Pérez", "texto": "hola buenas noches" },
+    { "autor": "Ana Pérez", "texto": "tengo una duda" },
+    { "autor": "Ana Pérez", "texto": "como instalo pyhton en windows?? me sale que pip no se reconoce como comando 😭" },
+    { "autor": "Luis Gómez", "texto": "Buenas! Alguien sabe cual es la diferencia entre una lista y una tupla en python? no me quedo claro en la clase" },
+    { "autor": "Camila Rojas", "texto": "URGENTE!!! no me corre el programa y tengo que entregar el challenge hoy" },
+    { "autor": "Camila Rojas", "texto": "```java\npublic class Main {\n    public static void main(String[] args) {\n        System.out.println(\"Hola mundo\")\n    }\n}\n```\nme dice error: ';' expected" },
+    { "autor": "Diego Ramírez", "texto": "te falta el punto y coma despues del println jaja nos pasa a todos" },
+    { "autor": "Camila Rojas", "texto": "graciasss era eso 🙏" },
+    { "autor": "Mateo Fernández", "texto": "@Ana a mí me pasó lo mismo. Tenés que tildar \"Add python.exe to PATH\" cuando instalás y después reiniciar la terminal" },
+    { "autor": "Valentina Castro", "texto": "Alguien me explica como hacer un pull request en github? hice fork pero no se q sigue" },
+    { "autor": "Sofía Morales", "texto": "xq me sale 'fatal: not a git repository'?? ya hice git init creo" },
+    { "autor": "Mateo Fernández", "texto": "che una consulta, la clase en vivo es hoy a las 19 hs? hora de argentina o de méxico?" },
+    { "autor": "Diego Ramírez", "texto": "Cómo instalo Python en Windows 11? cuando escribo python en la terminal me abre la Microsoft Store 🤔" },
+    { "autor": "Valentina Castro", "texto": "perdón si ya lo preguntaron pero cuándo conviene usar una tupla en vez de una lista?" },
+    { "autor": "Ana Pérez", "texto": "alguien? 😅" },
+    { "autor": "Sofía Morales", "texto": "En SQL cual es la diferencia entre INNER JOIN y LEFT JOIN? lei la documentacion https://dev.mysql.com/doc/refman/8.0/en/join.html pero no entiendo cuando usar cada uno" },
+    { "autor": "Andrés (Mentor)", "texto": "Hola a todos 👋 recuerden que las dudas del challenge se revisan el jueves en la sesión de mentoría. Dejen sus preguntas acá con el error completo y el código 🙌" },
+    { "autor": "Mateo Fernández", "texto": "Buenas, les cuento mi problema: estoy haciendo el challenge del conversor de monedas en Java y cuando llamo a la API de tasas de cambio me devuelve un JSON pero no sé como convertirlo a un objeto. Probé con Gson pero me sale un error de que no encuentra la clase, ya agregué la dependencia en el pom.xml y recargué maven pero sigue igual. Alguien tuvo este problema? uso IntelliJ en windows" },
+    { "autor": "Valentina Castro", "texto": "por fin me funcionó el deploy en github pages!!! 🎉 pero ahora no me cargan las imágenes, alguien sabe por qué?" },
+    { "autor": "Luis Gómez", "texto": "no entiendo nada de recursividad, me siento muy perdido y estoy pensando en dejar el curso 😞" },
+    { "autor": "Camila Rojas", "texto": "Luis no te rindas! a mí me costó un montón al principio, mañana te paso un video que me ayudó" },
+    { "autor": "Diego Ramírez", "texto": "cuando es la fecha limite para entregar el challenge de la biblioteca?" }
+  ],
+  "logros": [
+    { "autor": "Ana Pérez", "texto": "Terminé el curso de Lógica de Programación!! 🎉🎉" },
+    { "autor": "Ana Pérez", "texto": "y ya me funciona python jaja era lo del PATH" },
+    { "autor": "Mateo Fernández", "texto": "Después de 3 días peleando con Gson logré terminar el conversor de monedas 💪 Acá el repo: https://github.com/usuario-ejemplo/conversor-monedas" },
+    { "autor": "Sofía Morales", "texto": "20 días seguidos estudiando 🔥🔥 no pensé que lo lograría" },
+    { "autor": "Luis Gómez", "texto": "hoy entendí recursividad!!! gracias Camila por el video, ya no me voy del curso jaja" },
+    { "autor": "Valentina Castro", "texto": "Conseguí mi primera entrevista como desarrolladora jr 😱 gracias a todos por la ayuda en el canal" },
+    { "autor": "Diego Ramírez", "texto": "Aprobé el challenge de la biblioteca con Spring Boot ✅" },
+    { "autor": "Andrés (Mentor)", "texto": "Felicitaciones a todos los que terminaron el módulo de Java esta semana 👏 ya son 12 los que entregaron el challenge" },
+    { "autor": "Camila Rojas", "texto": "me contrataron!!!!! después de 6 meses en el bootcamp y 40 postulaciones, empiezo el lunes como QA trainee. No se rindan 🙌🙌" },
+    { "autor": "Sofía Morales", "texto": "subí mi primer proyecto a GitHub, es poco pero es trabajo honesto" }
+  ]
+}
