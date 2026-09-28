@@ -66,13 +66,14 @@ Este documento fija la pauta de cómo entran los mensajes de Discord a InsightEd
 - **P4 · Fechas en Java.** Usar `Instant` u `OffsetDateTime`, no `LocalDateTime`, para no perder la zona horaria.
 - **P5 · Hilos.** Decidir si se extraen. Los mensajes dentro de un hilo no aparecen en el historial del canal; hay que recorrer los hilos aparte.
 - **P6 · Extracción incremental.** Hoy `extract.py` descarga todo el historial en cada ejecución. En producción conviene pedir solo lo nuevo (parámetro `after` con el último ID guardado) y que la API Java ignore los IDs repetidos.
+- **P7 · Mensajes partidos.** Una idea suele llegar en varios mensajes (saludo, contexto y pregunta; o una imagen y después su descripción). Decidir si la agrupación la hace la ingesta o el motor IA. Ver [DISCORD_DATA_GUIDE.md](DISCORD_DATA_GUIDE.md) §14.
 
 ## 6. Criterios de terminado
 
-- [ ] El servidor de prueba tiene `#dudas` y `#logros` con mensajes de al menos 5 alumnos ficticios.
-- [ ] Un comando extrae todos los mensajes de ambos canales, incluida la paginación.
-- [ ] No hay tokens, IDs ni URLs escritos en el código.
-- [ ] Hay muestras crudas guardadas y un diccionario de datos.
+- [x] El servidor de prueba tiene `#dudas` y `#logros` con mensajes de al menos 5 alumnos ficticios.
+- [x] Un comando extrae todos los mensajes de ambos canales, incluida la paginación.
+- [x] No hay tokens, IDs ni URLs escritos en el código.
+- [x] Hay muestras crudas guardadas y un diccionario de datos ([DISCORD_DATA_GUIDE.md](DISCORD_DATA_GUIDE.md)).
 - [ ] El contrato v1 existe como JSON Schema y todos los mensajes extraídos lo cumplen.
 - [ ] La salida a archivo funciona y la salida HTTP está probada.
 - [ ] Backend recibió la especificación del endpoint.

@@ -64,12 +64,16 @@ def main() -> int:
             for canal in api.get(f"/guilds/{servidor['id']}/channels"):
                 if canal["type"] != CANAL_DE_TEXTO:
                     continue
-                # 4. Pide un solo mensaje para comprobar el permiso de lectura.
+                # 4. Pide un solo mensaje. Sin el permiso Read Message History, Discord
+                #    no da error: devuelve una lista vacía, igual que un canal vacío.
                 try:
-                    api.get(f"/channels/{canal['id']}/messages", params={"limit": 1})
-                    lectura = "✅ lectura OK"
+                    muestra = api.get(f"/channels/{canal['id']}/messages", params={"limit": 1})
+                    if muestra:
+                        lectura = "✅ lectura OK"
+                    else:
+                        lectura = "⚠️  0 mensajes: canal vacío o falta el permiso Read Message History"
                 except DiscordAPIError as e:
-                    lectura = f"❌ sin permiso de lectura (HTTP {e.status})"
+                    lectura = f"❌ sin acceso (HTTP {e.status})"
                 print(f"  #{canal['name']:<12} {lectura}")
                 if canal["name"] in VARIABLE_POR_CANAL:
                     print(f"    {VARIABLE_POR_CANAL[canal['name']]}={canal['id']}")
