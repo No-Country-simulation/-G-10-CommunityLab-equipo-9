@@ -65,6 +65,7 @@ Este documento fija la pauta de cómo entran los mensajes de Discord a InsightEd
 - **P3 · Privacidad.** Decidir si se anonimiza a los alumnos antes de guardar sus datos.
 - **P4 · Fechas en Java.** Usar `Instant` u `OffsetDateTime`, no `LocalDateTime`, para no perder la zona horaria.
 - **P5 · Hilos.** Decidir si se extraen. Los mensajes dentro de un hilo no aparecen en el historial del canal; hay que recorrer los hilos aparte.
+- **P6 · Extracción incremental.** Hoy `extract.py` descarga todo el historial en cada ejecución. En producción conviene pedir solo lo nuevo (parámetro `after` con el último ID guardado) y que la API Java ignore los IDs repetidos.
 
 ## 6. Criterios de terminado
 

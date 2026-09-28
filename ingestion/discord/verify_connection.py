@@ -8,7 +8,7 @@ Comprueba, en orden:
   4. Que puede leer el historial de cada canal.
 
 Solo hace peticiones GET: no escribe nada en Discord.
-Uso:  python verificar_conexion.py
+Uso:  python verify_connection.py
 """
 import sys
 

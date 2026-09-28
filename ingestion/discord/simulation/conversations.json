@@ -1,5 +1,5 @@
 {
-  "_descripcion": "Conversaciones ficticias de un bootcamp de programación. simular_alumnos.py publica cada mensaje, en orden, con el webhook de su canal. Incluyen a propósito errores de ortografía, jerga, emojis, código, enlaces, mensajes partidos, preguntas repetidas, frustración, dudas mezcladas con logros y mensajes en el canal equivocado, para estudiar datos sucios (pendiente P1).",
+  "_descripcion": "Conversaciones ficticias de un bootcamp de programación. simulate_students.py publica cada mensaje, en orden, con el webhook de su canal. Incluyen a propósito errores de ortografía, jerga, emojis, código, enlaces, mensajes partidos, preguntas repetidas, frustración, dudas mezcladas con logros y mensajes en el canal equivocado, para estudiar datos sucios (pendiente P1).",
   "dudas": [
     { "autor": "Ana Pérez", "texto": "hola buenas noches" },
     { "autor": "Ana Pérez", "texto": "tengo una duda" },

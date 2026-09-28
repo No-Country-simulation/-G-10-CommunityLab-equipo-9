@@ -1,14 +1,14 @@
 """
 Paso 3 · Publica conversaciones de alumnos ficticios en #dudas y #logros.
 
-Lee los mensajes de simulacion/conversaciones.json y los publica, en orden,
+Lee los mensajes de simulation/conversations.json y los publica, en orden,
 con el webhook de cada canal. El webhook permite elegir el nombre del autor en
 cada mensaje, así que uno solo basta para simular a muchos alumnos.
 
 Cada ejecución publica todo de nuevo: si lo corres dos veces, los mensajes
 quedan duplicados. Por eso pide confirmación antes de empezar.
 
-Uso:  python simular_alumnos.py
+Uso:  python simulate_students.py
 """
 import json
 import sys
@@ -20,7 +20,7 @@ import httpx
 from config import ConfigError, cargar_config
 from discord_api import DiscordAPI, DiscordAPIError
 
-ARCHIVO_CONVERSACIONES = Path(__file__).parent / "simulacion" / "conversaciones.json"
+ARCHIVO_CONVERSACIONES = Path(__file__).parent / "simulation" / "conversations.json"
 # Pausa entre mensajes: conserva el orden y se mantiene lejos del límite de los webhooks.
 PAUSA_SEGUNDOS = 1.5
 
