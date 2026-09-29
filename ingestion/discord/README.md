@@ -25,6 +25,8 @@ ingestion/discord/
 ├── extract.py                ← paso 3: extrae los mensajes a data/raw/
 ├── simulation/
 │   └── conversations.json    ← las conversaciones simuladas (se pueden editar)
+├── prototypes/
+│   └── contract_prototype.py ← prototipo desechable que generó los ejemplos de docs/CONTRACT.md
 ├── requirements.txt          ← librerías de Python
 ├── .env.example              ← plantilla de configuración
 └── .gitignore                ← evita subir data/ al repo

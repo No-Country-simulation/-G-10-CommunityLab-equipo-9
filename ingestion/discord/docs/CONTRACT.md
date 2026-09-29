@@ -177,7 +177,7 @@
 
 ## 7. Ejemplos con datos reales
 
-> Generados con un prototipo a partir de `data/raw/`. Los datos de la persona real están ocultos, y la URL del adjunto está acortada.
+> Generados con [`prototypes/contract_prototype.py`](../prototypes/contract_prototype.py) a partir de `data/raw/`. Los datos de la persona real están ocultos, y la URL del adjunto está acortada.
 
 **Lote completo, con una duda simulada** (`loteId` y `generadoEn` son valores ilustrativos)
 ```json

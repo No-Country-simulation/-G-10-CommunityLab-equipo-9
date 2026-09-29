@@ -31,13 +31,23 @@ Lee, en este orden:
   - En el MVP no hay hilos ni foros (P5 descartado) ni datos de los miembros.
   - La ampliación de la simulación queda pospuesta.
   - Esta rama termina con el contrato v1, su entrega y un pull request a `main`. El bot en vivo va en otra rama.
-- **Siguiente: O4.** Consolidar en una sola lista los datos que pide el catálogo, proponer el contrato v1 y **validarlo con el usuario antes de programar**. Después, el modelo `pydantic` que genera el JSON Schema y la transformación de `data/raw/` al contrato.
+- **En curso: validar el borrador del contrato** ([docs/CONTRACT.md](docs/CONTRACT.md), v0.1). El usuario tiene que aprobar o cambiar las 6 decisiones de la §8:
+  1. `autor.id = "sim-" + nombre` para los simulados;
+  2. el rol del autor sale de una lista configurada;
+  3. la URL del adjunto se incluye con `urlExpiraEn`;
+  4. los avisos del sistema se envían marcados, sin filtrarlos;
+  5. `mencionaAlBot` cubre al bot y a su rol;
+  6. la encuesta y las vistas previas no tienen muestras todavía.
+  Los ejemplos de la §7 salen de [prototypes/contract_prototype.py](prototypes/contract_prototype.py), un prototipo desechable.
+- **Después (3.6): comparar con backend.** Recién ahí, mirar el DTO de backend y conversar las diferencias en las dos direcciones. Está en la rama `feature/java-core-api`: `POST /api/v1/community/process`, `CommunityProcessRequestDto` e `InteractionInputDto`.
+- **Luego:** el modelo `pydantic` que genera el JSON Schema, la transformación de `data/raw/` al contrato, la validación de todos los mensajes, la entrega (O5) y el pull request a `main`.
 - **Luego: O5.** Salida a archivo, POST a la API Java y especificación del endpoint para backend.
 
 ## Cómo trabajar con el usuario
 
 - **Idioma y nivel.** Responder en español. El usuario está aprendiendo git, sabe Python básico y es su primer proyecto de este tipo: explicar desde cero, con ejemplos de InsightEdu.
 - **No ampliar el alcance.** Ante cada idea nueva, preguntar: ¿cambia el contrato? Si no lo cambia, va a pendientes. El usuario pidió explícitamente no seguir sumando documentación.
+- **Diseño independiente.** El contrato se diseña desde el catálogo de eventos, sin tomar como referencia a backend ni al motor IA, para no sesgarlo. Cada campo cita los casos del catálogo que lo necesitan. La comparación con los demás equipos se hace al final.
 - **Definir antes de programar.** Seguir el orden escenario → objetivos → evaluación → alcance; proponer y esperar la validación.
 - **Mejor opción a largo plazo.** Elegir lo mejor en eficiencia, seguridad e integración, no lo más fácil, y explicarlo bien.
 - **Precisión.** Verificar en la documentación oficial de Discord (repo `discord/discord-api-docs`, carpeta `developers/`) y separar lo verificado de lo inferido.
@@ -66,6 +76,11 @@ Lee, en este orden:
 ## Continuar en otra máquina
 
 Guía al usuario con estos pasos:
+0. **Seguridad al abandonar una máquina.** El repo de la máquina anterior estaba dentro de OneDrive, así que su `.env` (token y URLs de los webhooks) y `data/` se sincronizaron a la nube. Para anular esas copias:
+   - pedir un token nuevo con **Reset Token** y actualizar el `.env` de la máquina actual;
+   - opcionalmente, borrar los webhooks y crear otros nuevos.
+
+   Revisar también la identidad de git: `git config --global user.name` y `user.email` deben ser los de la cuenta de GitHub. En la máquina anterior, git había configurado un correo local automáticamente.
 1. **En la máquina anterior,** `git status` debe decir `nothing to commit, working tree clean` y `up to date`.
 2. **Instalar** Git y Python 3.12.
 3. **Clonar y cambiar de rama:**
