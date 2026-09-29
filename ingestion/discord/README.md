@@ -4,6 +4,8 @@ Este módulo es la puerta de entrada de InsightEdu Lab: se conecta a Discord, ex
 
 - **Qué incluye y qué no:** [docs/SCOPE.md](docs/SCOPE.md)
 - **Cómo son los datos de Discord** (léelo si nunca trabajaste con Discord): [docs/DISCORD_DATA_GUIDE.md](docs/DISCORD_DATA_GUIDE.md)
+- **Qué pide el proyecto y qué eventos de la comunidad importan:** [docs/EVENT_CATALOG.md](docs/EVENT_CATALOG.md)
+- **Cómo encajan las piezas del sistema (propuesta):** [docs/ARCHITECTURE_PROPOSAL.md](docs/ARCHITECTURE_PROPOSAL.md)
 
 ## Estructura
 
@@ -11,8 +13,10 @@ Este módulo es la puerta de entrada de InsightEdu Lab: se conecta a Discord, ex
 ingestion/discord/
 ├── README.md                 ← este archivo
 ├── docs/
-│   ├── SCOPE.md              ← alcance, decisiones y pendientes
-│   └── DISCORD_DATA_GUIDE.md ← guía y diccionario de datos
+│   ├── SCOPE.md                 ← alcance, decisiones y pendientes
+│   ├── ARCHITECTURE_PROPOSAL.md ← propuesta de arquitectura (para discutir con el equipo)
+│   ├── DISCORD_DATA_GUIDE.md    ← guía y diccionario de datos
+│   └── EVENT_CATALOG.md         ← interpretación del brief y catálogo de eventos
 ├── config.py                 ← lee la configuración del .env
 ├── discord_api.py            ← cliente de la API de Discord (autenticación, reintentos y límites)
 ├── verify_connection.py      ← paso 1: comprueba la conexión del bot

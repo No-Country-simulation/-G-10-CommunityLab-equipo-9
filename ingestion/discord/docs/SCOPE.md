@@ -1,17 +1,19 @@
 # Ingesta de Discord — Alcance
 
-> **Estado:** aprobado v1.0 · **Rama:** `feature/discord-ingestion` · **Fecha:** 2026-09-28
+> **Estado:** aprobado v1.2 · **Rama:** `feature/discord-ingestion` · **Fecha:** 2026-09-29
 
 Este documento fija la pauta de cómo entran los mensajes de Discord a InsightEdu Lab. El backend programa contra el contrato que se define aquí.
 
 ## 1. Escenario
 
-- InsightEdu Lab analiza conversaciones de comunidades educativas para responder dudas automáticamente y detectar hitos o logros de los alumnos.
+- InsightEdu Lab convierte la actividad de una comunidad EduTech en Discord en activos de marketing, contenido educativo y alertas de retención, con aprobación humana antes de publicar. La interpretación completa del brief está en [EVENT_CATALOG.md](EVENT_CATALOG.md) §1.
+- Activos del MVP: post de LinkedIn, caso de éxito o testimonio, FAQ o contenido educativo, dashboard de salud con alertas, y un bot que responde dudas en vivo con la documentación de la institución.
 - No hay datos reales. El servidor, los canales, los alumnos y el bot se simulan en Discord, que es gratis.
-- Canales iniciales: `#dudas` y `#logros`.
+- Canales iniciales: `#dudas` y `#logros`. El catálogo de eventos suma otros (ver [EVENT_CATALOG.md](EVENT_CATALOG.md) §5).
 - Flujo completo del sistema:
   `Discord → ingesta → API Java → motor IA (LLM) → API Java → respuesta en Discord`
-  Esta rama cubre solo el primer tramo: **Discord → ingesta → API Java**.
+  Los activos generados se guardan en OCI Object Storage.
+  Esta rama cubre solo el primer tramo: **Discord → ingesta → API Java**. La arquitectura propuesta está en [ARCHITECTURE_PROPOSAL.md](ARCHITECTURE_PROPOSAL.md).
 - `backend-java` solo tiene el esqueleto de Spring Boot. Todavía no existe un endpoint de ingesta.
 - Plazo: la hackatón dura 5 semanas. Al 2026-09-28 ha pasado 1.
 
@@ -39,18 +41,26 @@ Este documento fija la pauta de cómo entran los mensajes de Discord a InsightEd
 | Secretos | El token del bot y las URLs de webhook van en `.env`, que Git ignora | Nunca se escriben en el código ni se suben al repo. |
 | Simulación de alumnos | Webhooks de Discord, con un nombre distinto en cada mensaje | Automatizar cuentas de usuario (self-bots) viola los términos de Discord; los webhooks no. |
 | Mensajes de webhook | Se conservan y se marcan como simulados | Llegan con `webhook_id` y no son de personas. Si se filtraran como si fueran de bots, se perdería toda la simulación. |
+| Almacenamiento en la nube | OCI Object Storage es obligatorio para los **activos generados**. Para la ingesta es opcional: sirve de respaldo de los datos crudos, escritos por lotes | El brief pide *"persistir todos los paquetes de activos generados en un Bucket Always Free"*. El plan Always Free incluye 20 GB y 50.000 peticiones al mes: guardar un archivo por cada mensaje agotaría el cupo, por eso se escribe por lotes. |
+| Databricks | No se usa en el MVP | El brief exige OCI, así que Databricks sería una segunda plataforma y no un reemplazo. Nadie del equipo la conoce y está pensada para volúmenes de datos que no tenemos. La organización por capas (crudo → contrato → activos) se logra con carpetas dentro del bucket de OCI. |
+| Contenido del contrato | Todo campo que necesite algún caso de [EVENT_CATALOG.md](EVENT_CATALOG.md). Los datos crudos se conservan completos | Los eventos ocasionales pueden valer mucho, como una contratación. Si un dato no está en el contrato, sigue disponible en la capa cruda y se puede volver a procesar. |
+| Datos de los miembros | No se extraen en el MVP: ni fecha de ingreso ni roles | La deserción mensual se calcula con la actividad (autor y fecha de sus mensajes). Mide a quien dejó de escribir, no a quien abandonó el curso. Los datos de los miembros exigen peticiones extra y más simulación. |
 
 ## 4. Alcance
+
+**Esta rama termina con el contrato v1, su entrega (O4 y O5) y un pull request a `main`.** Regla para no desviarse: ante cada idea nueva, preguntar **¿cambia el contrato?** Si no lo cambia, va a pendientes.
 
 **Dentro**
 - Objetivos O1 a O5.
 - Especificación del endpoint de ingesta para que backend lo implemente.
 
-**Fuera, por ahora**
-- Limpieza del contenido (ortografía, jerga, sentido). Ver P1 y P2.
-- Escucha en tiempo real (Gateway). Es la siguiente fase y la necesitará la respuesta automática.
-- Responder en Discord, detectar hitos y la lógica del motor IA.
-- Implementar el endpoint en Java. Lo hace backend a partir de nuestra especificación.
+**Fuera de esta rama.** Algunos puntos sí son parte del MVP, pero se construyen en otras ramas usando el mismo contrato.
+- La escucha en tiempo real y el bot que responde dudas. Son parte del MVP y corresponden a la siguiente fase de la ingesta.
+- La limpieza del contenido (ortografía, jerga, sentido). Ver P1 y P2.
+- La lógica del motor IA, la detección de logros, el dashboard y el guardado de los activos en OCI.
+- La implementación del endpoint en Java. La hace backend a partir de nuestra especificación.
+- Los hilos y foros (P5) y los datos de los miembros.
+- Ampliar la simulación para cubrir todos los eventos del catálogo.
 
 ## 5. Pendientes
 
@@ -62,12 +72,11 @@ Este documento fija la pauta de cómo entran los mensajes de Discord a InsightEd
   - Las URLs de los adjuntos caducan.
   - Hay errores de ortografía, jerga y mensajes partidos en varios envíos.
 - **P2 · ¿Limpia el LLM?** Evaluar si el motor IA tolera o corrige los datos sucios, y qué limpieza deja de hacer falta.
-- **P3 · Privacidad.** Decidir si se anonimiza a los alumnos antes de guardar sus datos.
+- **P3 · Privacidad y consentimiento.** Decidir si se anonimiza a los alumnos antes de guardar sus datos. Además, publicar un testimonio con nombre y cita en LinkedIn requiere el consentimiento del alumno.
 - **P4 · Fechas en Java.** Usar `Instant` u `OffsetDateTime`, no `LocalDateTime`, para no perder la zona horaria.
-- **P5 · Hilos.** Decidir si se extraen. Los mensajes dentro de un hilo no aparecen en el historial del canal; hay que recorrer los hilos aparte.
+- **P5 · Hilos y foros: descartados para el MVP.** Los mensajes dentro de un hilo o de un foro no aparecen en el historial del canal, y extraerlos exige recorrer los hilos aparte. Como el servidor de prueba lo diseñamos nosotros, `#dudas` es un canal normal y no se extraen hilos. **Limitación conocida:** si la institución real usa foros para las dudas, habrá que agregarlo.
 - **P6 · Extracción incremental.** Hoy `extract.py` descarga todo el historial en cada ejecución. En producción conviene pedir solo lo nuevo (parámetro `after` con el último ID guardado) y que la API Java ignore los IDs repetidos.
 - **P7 · Mensajes partidos.** Una idea suele llegar en varios mensajes (saludo, contexto y pregunta; o una imagen y después su descripción). Decidir si la agrupación la hace la ingesta o el motor IA. Ver [DISCORD_DATA_GUIDE.md](DISCORD_DATA_GUIDE.md) §14.
-
 ## 6. Criterios de terminado
 
 - [x] El servidor de prueba tiene `#dudas` y `#logros` con mensajes de al menos 5 alumnos ficticios.
@@ -77,3 +86,4 @@ Este documento fija la pauta de cómo entran los mensajes de Discord a InsightEd
 - [ ] El contrato v1 existe como JSON Schema y todos los mensajes extraídos lo cumplen.
 - [ ] La salida a archivo funciona y la salida HTTP está probada.
 - [ ] Backend recibió la especificación del endpoint.
+- [ ] Hay un pull request abierto hacia `main`.

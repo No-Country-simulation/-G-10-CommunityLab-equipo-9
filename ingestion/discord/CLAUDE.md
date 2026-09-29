@@ -8,6 +8,8 @@ Lee, en este orden:
 1. [README.md](README.md): qué es el módulo y cómo se corre.
 2. [docs/SCOPE.md](docs/SCOPE.md): objetivos O1–O5, decisiones, pendientes P1–P7 y criterios de terminado.
 3. [docs/DISCORD_DATA_GUIDE.md](docs/DISCORD_DATA_GUIDE.md): cómo son los datos de Discord (hallazgos, riesgos e implicaciones para el contrato).
+4. [docs/EVENT_CATALOG.md](docs/EVENT_CATALOG.md): la interpretación del brief del proyecto y el catálogo de eventos de la comunidad, que es la base del contrato.
+5. [docs/ARCHITECTURE_PROPOSAL.md](docs/ARCHITECTURE_PROPOSAL.md): la arquitectura propuesta (dos flujos, un contrato), pendiente de discutir con el equipo.
 
 ## Proyecto
 
@@ -16,15 +18,25 @@ Lee, en este orden:
 - **Canales:** `#dudas` y `#logros`. Todo está simulado en un servidor de pruebas.
 - **Equipo:** nivel training, sin experiencia previa con Discord. La ingesta define la pauta (el contrato) que el backend implementa.
 
-## Estado (2026-09-28)
+## Estado (2026-09-29)
 
 - **Hecho:** O1 (entorno simulado), O2 (conexión y extracción) y O3 (guía y diccionario de datos).
-- **Siguiente: O4.** Proponer los campos del contrato v1 con un ejemplo y **validarlos con el usuario antes de programar**. Después, el modelo `pydantic` que genera el JSON Schema y la transformación de `data/raw/` al contrato.
+- **Decisiones del producto:**
+  - El MVP incluye post de LinkedIn, caso de éxito, FAQ o contenido educativo, dashboard de salud con alertas, y un bot que responde dudas en vivo (por eso la ingesta en tiempo real entra en el MVP).
+  - OCI Object Storage es obligatorio para los activos generados.
+  - Databricks queda descartado.
+- **Decisiones de alcance:**
+  - El catálogo de eventos está aprobado (v1.0).
+  - En el MVP no hay hilos ni foros (P5 descartado) ni datos de los miembros.
+  - La ampliación de la simulación queda pospuesta.
+  - Esta rama termina con el contrato v1, su entrega y un pull request a `main`. El bot en vivo va en otra rama.
+- **Siguiente: O4.** Consolidar en una sola lista los datos que pide el catálogo, proponer el contrato v1 y **validarlo con el usuario antes de programar**. Después, el modelo `pydantic` que genera el JSON Schema y la transformación de `data/raw/` al contrato.
 - **Luego: O5.** Salida a archivo, POST a la API Java y especificación del endpoint para backend.
 
 ## Cómo trabajar con el usuario
 
 - **Idioma y nivel.** Responder en español. El usuario está aprendiendo git, sabe Python básico y es su primer proyecto de este tipo: explicar desde cero, con ejemplos de InsightEdu.
+- **No ampliar el alcance.** Ante cada idea nueva, preguntar: ¿cambia el contrato? Si no lo cambia, va a pendientes. El usuario pidió explícitamente no seguir sumando documentación.
 - **Definir antes de programar.** Seguir el orden escenario → objetivos → evaluación → alcance; proponer y esperar la validación.
 - **Mejor opción a largo plazo.** Elegir lo mejor en eficiencia, seguridad e integración, no lo más fácil, y explicarlo bien.
 - **Precisión.** Verificar en la documentación oficial de Discord (repo `discord/discord-api-docs`, carpeta `developers/`) y separar lo verificado de lo inferido.
