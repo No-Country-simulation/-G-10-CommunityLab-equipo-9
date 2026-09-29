@@ -30,6 +30,7 @@ Para evitar cruces en Git y optimizar el desarrollo en paralelo entre los tres i
 * **Responsable:** [Integrante 1]
 * **`model/` e `model/enums/`**: Implementación de las entidades JPA (`PackageResult`, `Interaction`) con su relación bidireccional y las enumeraciones de seguridad de tipos (`TipoAutor`, `ClasificacionSentimiento`).
 * **`repository/`**: Creación de las interfaces `InteractionRepository` y `PackageResultRepository` para la gestión de base de datos con Spring Data JPA.
+# ❎
 
 ### 2. 🔌 Módulo de Controladores y Contratos (`controller/`, `dto/`)
 * **Responsable:** [Integrante 2]
