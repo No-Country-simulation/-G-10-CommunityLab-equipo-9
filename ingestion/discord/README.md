@@ -14,6 +14,7 @@ ingestion/discord/
 ├── README.md                 ← este archivo
 ├── docs/
 │   ├── SCOPE.md                 ← alcance, decisiones y pendientes
+│   ├── CONTRACT.md              ← contrato de ingesta (el formato que recibe el sistema)
 │   ├── ARCHITECTURE_PROPOSAL.md ← propuesta de arquitectura (para discutir con el equipo)
 │   ├── DISCORD_DATA_GUIDE.md    ← guía y diccionario de datos
 │   └── EVENT_CATALOG.md         ← interpretación del brief y catálogo de eventos

@@ -10,6 +10,7 @@ Lee, en este orden:
 3. [docs/DISCORD_DATA_GUIDE.md](docs/DISCORD_DATA_GUIDE.md): cómo son los datos de Discord (hallazgos, riesgos e implicaciones para el contrato).
 4. [docs/EVENT_CATALOG.md](docs/EVENT_CATALOG.md): la interpretación del brief del proyecto y el catálogo de eventos de la comunidad, que es la base del contrato.
 5. [docs/ARCHITECTURE_PROPOSAL.md](docs/ARCHITECTURE_PROPOSAL.md): la arquitectura propuesta (dos flujos, un contrato), pendiente de discutir con el equipo.
+6. [docs/CONTRACT.md](docs/CONTRACT.md): el contrato de ingesta v1. Se diseñó de forma independiente de backend y del motor IA, y se compara con ellos después de validarlo.
 
 ## Proyecto
 
