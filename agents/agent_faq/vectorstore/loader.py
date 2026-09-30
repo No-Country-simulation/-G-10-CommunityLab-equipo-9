@@ -5,7 +5,7 @@ from pathlib import Path
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from ..config import RUTA_PDFS, CHUNK_SIZE, CHUNK_OVERLAP
-from .embeddings import requiere_prefijo_e5
+from .embedding_models import requiere_prefijo_e5
 
 
 def cargar_pdfs(ruta: Path = RUTA_PDFS) -> list:

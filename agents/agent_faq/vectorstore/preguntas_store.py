@@ -24,7 +24,7 @@ class PreguntasStore:
     """
 
     def __init__(self):
-        self.embeddings = build_embeddings()
+        self.embeddings = select_embeddings()
         self.vectorstore: FAISS | None = None
         self._cargar()
 

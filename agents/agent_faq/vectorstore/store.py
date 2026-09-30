@@ -10,7 +10,7 @@ class StorePDFs:
     """Wrapper para el vectorstore de PDFs."""
 
     def __init__(self):
-        self.embeddings = build_embeddings()
+        self.embeddings = select_embeddings()
         self.vectorstore: FAISS | None = None
         self.retriever = None
 

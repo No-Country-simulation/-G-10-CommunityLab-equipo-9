@@ -4,7 +4,7 @@ Tool 'Buscador': RAG + Rerank + Guardrail anti-alucinación.
 
 from langchain_core.tools import tool
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
+from langchain_core.output_parsers import BaseOutputParser
 
 from ..config import (
     UMBRAL_SIMILITUD_RAG, UMBRAL_FIDELIDAD,
@@ -14,6 +14,41 @@ from ..prompts.prompts import PROMPT_RAG_FAQ, PROMPT_GUARDRAIL
 from ..vectorstore.store import StorePDFs
 from ..vectorstore.reranker import Reranker
 
+class GeminiTextParser(BaseOutputParser[str]):
+    """Parser que extrae texto plano de respuestas de Gemini (str o content_blocks)."""
+
+    def parse(self, text) -> str:
+        # Caso 1: ya es string
+        if isinstance(text, str):
+            return text.strip()
+
+        # Caso 2: es AIMessage con content como string
+        if hasattr(text, "content") and isinstance(text.content, str):
+            return text.content.strip()
+
+        # Caso 3: es AIMessage con content como lista de bloques
+        if hasattr(text, "content") and isinstance(text.content, list):
+            return self._extraer_de_bloques(text.content)
+
+        # Caso 4: es lista de bloques directamente
+        if isinstance(text, list):
+            return self._extraer_de_bloques(text)
+
+        # Fallback
+        return str(text).strip()
+
+    def _extraer_de_bloques(self, bloques: list) -> str:
+        """Extrae el texto de una lista de bloques tipo {'type': 'text', 'text': '...'}"""
+        partes = []
+        for bloque in bloques:
+            if isinstance(bloque, dict):
+                if bloque.get("type") == "text":
+                    partes.append(bloque.get("text", ""))
+                elif "text" in bloque:
+                    partes.append(bloque["text"])
+            elif isinstance(bloque, str):
+                partes.append(bloque)
+        return "\n".join(partes).strip()
 
 class BuscadorTool:
     """
@@ -27,7 +62,7 @@ class BuscadorTool:
         self.rag_chain = (
             ChatPromptTemplate.from_template(PROMPT_RAG_FAQ)
             | llm
-            | StrOutputParser()
+            | GeminiTextParser()
         )
         self.guardrail = llm.with_structured_output(EvaluacionFidelidad)
 

@@ -14,7 +14,7 @@ RUTA_HISTORIAL_PREGUNTAS = BASE_DIR / "data" / "historial_preguntas.json"
 
 # --- LLM (cambiar LLM_PROVIDER para alternar) ---
 LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "google")  # "google" | "openai" | "cohere"
-LLM_MODEL_NAME: str = os.getenv("LLM_MODEL_NAME", "gemini-2.0-flash-exp")
+LLM_MODEL_NAME: str = os.getenv("LLM_MODEL_NAME", "gemini-3.5-flash-lite")
 LLM_TEMPERATURE: float = 0.1
 
 # --- Embeddings ---
@@ -36,8 +36,8 @@ UMBRAL_FIDELIDAD: float = 0.85          # Mínimo para aprobar respuesta sin rev
 UMBRAL_PREGUNTA_REPETIDA: float = 0.85  # Similitud para considerar pregunta repetida
 
 # --- Chunking y recuperación ---
-CHUNK_SIZE: int = 400
-CHUNK_OVERLAP: int = 50
+CHUNK_SIZE: int = 1000
+CHUNK_OVERLAP: int = 200
 TOP_K_RETRIEVAL: int = 8   # Candidatos iniciales del retriever
 TOP_N_RERANK: int = 3      # Fragmentos finales tras reranking
 TOP_K_PREGUNTAS: int = 5   # Preguntas similares a recuperar del histórico
@@ -50,3 +50,5 @@ COHERE_API_KEY: str | None = os.getenv("COHERE_API_KEY")
 # --- IDs ---
 AGENTE_NOMBRE: str = "agente_faq"
 AGENTE_VERSION: str = "1.0.0"
+
+
