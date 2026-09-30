@@ -1,5 +1,5 @@
 """
-Configuraicon de cargadores de PDF de la documentaicón y segmentación en chunks.
+Configuración de cargadores de PDF de la documentación y segmentación en chunks.
 """
 from pathlib import Path
 from langchain_community.document_loaders import PyPDFLoader
