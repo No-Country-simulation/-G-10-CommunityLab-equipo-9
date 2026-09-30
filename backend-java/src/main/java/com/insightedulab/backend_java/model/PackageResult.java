@@ -26,6 +26,7 @@ public class PackageResult {
     private String tipoServidor;           // Canal o servidor de origen
 
     // Relación relacional con las interacciones que dieron origen a este paquete
+    @com.fasterxml.jackson.annotation.JsonManagedReference
     @OneToMany(mappedBy = "packageResult", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Interaction> interacciones;
 

@@ -23,7 +23,7 @@ public class Interaction {
     private String loteId;
 
     private String tipoServidor;
-
+    @com.fasterxml.jackson.annotation.JsonBackReference
     @ManyToOne(fetch =  FetchType.LAZY)
     @JoinColumn(name = "package_result_id")
     private PackageResult packageResult;
