@@ -39,12 +39,24 @@ PAYLOAD_PRUEBA = {
                 "username": "Lucas Albuquerque",
                 "bot": False,
             },
-            "content": "¿Cuáles son los requisitos para inscribirme en el curso de Python?",
+            "content": "¿Cuáles son los requisitos para la beca de apoyo socioeconómico?",
             "timestamp": "2026-09-30T10:18:00.000Z",
             "type": 0,
         },
         {
             "id": "msg_003",
+            "channel_id": "canal_dudas",
+            "author": {
+                "id": "user_002",
+                "username": "Lucas Albuquerque",
+                "bot": False,
+            },
+            "content": "¿Cuáles son los requisitos para inscribirme en el curso de Python?",
+            "timestamp": "2026-09-30T10:18:00.000Z",
+            "type": 0,
+        },
+        {
+            "id": "msg_004",
             "channel_id": "canal_general",
             "author": {
                 "id": "user_003",
@@ -56,7 +68,7 @@ PAYLOAD_PRUEBA = {
             "type": 0,
         },
         {
-            "id": "msg_004",
+            "id": "msg_005",
             "channel_id": "canal_bot",
             "author": {
                 "id": "bot_001",

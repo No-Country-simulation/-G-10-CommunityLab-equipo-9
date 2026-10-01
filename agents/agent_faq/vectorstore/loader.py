@@ -4,7 +4,7 @@ Configuración de cargadores de PDF de la documentación y segmentación en chun
 from pathlib import Path
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from ..config import RUTA_PDFS, CHUNK_SIZE, CHUNK_OVERLAP
+from ..config import FAQ_CHUNK_OVERLAP, RUTA_PDFS, FAQ_CHUNK_SIZE
 from .embedding_models import requiere_prefijo_e5
 
 
@@ -31,8 +31,8 @@ def cargar_pdfs(ruta: Path = RUTA_PDFS) -> list:
 def fragmentar_documentos(documentos: list) -> list:
     """Divide los documentos en chunks y aplica prefijo E5 si es necesario."""
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=CHUNK_SIZE,
-        chunk_overlap=CHUNK_OVERLAP,
+        chunk_size=FAQ_CHUNK_SIZE,
+        chunk_overlap=FAQ_CHUNK_OVERLAP,
         separators=["\n\n", "\n", ". ", " ", ""],
     )
     fragmentos = splitter.split_documents(documentos)

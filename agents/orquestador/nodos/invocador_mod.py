@@ -8,12 +8,12 @@ from __future__ import annotations
 import importlib
 import time
 from ..contratos import OutputSubAgente
-from ..config import SUBAGENTE_MOD_PATH
+from ..config import ORQ_SUBAGENTE_MOD_PATH
 
 
 def _cargar_agente_mod():
     """Carga dinámicamente el Agente-Mod."""
-    modulo_path, clase_nombre = SUBAGENTE_MOD_PATH.rsplit(".", 1)
+    modulo_path, clase_nombre = ORQ_SUBAGENTE_MOD_PATH.rsplit(".", 1)
     modulo = importlib.import_module(modulo_path)
     return getattr(modulo, clase_nombre)
 

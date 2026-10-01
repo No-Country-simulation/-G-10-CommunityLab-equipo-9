@@ -4,7 +4,7 @@ Agente FAQ: construcción con create_react_agent + AgentExecutor.
 from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
-from .config import LLM_MODEL_NAME, AGENTE_VERSION
+from .config import FAQ_MODEL_NAME, AGENTE_VERSION
 from .llm_models import select_llm
 from .prompts.prompts import SYSTEM_PROMPT_AGENTE
 from .tools.buscador import BuscadorTool
@@ -29,7 +29,7 @@ class AgenteFAQ:
 
         # 1. LLM
         self.llm = select_llm()
-        print(f"[AgenteFAQ] LLM: {LLM_MODEL_NAME}")
+        print(f"[AgenteFAQ] LLM: {FAQ_MODEL_NAME}")
 
         # 2. Vectorstore PDFs
         self.store = StorePDFs()

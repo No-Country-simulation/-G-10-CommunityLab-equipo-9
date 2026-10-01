@@ -8,12 +8,13 @@ import importlib
 import time
 
 from ..contratos import OutputSubAgente
-from ..config import SUBAGENTE_FAQ_PATH
+from ..config import ORQ_SUBAGENTE_FAQ_PATH
+
 
 
 def _cargar_agente_faq():
     """Carga dinámicamente el Agente FAQ."""
-    modulo_path, clase_nombre = SUBAGENTE_FAQ_PATH.rsplit(".", 1)
+    modulo_path, clase_nombre = ORQ_SUBAGENTE_FAQ_PATH.rsplit(".", 1)
     modulo = importlib.import_module(modulo_path)
     return getattr(modulo, clase_nombre)
 

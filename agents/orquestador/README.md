@@ -170,8 +170,8 @@ OCI_REGION=us-ashburn-1
 # ============================================================
 # SUB-AGENTES
 # ============================================================
-SUBAGENTE_MOD_PATH=agents.agent_mod.agente_mod.AgenteMod
-SUBAGENTE_FAQ_PATH=agents.agent_faq.agente_faq.AgenteFAQ
+ORQ_SUBAGENTE_MOD_PATH=agents.agent_mod.agente_mod.AgenteMod
+ORQ_SUBAGENTE_FAQ_PATH=agents.agent_faq.agente_faq.AgenteFAQ
 ```
 
 Cambiar de proveedor
