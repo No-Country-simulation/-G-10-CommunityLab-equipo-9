@@ -1,4 +1,4 @@
-package com.insightedulab.backend_java.dto;
+package com.insightedulab.backend_java.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

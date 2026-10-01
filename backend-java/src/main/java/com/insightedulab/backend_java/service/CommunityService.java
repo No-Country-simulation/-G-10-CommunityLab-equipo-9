@@ -1,9 +1,9 @@
 package com.insightedulab.backend_java.service;
 
-import com.insightedulab.backend_java.dto.CommunityProcessRequestDto;
-import com.insightedulab.backend_java.dto.CurationRequestDto;
-import com.insightedulab.backend_java.dto.InteractionInputDto;
-import com.insightedulab.backend_java.dto.OciUploadResponseDto;
+import com.insightedulab.backend_java.dto.request.CommunityProcessRequestDto;
+import com.insightedulab.backend_java.dto.request.CurationRequestDto;
+import com.insightedulab.backend_java.dto.request.InteractionInputDto;
+import com.insightedulab.backend_java.dto.response.OciUploadResponseDto;
 import com.insightedulab.backend_java.model.Interaction;
 import com.insightedulab.backend_java.model.PackageResult;
 import com.insightedulab.backend_java.model.enums.TipoAutor;

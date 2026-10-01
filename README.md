@@ -63,6 +63,13 @@ com.insightedulab.backend_java/
 ├── 📁 security/               # Filtros, configuración de Spring Security y JWT
 └── 📁 service/                # Lógica de negocio e integraciones externas (OCI, etc.)
 ```
+## Estado actual de los DTOs 📋
+Con este último, ya tienes la arquitectura de datos de entrada y salida totalmente sólida:
+
+* Entrada: `CommunityProcessRequestDto`, `InteractionInputDto`, `CurationRequestDto`.
+
+* Salida: `CommunityProcessResponseDto`, `InteractionResponseDto`, `OciUploadResponseDto`, `PackageResultResponseDto`.
+
 # Lo que sigue a desarrollar:
 
 ### 🛡️ Capas de Seguridad y Excepciones

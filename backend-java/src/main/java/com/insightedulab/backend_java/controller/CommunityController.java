@@ -1,6 +1,11 @@
 package com.insightedulab.backend_java.controller;
 
-import com.insightedulab.backend_java.dto.*;
+import com.insightedulab.backend_java.dto.request.CommunityProcessRequestDto;
+import com.insightedulab.backend_java.dto.request.CurationRequestDto;
+import com.insightedulab.backend_java.dto.response.CommunityProcessResponseDto;
+import com.insightedulab.backend_java.dto.response.InteractionResponseDto;
+import com.insightedulab.backend_java.dto.response.OciUploadResponseDto;
+import com.insightedulab.backend_java.dto.response.PackageResultResponseDto;
 import com.insightedulab.backend_java.model.PackageResult;
 import com.insightedulab.backend_java.service.CommunityService;
 import org.springframework.http.ResponseEntity;
