@@ -14,11 +14,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/community")
-@CrossOrigin(
-    origins = "${cors.allowed-origins:*}",
-    allowedHeaders = "*",
-    methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.OPTIONS}
-)
 public class CommunityController {
     private final CommunityService communityService;
     public CommunityController(CommunityService communityService) {
