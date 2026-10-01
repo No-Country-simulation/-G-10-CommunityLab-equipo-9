@@ -8,6 +8,7 @@ import com.insightedulab.backend_java.dto.response.OciUploadResponseDto;
 import com.insightedulab.backend_java.dto.response.PackageResultResponseDto;
 import com.insightedulab.backend_java.model.PackageResult;
 import com.insightedulab.backend_java.service.CommunityService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,7 +27,7 @@ public class CommunityController {
      * Endpoint oficial para recibir y validar el lote de mensajes de Discord.
      */
     @PostMapping("/process")
-    public ResponseEntity<CommunityProcessResponseDto> processBatch(@RequestBody CommunityProcessRequestDto request) {
+    public ResponseEntity<CommunityProcessResponseDto> processBatch(@Valid @RequestBody CommunityProcessRequestDto request) {
         // 1. Validación de entrada
         if (request == null || request.getInteracciones() == null || request.getInteracciones().isEmpty()) {
             CommunityProcessResponseDto errorResponse = CommunityProcessResponseDto.builder()
@@ -93,7 +94,7 @@ public class CommunityController {
     }
 
     /**
-     * Método auxiliar de mapeo de Entidad a DTO (Puedes moverlo a un Mapper dedicado si prefieres)
+     * Funcion auxiliar de mapeo de Entidad a DTO (Puedes moverlo a un Mapper dedicado si prefieres)
      */
     private PackageResultResponseDto mapToPackageResultResponseDto(PackageResult pkg) {
         if (pkg == null) {
