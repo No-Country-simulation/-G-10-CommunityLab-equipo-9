@@ -43,8 +43,44 @@ Para evitar cruces en Git y optimizar el desarrollo en paralelo entre los tres i
 * **`service/`**: Lógica de negocio principal (`ProcessingService`, `OciStorageService`) y orquestación del control de tokens y métricas.
 * **`client/`**: Conexión HTTP externa mediante `PythonAiClient` hacia el microservicio de IA en FastAPI.
 * **`config/`**: Configuraciones globales y Beans (`OciConfig`, `RestClientConfig`).
+# ❎
 
 ---
+## 📂 Estructura del Proyecto
+
+El proyecto sigue una arquitectura por capas desacoplada para garantizar mantenibilidad, seguridad y robustez:
+
+```text
+com.insightedulab.backend_java/
+│
+├── 📁 config/                 # Configuraciones globales (CORS, Beans, etc.)
+├── 📁 controller/             # Controladores REST (Exponen endpoints y manejan HTTP)
+├── 📁 dto/                    # Objetos de Transferencia de Datos (Request y Response)
+├── 📁 exception/              # Manejo global de excepciones y respuestas de error personalizadas
+├── 📁 model/                  # Entidades JPA (Base de datos)
+│   └── 📁 enums/              # Enumeraciones del dominio (ej. TipoAutor, Sentimiento)
+├── 📁 repository/             # Interfaces de acceso a datos (Spring Data JPA)
+├── 📁 security/               # Filtros, configuración de Spring Security y JWT
+└── 📁 service/                # Lógica de negocio e integraciones externas (OCI, etc.)
+```
+# Lo que sigue a desarrollar:
+
+### 🛡️ Capas de Seguridad y Excepciones
+1. Módulo de Seguridad (`/security`)
+   Propósito: Gestionar la autenticación y autorización de las peticiones HTTP mediante tokens (JWT) y filtros personalizados de Spring Security.
+
+* Componentes principales: Configuración de filtros de seguridad, codificación de contraseñas y validación de credenciales para proteger los endpoints de la API.
+
+2. Manejo de Excepciones (`/exception`)
+* 
+* Propósito: Centralizar la captura de errores en toda la aplicación para evitar stack traces expuestos al cliente y estandarizar el formato de las respuestas HTTP en caso de fallos.
+
+* Componentes principales:
+
+* Clases de excepciones personalizadas (ej. recursos no encontrados, errores de validación).
+
+* Un manejador global (`@ControllerAdvice`) que intercepta las excepciones y devuelve un JSON estructurado con el código de estado, mensaje descriptivo y marca de tiempo.
+___
 # 🐳 Despliegue e Infraestructura con Docker Compose
 Este proyecto cuenta con un entorno containerizado utilizando **Docker y Docker Compose** para orquestar de forma automatizada la aplicación backend en Java 21 (Spring Boot) y la base de datos relacional PostgreSQL.
 

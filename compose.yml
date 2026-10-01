@@ -16,7 +16,7 @@ services:
       dockerfile: Dockerfile
     container_name: community-backend-java
     ports:
-      - '8000:8080'
+      - '8008:8080'
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB}
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
