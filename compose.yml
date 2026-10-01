@@ -17,6 +17,8 @@ services:
     container_name: community-backend-java
     ports:
       - '8008:8080'
+    env_file:
+      - .env
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB}
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
