@@ -36,6 +36,7 @@ Para evitar cruces en Git y optimizar el desarrollo en paralelo entre los tres i
 * **Responsable:** [Integrante 2]
 * **`dto/`**: Definición de los objetos de transferencia de datos (`CommunityInputDto`, `PackageOutputDto`) para asegurar el contrato JSON estricto con Streamlit y Python.
 * **`controller/`**: Exposición de los endpoints REST (`CommunityController`, `OciStorageController`) para la recepción de lotes de interacciones y gestión de reportes.
+# ❎
 
 ### 3. ⚙️ Módulo de Servicios, Clientes e Infraestructura (`service/`, `client/`, `config/`)
 * **Responsable:** [Integrante 3]
@@ -44,5 +45,41 @@ Para evitar cruces en Git y optimizar el desarrollo en paralelo entre los tres i
 * **`config/`**: Configuraciones globales y Beans (`OciConfig`, `RestClientConfig`).
 
 ---
+# 🐳 Despliegue e Infraestructura con Docker Compose
+Este proyecto cuenta con un entorno containerizado utilizando **Docker y Docker Compose** para orquestar de forma automatizada la aplicación backend en Java 21 (Spring Boot) y la base de datos relacional PostgreSQL.
+
+🛠️ Componentes de la Arquitectura
+
+* Servicio de Base de Datos (`postgres`):
+° Imagen oficial de PostgreSQL (`postgres:latest`) configurada mediante variables de entorno seguras para el aislamiento de credenciales y persistencia de datos.
+* Servicio de Backend (`backend-java`):
+° Construcción optimizada mediante un `Dockerfile` multi-etapa ubicado en el subdirectorio del microservicio.
+° Mapeo de puertos hacia el host local (`8000:8080`) y comunicación interna mediante redes privadas de Docker con el servicio de base de datos.
+
+# ⚙️ Gestión de Configuración y Seguridad
+° Variables de Entorno: Se implementó un archivo **.env** en la raíz del proyecto para la gestión centralizada y segura de credenciales sensibles (excluido del control de versiones mediante **.gitignore**).
+
+° Estandarización: Uso de un archivo plantilla (**.env.example**) para facilitar la configuración inicial de los colaboradores del equipo.
+
+# Instrucciones de Ejecución
+Para levantar todo el ecosistema de servicios y compilar la aplicación desde la raíz del proyecto, ejecuta el siguiente comando:
+
+````bash
+docker compose up --build
+````
+# 🐳 ¿Por qué necesitamos Docker Desktop?
+
+Para ejecutar este proyecto de manera local, Docker Desktop es una herramienta indispensable por las siguientes razones:
+
+1- Entornos Aislados y Consistentes (Elimina el "en mi máquina funciona"): Docker empaqueta la aplicación de Spring Boot (Java 21) junto con todas sus dependencias y el motor de la base de datos PostgreSQL en contenedores independientes. Esto garantiza que el comportamiento del software sea exactamente el mismo tanto en la computadora de cualquier miembro del equipo como en el servidor de producción.
+
+2- Orquestación con Docker Compose: Permite levantar y conectar múltiples servicios de forma simultánea (el contenedor del backend y el contenedor de PostgreSQL) utilizando un único comando (**docker compose up --build**), configurando redes internas automáticas sin necesidad de instalar bases de datos o runtimes complejos directamente en el sistema operativo.
+
+3- Gestión de Recursos y Variables de Entorno: Facilita la inyección segura de credenciales mediante archivos **.env** y mapeo de puertos hacia la máquina host de manera limpia y controlada.
+
+# 🔗 Enlace de descarga oficial
+Puedes descargar la versión correspondiente para tu sistema operativo (Windows, macOS o Linux) desde el sitio web oficial:
+
+° [Sitio Oficial de Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
 > ⚠️ *Nota: Los nombres de las clases y entidades están a modo de sugerencia y están dispuestos a modificaciones según avance el desarrollo.*
