@@ -1,5 +1,6 @@
 package com.insightedulab.backend_java.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.insightedulab.backend_java.model.enums.ClasificacionSentimiento;
 import com.insightedulab.backend_java.model.enums.TipoAutor;
 import jakarta.persistence.*;
@@ -26,7 +27,6 @@ public class PackageResult {
     private String tipoServidor;           // Canal o servidor de origen
 
     // Relación relacional con las interacciones que dieron origen a este paquete
-    @com.fasterxml.jackson.annotation.JsonManagedReference
     @OneToMany(mappedBy = "packageResult", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Interaction> interacciones;
 

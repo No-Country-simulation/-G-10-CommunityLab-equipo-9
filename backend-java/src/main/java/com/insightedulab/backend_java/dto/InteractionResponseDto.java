@@ -13,7 +13,8 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class InteractionInputDto {
+public class InteractionResponseDto {
+    private Long id;
     private String discordId;
     private String channelId;
     private String authorId;
@@ -24,4 +25,5 @@ public class InteractionInputDto {
     private TipoAutor tipoAutor;
     private ClasificacionSentimiento clasificacionSentimiento;
     private Instant timestampMensaje;
+    // Omitimos la referencia a PackageResult para romper el ciclo por completo
 }

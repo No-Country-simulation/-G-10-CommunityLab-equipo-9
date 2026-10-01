@@ -1,9 +1,6 @@
 package com.insightedulab.backend_java.controller;
 
-import com.insightedulab.backend_java.dto.CommunityProcessRequestDto;
-import com.insightedulab.backend_java.dto.CommunityProcessResponseDto;
-import com.insightedulab.backend_java.dto.CurationRequestDto;
-import com.insightedulab.backend_java.dto.OciUploadResponseDto;
+import com.insightedulab.backend_java.dto.*;
 import com.insightedulab.backend_java.model.PackageResult;
 import com.insightedulab.backend_java.service.CommunityService;
 import org.springframework.http.ResponseEntity;
@@ -38,9 +35,7 @@ public class CommunityController {
 
         int total = request.getInteracciones().size();
 
-        
-        PackageResult pkg = communityService.processBatch(request);
-
+        communityService.processBatch(request);
 
         // 2. Respuesta formal tipada para Discord
         CommunityProcessResponseDto response = CommunityProcessResponseDto.builder()
@@ -55,26 +50,91 @@ public class CommunityController {
     }
 
     @PutMapping("/curation/{id}")
-    public ResponseEntity<PackageResult> updateCuration(
+    public ResponseEntity<PackageResultResponseDto> updateCuration(
             @PathVariable Long id,
             @RequestBody CurationRequestDto dto) {
         PackageResult updated = communityService.updateCuration(id, dto);
-        return ResponseEntity.ok(updated);
+
+        // Mapeamos la entidad actualizada a su respectivo DTO de respuesta
+        PackageResultResponseDto responseDto = mapToPackageResultResponseDto(updated);
+        return ResponseEntity.ok(responseDto);
     }
+
     @PostMapping({"/upload-report/{packageId}", "/oci/upload-report/{packageId}"})
     public ResponseEntity<OciUploadResponseDto> uploadReport(@PathVariable Long packageId) {
         OciUploadResponseDto response = communityService.uploadReportToOci(packageId);
         return ResponseEntity.ok(response);
     }
+
     @GetMapping("/packages")
-    public ResponseEntity<List<PackageResult>> getAllPackages() {
-        return ResponseEntity.ok(communityService.getAllPackages());
+    public ResponseEntity<List<PackageResultResponseDto>> getAllPackages() {
+        List<PackageResult> packages = communityService.getAllPackages();
+
+        // Mapeamos la lista de entidades a una lista de DTOs
+        List<PackageResultResponseDto> responseDtos = packages.stream()
+                .map(this::mapToPackageResultResponseDto)
+                .toList();
+
+        return ResponseEntity.ok(responseDtos);
     }
+
     @GetMapping("/packages/{id}")
-    public ResponseEntity<PackageResult> getPackageById(@PathVariable Long id) {
-        return ResponseEntity.ok(communityService.getPackageById(id));
-    }  
-    
+    public ResponseEntity<PackageResultResponseDto> getPackageById(@PathVariable Long id) {
+        PackageResult pkg = communityService.getPackageById(id);
+
+        // Mapeamos la entidad individual a su DTO de respuesta
+        PackageResultResponseDto responseDto = mapToPackageResultResponseDto(pkg);
+        return ResponseEntity.ok(responseDto);
+    }
+
+    /**
+     * Método auxiliar de mapeo de Entidad a DTO (Puedes moverlo a un Mapper dedicado si prefieres)
+     */
+    private PackageResultResponseDto mapToPackageResultResponseDto(PackageResult pkg) {
+        if (pkg == null) {
+            return null;
+        }
+
+        List<InteractionResponseDto> interactionDtos = null;
+        if (pkg.getInteracciones() != null) {
+            interactionDtos = pkg.getInteracciones().stream()
+                    .map(i -> InteractionResponseDto.builder()
+                            .id(i.getId())
+                            .discordId(i.getDiscordId())
+                            .channelId(i.getChannelId())
+                            .authorId(i.getAuthorId())
+                            .authorUsername(i.getAuthorUsername())
+                            .autorNombre(i.getAutorNombre())
+                            .autorRol(i.getAutorRol())
+                            .textoMensaje(i.getTextoMensaje())
+                            .tipoAutor(i.getTipoAutor())
+                            .clasificacionSentimiento(i.getClasificacionSentimiento())
+                            .timestampMensaje(i.getTimestampMensaje())
+                            .build())
+                    .toList();
+        }
+
+        return PackageResultResponseDto.builder()
+                .id(pkg.getId())
+                .logId(pkg.getLogId())
+                .loteId(pkg.getLoteId())
+                .tipoServidor(pkg.getTipoServidor())
+                .interacciones(interactionDtos)
+                .tipoAutorRespuesta(pkg.getTipoAutorRespuesta())
+                .clasificacionSentimiento(pkg.getClasificacionSentimiento())
+                .respuestaAi(pkg.getRespuestaAi())
+                .postLinkedin(pkg.getPostLinkedin())
+                .temaFaq(pkg.getTemaFaq())
+                .preguntaFaq(pkg.getPreguntaFaq())
+                .respuestaFaq(pkg.getRespuestaFaq())
+                .tokensIn(pkg.getTokensIn())
+                .tokensOut(pkg.getTokensOut())
+                .similitudPromedio(pkg.getSimilitudPromedio())
+                .fueEditadoPorHumano(pkg.getFueEditadoPorHumano())
+                .tiempoCuraduriaSeg(pkg.getTiempoCuraduriaSeg())
+                .timestampInicio(pkg.getTimestampInicio())
+                .timestampFin(pkg.getTimestampFin())
+                .statusOci(pkg.getStatusOci())
+                .build();
+    }
 }
-
-
