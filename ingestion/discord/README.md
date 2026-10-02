@@ -24,19 +24,27 @@ ingestion/discord/
 │   └── EVENT_CATALOG.md         ← interpretación del brief y catálogo de eventos
 ├── config.py                 ← lee la configuración del .env
 ├── discord_api.py            ← cliente de la API de Discord (autenticación, reintentos y límites)
+├── contract.py               ← el contrato v1 como código (pydantic); genera el JSON Schema
+├── transform.py              ← convierte un mensaje de Discord al contrato (sin internet)
 ├── verify_connection.py      ← paso 1: comprueba la conexión del bot
 ├── simulate_students.py      ← paso 2: publica conversaciones de alumnos ficticios
-├── extract.py                ← paso 3: extrae los mensajes a data/raw/
+├── extract.py                ← paso 3: extrae los mensajes y los roles a data/raw/
+├── build_batch.py            ← paso 4: transforma, valida y arma el lote en data/batches/
+├── send_batch.py             ← paso 5: envía el lote a backend (opción C: etiqueta + caja)
+├── schema/
+│   └── contract_v1.schema.json ← la especificación del contrato para backend (generada)
+├── tests/                    ← pruebas automáticas (pytest)
 ├── simulation/
 │   └── conversations.json    ← las conversaciones simuladas (se pueden editar)
 ├── prototypes/
 │   └── contract_prototype.py ← prototipo desechable que generó los ejemplos de docs/CONTRACT.md
 ├── requirements.txt          ← librerías de Python
+├── pytest.ini                ← configuración de las pruebas
 ├── .env.example              ← plantilla de configuración
 └── .gitignore                ← evita subir data/ al repo
 ```
 
-`data/` (los mensajes extraídos) y `.env` (los secretos) existen solo en tu computador y **nunca se suben al repo**.
+`data/` (los mensajes extraídos, los lotes y el marcador) y `.env` (los secretos) existen solo en tu computador y **nunca se suben al repo**.
 
 ## 1. Preparar Discord (una sola vez)
 
@@ -75,6 +83,10 @@ Abre `.env` y completa:
 | `DISCORD_BOT_TOKEN` | Developer Portal → tu aplicación → **Bot** → **Reset Token** |
 | `DISCORD_GUILD_ID`, `DISCORD_CHANNEL_DUDAS_ID`, `DISCORD_CHANNEL_LOGROS_ID` | Los muestra `verify_connection.py` (paso 1 de la sección siguiente) |
 | `DISCORD_WEBHOOK_DUDAS_URL`, `DISCORD_WEBHOOK_LOGROS_URL` | En cada canal: **Integraciones → Webhooks → Copiar URL del webhook** |
+| `DISCORD_MENTOR_ROLE_IDS`, `DISCORD_STAFF_ROLE_IDS` | **Ajustes del servidor → Roles →** clic derecho en el rol **→ Copiar ID del rol** (requiere el Modo desarrollador) |
+| `SIMULATED_MENTORS` | Los mentores simulados por su `autor.id`, por ejemplo `sim-andres-mentor` |
+| `BACKEND_INGEST_URL` | La puerta de backend. Opcional: sin ella, `send_batch.py --prueba` funciona igual |
+| `INGEST_REREAD_DAYS` | Días que se releen en cada extracción (por defecto, 7) |
 
 ## 4. Usar (en este orden)
 
@@ -82,7 +94,14 @@ Abre `.env` y completa:
 |---|---|---|
 | 1 | `.\.venv\Scripts\python.exe verify_connection.py` | Comprueba el token, el permiso de contenido y la lectura de cada canal, y muestra los IDs para el `.env`. Solo lee |
 | 2 | `.\.venv\Scripts\python.exe simulate_students.py` | Publica las conversaciones de `simulation/conversations.json`. **Ejecútalo una sola vez**: cada ejecución vuelve a publicar todo y los mensajes se duplican |
-| 3 | `.\.venv\Scripts\python.exe extract.py` | Descarga todos los mensajes de los dos canales a `data/raw/<canal>.json`, sin modificarlos. Solo lee |
+| 3 | `.\.venv\Scripts\python.exe extract.py` | Descarga los mensajes de los dos canales a `data/raw/<canal>.json`, sin modificarlos, y guarda los roles en `data/raw/context.json`. La primera vez trae todo el historial; después, solo lo nuevo y los últimos días. Con `--todo`, siempre todo. Solo lee |
+| 4 | `.\.venv\Scripts\python.exe build_batch.py` | Transforma los mensajes al contrato, **valida cada uno** y escribe el lote en `data/batches/`. Si un mensaje no cumple el contrato, dice qué campo falla |
+| 5 | `.\.venv\Scripts\python.exe send_batch.py --prueba` | Muestra lo que se enviaría a backend (opción C, "etiqueta + caja"), sin enviar nada |
+| 5 | `.\.venv\Scripts\python.exe send_batch.py` | Envía el último lote a backend. Si backend confirma, guarda el marcador para que la próxima extracción pida solo lo nuevo |
+
+**Pruebas automáticas:** `.\.venv\Scripts\python.exe -m pytest` comprueba cada regla del contrato con mensajes de ejemplo. No se conecta a Discord ni usa `data/`.
+
+**Si cambias el contrato en `contract.py`:** corre `.\.venv\Scripts\python.exe contract.py` para regenerar `schema/contract_v1.schema.json`. Una prueba avisa si te olvidas.
 
 ## Seguridad
 

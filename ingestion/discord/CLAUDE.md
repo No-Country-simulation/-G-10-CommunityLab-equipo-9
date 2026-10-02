@@ -39,8 +39,14 @@ Lee, en este orden:
   Los ejemplos de la §7 salen de [prototypes/contract_prototype.py](prototypes/contract_prototype.py), un prototipo desechable.
 - **Del brief no entran:** X, newsletters ni *Community Highlights* (ver [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md)).
 - **Hecho (2026-10-02): comparación con backend** (`feature/java-core-api`, commit b5e03e9), documentada en [docs/INGESTION_GUIDE.md](docs/INGESTION_GUIDE.md). Falta la respuesta de backend sobre las opciones A, B y C.
-- **Luego:** el modelo `pydantic` que genera el JSON Schema, la transformación de `data/raw/` al contrato (con el marcador `after` de P6), la validación de todos los mensajes, la entrega (O5) y el pull request a `main` (meta: 2026-10-10).
-- **Luego: O5.** Salida a archivo, POST a la API Java y especificación del endpoint para backend.
+- **Hecho (2026-10-02): la ingesta por lotes completa.**
+  - Archivos: `contract.py` (pydantic y JSON Schema), `transform.py` (función pura), `extract.py` (incremental, con marcador, relectura de 7 días y roles en `context.json`), `build_batch.py` (valida y arma el lote) y `send_batch.py` (opción C, "etiqueta + caja", y marcador).
+  - 34 pruebas con `pytest`. Los 38 mensajes cumplen el contrato.
+- **Falta:**
+  - probar el envío contra el backend real cuando aplique la opción C;
+  - el pull request a `main` (meta: 2026-10-10);
+  - el bot en vivo, en otra rama.
+- **Especificación del endpoint para backend:** por ahora la cubren el JSON Schema y [docs/INGESTION_GUIDE.md](docs/INGESTION_GUIDE.md) §11. Se cierra cuando backend elija una opción.
 
 ## Cómo trabajar con el usuario
 

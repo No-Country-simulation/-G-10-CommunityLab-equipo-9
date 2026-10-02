@@ -773,7 +773,7 @@ tabla interacciones_originales
 - El sobre y la etiqueta usan los nombres de backend. La transformación todavía no está programada, así que no hay que rehacer nada.
 - `servidorId` y `generadoEn` se siguen enviando. 🔎 Si backend no los usa, Spring los ignora sin error.
 - Lee el recibo de backend para saber si el envío llegó.
-- Si backend elige esta opción, el contrato pasa a la **v0.3**: el formato de adentro de la caja no cambia; cambia el sobre.
+- **El contrato no cambia:** la etiqueta y el sobre son solo la forma de entregárselo a backend. Esto ya está programado en `send_batch.py`.
 
 ### Las tres opciones, lado a lado
 

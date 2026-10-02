@@ -297,5 +297,8 @@
 ## 9. Próximos pasos
 
 1. ~~**Validar este borrador.**~~ Hecho el 2026-10-01.
-2. **Comparar con backend (3.6):** poner este contrato al lado de su DTO y conversar las diferencias en las dos direcciones.
-3. **Programar:** el modelo `pydantic` que genera el JSON Schema, la transformación de `data/raw/` al contrato y la validación de todos los mensajes.
+2. ~~**Comparar con backend (3.6).**~~ Hecho el 2026-10-02: ver [INGESTION_GUIDE.md](INGESTION_GUIDE.md) §10 y §11. Falta la respuesta de backend sobre las opciones.
+3. ~~**Programar.**~~ Hecho el 2026-10-02:
+   - el contrato como código está en [contract.py](../contract.py), y su JSON Schema en [schema/contract_v1.schema.json](../schema/contract_v1.schema.json);
+   - la transformación está en [transform.py](../transform.py);
+   - los 38 mensajes de la muestra cumplen el contrato.

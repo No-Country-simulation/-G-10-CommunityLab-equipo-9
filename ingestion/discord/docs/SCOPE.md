@@ -76,7 +76,7 @@ Este documento fija la pauta de cómo entran los mensajes de Discord a InsightEd
 - **P3 · Privacidad y consentimiento.** Decidir si se anonimiza a los alumnos antes de guardar sus datos. Además, publicar un testimonio con nombre y cita en LinkedIn requiere el consentimiento del alumno.
 - **P4 · Fechas en Java.** Usar `Instant` u `OffsetDateTime`, no `LocalDateTime`, para no perder la zona horaria.
 - **P5 · Hilos y foros: descartados para el MVP.** Los mensajes dentro de un hilo o de un foro no aparecen en el historial del canal, y extraerlos exige recorrer los hilos aparte. Como el servidor de prueba lo diseñamos nosotros, `#dudas` es un canal normal y no se extraen hilos. **Limitación conocida:** si la institución real usa foros para las dudas, habrá que agregarlo. El brief pide "debates en foros", por eso el contrato v1 ya incluye el campo `hilo` (en `null`): agregar la extracción después no cambiará la versión del contrato.
-- **P6 · Extracción incremental.** Hoy `extract.py` descarga todo el historial en cada ejecución. En producción conviene pedir solo lo nuevo (parámetro `after` con el último ID guardado) y que la API Java ignore los IDs repetidos.
+- **P6 · Extracción incremental. Resuelto (2026-10-02).** `extract.py` pide solo lo posterior al marcador (parámetro `after`) y relee los últimos `INGEST_REREAD_DAYS` días (7 por defecto) para captar reacciones y ediciones. `send_batch.py` guarda el marcador cuando backend confirma la recepción. Falta del lado de backend: actualizar en lugar de duplicar (*upsert*), según [INGESTION_GUIDE.md](INGESTION_GUIDE.md) §9.
 - **P7 · Mensajes partidos.** Una idea suele llegar en varios mensajes (saludo, contexto y pregunta; o una imagen y después su descripción). Decidir si la agrupación la hace la ingesta o el motor IA. Ver [DISCORD_DATA_GUIDE.md](DISCORD_DATA_GUIDE.md) §14.
 ## 6. Criterios de terminado
 
@@ -84,7 +84,7 @@ Este documento fija la pauta de cómo entran los mensajes de Discord a InsightEd
 - [x] Un comando extrae todos los mensajes de ambos canales, incluida la paginación.
 - [x] No hay tokens, IDs ni URLs escritos en el código.
 - [x] Hay muestras crudas guardadas y un diccionario de datos ([DISCORD_DATA_GUIDE.md](DISCORD_DATA_GUIDE.md)).
-- [ ] El contrato v1 existe como JSON Schema y todos los mensajes extraídos lo cumplen.
-- [ ] La salida a archivo funciona y la salida HTTP está probada.
+- [x] El contrato v1 existe como JSON Schema ([schema/contract_v1.schema.json](../schema/contract_v1.schema.json)) y los 38 mensajes extraídos lo cumplen (2026-10-02).
+- [ ] La salida a archivo funciona y la salida HTTP está probada. La salida a archivo funciona. El envío HTTP (opción C) está probado contra un backend simulado; falta probarlo contra el backend real.
 - [ ] Backend recibió la especificación del endpoint.
 - [ ] Hay un pull request abierto hacia `main`.
