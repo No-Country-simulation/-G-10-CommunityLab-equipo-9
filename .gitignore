@@ -216,3 +216,32 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Datos generados localmente (ChromaDB, FAISS, JSONs)
+agents/*/data/
+agents/**/data/chroma/
+agents/**/data/vectorstore/
+agents/**/data/*.json
+
+# Credenciales OCI
+.oci/
+*.pem
+*.key
+
+# Imágenes generadas por LangGraph
+flujo_*.png
+*.mmd
+
+# Scripts temporales de prueba
+probar_*.py
+verificar_*.py
+diagnostico.py
+temp_*.py
+
+# Outputs locales
+output/
+outputs/
+logs/
+*.log
+# VS Code
+.vscode/
