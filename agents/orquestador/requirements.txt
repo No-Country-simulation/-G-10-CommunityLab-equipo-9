@@ -1,0 +1,13 @@
+aiohttp>=3.9.0
+python-dotenv>=1.0.0
+langchain-core
+langchain-cohere
+langchain-chroma
+chromadb
+langchain-oci
+oci
+fastapi>=0.110.0
+uvicorn>=0.28.0
+discord.py>=2.4.0
+langgraph
+laya[langchain]
