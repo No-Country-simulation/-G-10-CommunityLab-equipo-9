@@ -2,6 +2,7 @@
 
 Este módulo es la puerta de entrada de InsightEdu Lab: se conecta a Discord, extrae los mensajes de los canales `#dudas` y `#logros` y los prepara para el resto del sistema.
 
+- **Empieza aquí si eres nuevo** (explicación completa para el equipo y comparación con backend): [docs/INGESTION_GUIDE.md](docs/INGESTION_GUIDE.md)
 - **Qué pide el cliente y qué entra en el MVP:** [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md)
 - **Qué incluye y qué no:** [docs/SCOPE.md](docs/SCOPE.md)
 - **Cómo son los datos de Discord** (léelo si nunca trabajaste con Discord): [docs/DISCORD_DATA_GUIDE.md](docs/DISCORD_DATA_GUIDE.md)
@@ -14,6 +15,7 @@ Este módulo es la puerta de entrada de InsightEdu Lab: se conecta a Discord, ex
 ingestion/discord/
 ├── README.md                 ← este archivo
 ├── docs/
+│   ├── INGESTION_GUIDE.md       ← explicación completa para el equipo y comparación con backend
 │   ├── PROJECT_BRIEF.md         ← el brief del cliente, objetivos y qué entra en el MVP
 │   ├── SCOPE.md                 ← alcance, decisiones y pendientes
 │   ├── CONTRACT.md              ← contrato de ingesta (el formato que recibe el sistema)

@@ -12,6 +12,7 @@ Lee, en este orden:
 5. [docs/EVENT_CATALOG.md](docs/EVENT_CATALOG.md): el catálogo de eventos de la comunidad, que es la base del contrato.
 6. [docs/ARCHITECTURE_PROPOSAL.md](docs/ARCHITECTURE_PROPOSAL.md): la arquitectura propuesta (dos flujos, un contrato). Por ahora se discute solo con el usuario, no con el equipo.
 7. [docs/CONTRACT.md](docs/CONTRACT.md): el contrato de ingesta v1. Se diseñó de forma independiente de backend y del motor IA, y se compara con ellos después de validarlo.
+8. [docs/INGESTION_GUIDE.md](docs/INGESTION_GUIDE.md): la explicación para el equipo (nivel training), con lotes y en vivo, los duplicados, la comparación con backend y las opciones A, B y C (se recomienda la C, "etiqueta + caja").
 
 ## Proyecto
 
@@ -37,8 +38,8 @@ Lee, en este orden:
   - el campo `hilo` existe desde la v1, en `null`.
   Los ejemplos de la §7 salen de [prototypes/contract_prototype.py](prototypes/contract_prototype.py), un prototipo desechable.
 - **Del brief no entran:** X, newsletters ni *Community Highlights* (ver [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md)).
-- **Después (3.6): comparar con backend.** Recién ahí, mirar el DTO de backend y conversar las diferencias en las dos direcciones. Está en la rama `feature/java-core-api`: `POST /api/v1/community/process`, `CommunityProcessRequestDto` e `InteractionInputDto`.
-- **Luego:** el modelo `pydantic` que genera el JSON Schema, la transformación de `data/raw/` al contrato, la validación de todos los mensajes, la entrega (O5) y el pull request a `main`.
+- **Hecho (2026-10-02): comparación con backend** (`feature/java-core-api`, commit b5e03e9), documentada en [docs/INGESTION_GUIDE.md](docs/INGESTION_GUIDE.md). Falta la respuesta de backend sobre las opciones A, B y C.
+- **Luego:** el modelo `pydantic` que genera el JSON Schema, la transformación de `data/raw/` al contrato (con el marcador `after` de P6), la validación de todos los mensajes, la entrega (O5) y el pull request a `main` (meta: 2026-10-10).
 - **Luego: O5.** Salida a archivo, POST a la API Java y especificación del endpoint para backend.
 
 ## Cómo trabajar con el usuario
