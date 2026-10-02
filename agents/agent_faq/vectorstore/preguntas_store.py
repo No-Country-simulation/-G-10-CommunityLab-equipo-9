@@ -12,7 +12,7 @@ from ..config import (
     RUTA_FAISS_PREGUNTAS,
     RUTA_HISTORIAL_PREGUNTAS,
     TOP_K_PREGUNTAS,
-    UMBRAL_PREGUNTA_REPETIDA,
+    FAQ_UMBRAL_PREGUNTA_REPETIDA,
 )
 from .embedding_models import select_embeddings, requiere_prefijo_e5
 from ..contratos import PreguntaSimilar
@@ -51,7 +51,7 @@ class PreguntasStore:
         for doc, score in resultados:
             # FAISS retorna distancia; convertir a similitud (aproximación)
             similitud = 1.0 / (1.0 + float(score))
-            if similitud >= UMBRAL_PREGUNTA_REPETIDA:
+            if similitud >= FAQ_UMBRAL_PREGUNTA_REPETIDA:
                 similares.append(
                     PreguntaSimilar(
                         pregunta=doc.page_content.replace("passage: ", "").replace("query: ", "").strip(),

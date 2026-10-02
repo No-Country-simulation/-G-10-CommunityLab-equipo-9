@@ -2,15 +2,15 @@
 Reranking local con Cross-Encoder para mejorar precisión del RAG.
 """
 from sentence_transformers import CrossEncoder
-from ..config import RERANKER_MODEL, TOP_N_RERANK
+from ..config import FAQ_RERANKER_MODEL, TOP_N_RERANK
 
 
 class Reranker:
     """Wrapper del Cross-Encoder para reranking de documentos."""
 
     def __init__(self):
-        print(f"[reranker] Cargando modelo {RERANKER_MODEL}...")
-        self.model = CrossEncoder(RERANKER_MODEL, max_length=512)
+        print(f"[reranker] Cargando modelo {FAQ_RERANKER_MODEL}...")
+        self.model = CrossEncoder(FAQ_RERANKER_MODEL, max_length=512)
 
     def rerank(self, query: str, documentos: list, top_n: int = TOP_N_RERANK) -> list:
         """Reordena documentos por relevancia semántica real."""

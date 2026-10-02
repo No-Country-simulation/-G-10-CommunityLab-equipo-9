@@ -14,8 +14,8 @@ class BuscadorOutput(BaseModel):
     score_fidelidad: float = Field(ge=0.0, le=1.0, description="Score de fidelidad al contexto.")
     fuente: Optional[str] = Field(default=None, description="Fuente citada (archivo + página).")
     alucinacion_detectada: bool = Field(default=False, description="True si el guardrail detectó alucinación.")
+    revision_recomendada: bool = Field(default=False, description="True si requiere revisión humana por fidelidad media.")
     motivo_fallo: Optional[str] = Field(default=None, description="Razón si no se encontró respuesta.")
-
 
 class EvaluacionFidelidad(BaseModel):
     """Output del guardrail anti-alucinación."""

@@ -7,7 +7,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import BaseOutputParser
 
 from ..config import (
-    UMBRAL_SIMILITUD_RAG, UMBRAL_FIDELIDAD,
+    FAQ_UMBRAL_SIMILITUD, FAQ_UMBRAL_FIDELIDAD, FAQ_UMBRAL_REVISION,
 )
 from ..contratos import EvaluacionFidelidad, BuscadorOutput
 from ..prompts.prompts import PROMPT_RAG_FAQ, PROMPT_GUARDRAIL
@@ -69,6 +69,7 @@ class BuscadorTool:
     def ejecutar(self, pregunta: str) -> dict:
         """
         Ejecuta la búsqueda RAG completa con rerank y guardrail.
+        Aplica los umbrales definidos en config.py.
         """
         # 1. Retrieval amplio
         candidatos = self.store.buscar(pregunta)
@@ -102,6 +103,8 @@ class BuscadorTool:
         evaluacion = self.guardrail.invoke(
             PROMPT_GUARDRAIL.format(contexto=contexto, pregunta=pregunta, respuesta=respuesta)
         )
+
+        # 5a. Si el guardrail detecta alucinación → rechazar
         if not evaluacion.fiel_al_contexto:
             return BuscadorOutput(
                 respuesta="",
@@ -112,7 +115,30 @@ class BuscadorTool:
                 motivo_fallo=f"Alucinación: {evaluacion.justificacion}",
             ).model_dump()
 
-        # 6. Éxito
+        # 5b. Aplicar umbral de fidelidad
+        if evaluacion.score_fidelidad < FAQ_UMBRAL_FIDELIDAD:
+            # Si está entre el umbral de revisión y el de fidelidad → marcar para revisión
+            if evaluacion.score_fidelidad >= FAQ_UMBRAL_REVISION:
+                return BuscadorOutput(
+                    respuesta=respuesta,
+                    encontrado=True,
+                    score_similitud=round(evaluacion.score_fidelidad, 4),
+                    score_fidelidad=evaluacion.score_fidelidad,
+                    fuente=citaciones[0] if citaciones else None,
+                    revision_recomendada=True,
+                    motivo_fallo=f"Fidelidad media ({evaluacion.score_fidelidad:.2f} < {FAQ_UMBRAL_FIDELIDAD}). Requiere revisión.",
+                ).model_dump()
+            # Si está por debajo del umbral de revisión → rechazar
+            else:
+                return BuscadorOutput(
+                    respuesta="",
+                    encontrado=False,
+                    score_similitud=0.0,
+                    score_fidelidad=evaluacion.score_fidelidad,
+                    motivo_fallo=f"Fidelidad baja ({evaluacion.score_fidelidad:.2f} < {FAQ_UMBRAL_REVISION}).",
+                ).model_dump()
+
+        # 6. Éxito (fidelidad ≥ FAQ_UMBRAL_FIDELIDAD)
         return BuscadorOutput(
             respuesta=respuesta,
             encontrado=True,

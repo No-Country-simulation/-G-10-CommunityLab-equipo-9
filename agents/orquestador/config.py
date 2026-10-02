@@ -29,7 +29,10 @@ COHERE_API_KEY: str | None = os.getenv("COHERE_API_KEY")
 ANTHROPIC_API_KEY: str | None = os.getenv("ANTHROPIC_API_KEY")
 
 # Laya (especial)
-LAYA_ENABLED: bool = os.getenv("LAYA_ENABLED", "false").lower() == "true"
+# LAYA actualmente se encuentra en entrenamiento, por lo que no se recomienda su uso en producción.
+# Para activar LAYA_ENABLED: bool = os.getenv("LAYA_ENABLED", "false")
+
+LAYA_ENABLED: bool = False  
 LAYA_MODEL: str = os.getenv("LAYA_MODEL", "multilingual")
 
 # --- 3. SUB-AGENTES ---
@@ -45,8 +48,14 @@ MOD_MODEL: str = os.getenv("MOD_MODEL", "gpt-4o-mini")
 OPENAI_API_KEY: str | None = os.getenv("OPENAI_API_KEY")
 
 # Rutas de importación dinámica de sub-agentes
-SUBAGENTE_MOD_PATH: str = "agents.agent_mod.agente_mod.AgenteMod"
-SUBAGENTE_FAQ_PATH: str = "agents.agent_faq.agente_faq.AgenteFAQ"
+ORQ_SUBAGENTE_FAQ_PATH: str = os.getenv(
+    "ORQ_SUBAGENTE_FAQ_PATH",
+    "agents.agent_faq.agente_faq.AgenteFAQ"
+)
+ORQ_SUBAGENTE_MOD_PATH: str = os.getenv(
+    "ORQ_SUBAGENTE_MOD_PATH",
+    "agents.agent_mod.agente_mod.AgenteMod"
+)
 
 
 # --- FILTROS ---
