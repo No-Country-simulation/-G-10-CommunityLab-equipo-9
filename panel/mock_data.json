@@ -1,8 +1,22 @@
 {
-  "logId": "log_2026-09-27_001",
-  "loteId": "lote_2026-09-27_001",
-  "postLinkedin": "🚀 ¡Excelente actividad en nuestra comunidad de Discord! Analizamos el flujo de interacciones y la recepción del bot fue todo un éxito. #ComunityLab #Tech #Automation",
+  "id": 1,
+  "logId": "log_2026-10-01_001",
+  "loteId": "lote_2026-10-01_001",
+  "tipoServidor": "Discord_ONE_G10",
+  "interacciones": [],
+  "tipoAutorRespuesta": "IA",
+  "clasificacionSentimiento": "POSITIVO",
+  "respuestaAi": "Respuesta cruda generada por el agente RAG...",
+  "postLinkedin": "🚀 ¡Excelente actividad en nuestra comunidad de Discord!...",
   "temaFaq": "Comandos del Bot",
   "preguntaFaq": "¿Cómo verifico si el bot está funcionando?",
-  "respuestaFaq": "Puedes utilizar el comando /ping para comprobar el estado de respuesta del bot en tiempo real."
+  "respuestaFaq": "Puedes utilizar el comando /ping...",
+  "tokensIn": 1540,
+  "tokensOut": 230,
+  "similitudPromedio": 0.89,
+  "fueEditadoPorHumano": false,
+  "tiempoCuraduriaSeg": 0,
+  "timestampInicio": "2026-10-01T20:00:00Z",
+  "timestampFin": "2026-10-01T20:01:05Z",
+  "statusOci": "PENDIENTE"
 }
