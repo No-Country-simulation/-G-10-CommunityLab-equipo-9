@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{url_back}}/api/v1/community/upload-report/2"
+method: POST
+body:
+  type: json
+  content: ""
+order: 1000

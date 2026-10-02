@@ -1,0 +1,57 @@
+$kind: http-request
+url: "{{url_back}}/api/v1/community/oci/upload-report/1"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"name\": \"Subir Reporte a OCI\",\r
+
+    \  \"request\": {\r
+
+    \    \"method\": \"POST\",\r
+
+    \    \"header\": [\r
+
+    \      {\r
+
+    \        \"key\": \"Accept\",\r
+
+    \        \"value\": \"application/json\"\r
+
+    \      }\r
+
+    \    ],\r
+
+    \    \"url\": {\r
+
+    \      \"raw\": \"{{url_back}}/api/v1/community/upload-report/1\",\r
+
+    \      \"host\": [\r
+
+    \        \"{{url_back}}\"\r
+
+    \      ],\r
+
+    \      \"path\": [\r
+
+    \        \"api\",\r
+
+    \        \"v1\",\r
+
+    \        \"community\",\r
+
+    \        \"upload-report\",\r
+
+    \        \"1\"\r
+
+    \      ]\r
+
+    \    }\r
+
+    \  },\r
+
+    \  \"response\": []\r
+
+    }"
+order: 2000

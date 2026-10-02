@@ -1,0 +1,39 @@
+$kind: http-request
+url: "{{url_back}}/api/v1/community/process"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"loteId\": \"lote-discord-001\",\r
+
+    \  \"tipoServidor\": \"DEVELOPER\",\r
+
+    \  \"interacciones\": [\r
+
+    \    {\r
+
+    \      \"discordId\": \"123456789\",\r
+
+    \      \"channelId\": \"987654321\",\r
+
+    \      \"authorId\": \"111222333\",\r
+
+    \      \"authorUsername\": \"dev_user\",\r
+
+    \      \"autorNombre\": \"Juan Pérez\",\r
+
+    \      \"autorRol\": \"Member\",\r
+
+    \      \"textoMensaje\": \"¿Cómo configuro Spring Security con JWT?\",\r
+
+    \      \"tipoAutor\": \"HUMANO\",\r
+
+    \      \"clasificacionSentimiento\": \"NEUTRO\"\r
+
+    \    }\r
+
+    \  ]\r
+
+    }"
+order: 1000

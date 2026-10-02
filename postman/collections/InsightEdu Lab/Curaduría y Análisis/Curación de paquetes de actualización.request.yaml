@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{url_back}}/api/v1/community/curation/1"
+method: PUT
+body:
+  type: json
+  content: "{\r
+
+    \  \"postLinkedin\": \"Hoy aprendimos sobre Spring Boot 3 y OCI...\",\r
+
+    \  \"temaFaq\": \"Seguridad\",\r
+
+    \  \"preguntaFaq\": \"¿Cómo configurar JWT?\",\r
+
+    \  \"respuestaFaq\": \"Se configura mediante un filtro de seguridad...\",\r
+
+    \  \"tipoAutorRespuesta\": \"AI\",\r
+
+    \  \"fueEditadoPorHumano\": true,\r
+
+    \  \"tiempoCuraduriaSeg\": 120\r
+
+    }"
+order: 1000

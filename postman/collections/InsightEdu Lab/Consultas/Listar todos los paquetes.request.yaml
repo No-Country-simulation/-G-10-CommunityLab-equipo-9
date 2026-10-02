@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{url_back}}/api/v1/community/packages"
+method: GET
+body:
+  type: json
+  content: ""
+order: 1000
