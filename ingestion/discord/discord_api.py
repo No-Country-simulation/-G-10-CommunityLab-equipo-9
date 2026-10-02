@@ -6,14 +6,22 @@ bot, un tiempo máximo de espera y el respeto de los límites de velocidad
 (rate limits) que impone Discord.
 """
 import time
+from datetime import datetime
 
 import httpx
 
 API_BASE = "https://discord.com/api/v10"
+# 📘 Los IDs de Discord (snowflakes) guardan en sus bits 63 a 22 los milisegundos desde esta fecha (2015-01-01).
+EPOCA_DISCORD_MS = 1420070400000
 # Discord exige que los bots se identifiquen con este formato de User-Agent.
 USER_AGENT = "DiscordBot (https://github.com/No-Country-simulation/-G-10-CommunityLab-equipo-9, 0.1.0)"
 TIMEOUT_SEGUNDOS = 10.0
 MAX_INTENTOS = 3
+
+
+def snowflake_desde_fecha(fecha: datetime) -> int:
+    """📘 Un ID "fabricado" para una fecha: sirve para pedir "los mensajes posteriores a tal día" con after."""
+    return (int(fecha.timestamp() * 1000) - EPOCA_DISCORD_MS) << 22
 
 
 class DiscordAPIError(Exception):
