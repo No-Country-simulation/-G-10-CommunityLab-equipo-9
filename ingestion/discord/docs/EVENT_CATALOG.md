@@ -1,6 +1,6 @@
 # Catálogo de eventos de la comunidad — InsightEdu Lab
 
-> **Estado:** aprobado v1.0 · **Fecha:** 2026-09-29 · **Rama:** `feature/discord-ingestion`
+> **Estado:** aprobado v1.1 · **Fecha:** 2026-10-01 · **Rama:** `feature/discord-ingestion`
 
 ## 0. Sobre este documento
 
@@ -20,7 +20,7 @@ Si nunca trabajaste con Discord, lee antes la sección 2 de la [guía de datos](
 
 ## 1. Qué nos pide el proyecto
 
-> Una lectura ordenada del brief, sin repeticiones, para que todos partamos de lo mismo.
+> Una lectura ordenada del brief, sin repeticiones, para que todos partamos de lo mismo. El texto del brief, los objetivos de negocio y las decisiones del MVP están en [PROJECT_BRIEF.md](PROJECT_BRIEF.md).
 
 ### 1.1 En una frase
 Convertir automáticamente la actividad de una comunidad EduTech en Discord en **activos de marketing, contenido educativo y alertas de retención**, con una persona que revisa y aprueba antes de publicar.
@@ -58,6 +58,7 @@ El brief repite las mismas ideas en tres listas: problemas (PR1–PR4), necesida
 | `DB` | Dashboard de salud con alertas | CM | ✅ |
 | `BOT` | Bot que responde dudas en vivo con la documentación de la institución | Estudiantes | ✅ (lo agrega el equipo; el brief no lo pide) |
 | — | Resumen semanal *Community Highlights* | CM y la comunidad | ❌ Fuera del MVP |
+| — | Publicaciones para X (Twitter) y newsletters | Marketing | ❌ Fuera del MVP: solo LinkedIn (2026-10-01) |
 
 ### 1.5 Decisiones del equipo
 - **El bot en vivo entra en el MVP.** Por eso la ingesta en tiempo real deja de ser "algún día": el bot la necesita.
