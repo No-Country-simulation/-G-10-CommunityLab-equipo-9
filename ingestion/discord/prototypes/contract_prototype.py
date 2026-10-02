@@ -55,6 +55,7 @@ def a_contrato(m: dict, canal_nombre: str) -> dict:
     return {
         "id": m["id"],
         "canal": {"id": m["channel_id"], "nombre": canal_nombre},
+        "hilo": None,
         "fecha": fecha_utc(m["timestamp"]),
         "tipo": TIPOS.get(m["type"], "otro"),
         "tipoDiscord": m["type"],

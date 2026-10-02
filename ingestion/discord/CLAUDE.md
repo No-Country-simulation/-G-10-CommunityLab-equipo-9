@@ -6,15 +6,16 @@ Contexto para Claude Code al trabajar en `ingestion/discord/`, desde cualquier m
 
 Lee, en este orden:
 1. [README.md](README.md): qué es el módulo y cómo se corre.
-2. [docs/SCOPE.md](docs/SCOPE.md): objetivos O1–O5, decisiones, pendientes P1–P7 y criterios de terminado.
-3. [docs/DISCORD_DATA_GUIDE.md](docs/DISCORD_DATA_GUIDE.md): cómo son los datos de Discord (hallazgos, riesgos e implicaciones para el contrato).
-4. [docs/EVENT_CATALOG.md](docs/EVENT_CATALOG.md): la interpretación del brief del proyecto y el catálogo de eventos de la comunidad, que es la base del contrato.
-5. [docs/ARCHITECTURE_PROPOSAL.md](docs/ARCHITECTURE_PROPOSAL.md): la arquitectura propuesta (dos flujos, un contrato), pendiente de discutir con el equipo.
-6. [docs/CONTRACT.md](docs/CONTRACT.md): el contrato de ingesta v1. Se diseñó de forma independiente de backend y del motor IA, y se compara con ellos después de validarlo.
+2. [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md): el brief del cliente, los objetivos de negocio y qué entra en el MVP. Es la referencia para decidir el contrato.
+3. [docs/SCOPE.md](docs/SCOPE.md): objetivos O1–O5, decisiones, pendientes P1–P7 y criterios de terminado.
+4. [docs/DISCORD_DATA_GUIDE.md](docs/DISCORD_DATA_GUIDE.md): cómo son los datos de Discord (hallazgos, riesgos e implicaciones para el contrato).
+5. [docs/EVENT_CATALOG.md](docs/EVENT_CATALOG.md): el catálogo de eventos de la comunidad, que es la base del contrato.
+6. [docs/ARCHITECTURE_PROPOSAL.md](docs/ARCHITECTURE_PROPOSAL.md): la arquitectura propuesta (dos flujos, un contrato). Por ahora se discute solo con el usuario, no con el equipo.
+7. [docs/CONTRACT.md](docs/CONTRACT.md): el contrato de ingesta v1. Se diseñó de forma independiente de backend y del motor IA, y se compara con ellos después de validarlo.
 
 ## Proyecto
 
-- **InsightEdu Lab:** hackatón de No Country y ONE, grupo G10, equipo 9. Dura 5 semanas; al 2026-09-28 había pasado 1.
+- **InsightEdu Lab:** hackatón de No Country y ONE, grupo G10, equipo 9. Dura 5 semanas; **la entrega final es el 2026-10-26**. Solo Discord.
 - **Flujo:** Discord → ingesta (este módulo, en Python) → API Java (`backend-java/`) → motor IA con LLM (`agents/`, rama `feature/ai-engine`) → API Java → respuesta en Discord (fase 2).
 - **Canales:** `#dudas` y `#logros`. Todo está simulado en un servidor de pruebas.
 - **Equipo:** nivel training, sin experiencia previa con Discord. La ingesta define la pauta (el contrato) que el backend implementa.
@@ -31,14 +32,11 @@ Lee, en este orden:
   - En el MVP no hay hilos ni foros (P5 descartado) ni datos de los miembros.
   - La ampliación de la simulación queda pospuesta.
   - Esta rama termina con el contrato v1, su entrega y un pull request a `main`. El bot en vivo va en otra rama.
-- **En curso: validar el borrador del contrato** ([docs/CONTRACT.md](docs/CONTRACT.md), v0.1). El usuario tiene que aprobar o cambiar las 6 decisiones de la §8:
-  1. `autor.id = "sim-" + nombre` para los simulados;
-  2. el rol del autor sale de una lista configurada;
-  3. la URL del adjunto se incluye con `urlExpiraEn`;
-  4. los avisos del sistema se envían marcados, sin filtrarlos;
-  5. `mencionaAlBot` cubre al bot y a su rol;
-  6. la encuesta y las vistas previas no tienen muestras todavía.
+- **Hecho (2026-10-01): contrato validado** ([docs/CONTRACT.md](docs/CONTRACT.md), v0.2). Las 7 decisiones de la §8 están aprobadas. Criterio: el contrato debe funcionar con una institución real, no solo con la simulación. Las más importantes:
+  - el rol del autor sale de sus roles reales de Discord, con un mapeo configurado y una lista de respaldo para los simulados;
+  - el campo `hilo` existe desde la v1, en `null`.
   Los ejemplos de la §7 salen de [prototypes/contract_prototype.py](prototypes/contract_prototype.py), un prototipo desechable.
+- **Del brief no entran:** X, newsletters ni *Community Highlights* (ver [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md)).
 - **Después (3.6): comparar con backend.** Recién ahí, mirar el DTO de backend y conversar las diferencias en las dos direcciones. Está en la rama `feature/java-core-api`: `POST /api/v1/community/process`, `CommunityProcessRequestDto` e `InteractionInputDto`.
 - **Luego:** el modelo `pydantic` que genera el JSON Schema, la transformación de `data/raw/` al contrato, la validación de todos los mensajes, la entrega (O5) y el pull request a `main`.
 - **Luego: O5.** Salida a archivo, POST a la API Java y especificación del endpoint para backend.

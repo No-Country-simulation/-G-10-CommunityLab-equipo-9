@@ -1,6 +1,6 @@
 # Contrato de ingesta v1 — InsightEdu Lab
 
-> **Estado:** borrador v0.1, para validar · **Fecha:** 2026-09-29 · **Rama:** `feature/discord-ingestion`
+> **Estado:** v0.2, decisiones aprobadas (falta comparar con backend) · **Fecha:** 2026-10-01 · **Rama:** `feature/discord-ingestion`
 
 ## 0. Sobre este documento
 
@@ -46,6 +46,7 @@
 |---|---|---|---|---|
 | `id` | texto | `"1554205178671009863"` | `id` | A1. También sirve para vincular respuestas (A6, A7) y evitar duplicados (P6) |
 | `canal` | objeto (§4.2) | `{ "id": "…", "nombre": "dudas" }` | `channel_id`; el nombre sale de la extracción | A1, A2, A4, B1, B5, D1, D2, E1, E4 |
+| `hilo` | objeto (§4.9) o `null` | `null` | El canal del mensaje, cuando es un hilo o una publicación de foro. **En el MVP siempre es `null`** (ver §8, decisión 7) | A1, A5, A6, A9, G3. El brief pide "debates en foros" ([PROJECT_BRIEF.md](PROJECT_BRIEF.md)) |
 | `fecha` | fecha | `"2026-09-28T18:56:30.331Z"` | `timestamp`, convertido a UTC con `Z` | A1, A2, A4, A5, A7, B1–B5, D1, D2, E1–E5, F2, H3 |
 | `tipo` | valor fijo (§5) | `"respuesta"` | Se deduce de `type` | A7, G4, I1. Distingue a las personas de los avisos del sistema |
 | `tipoDiscord` | entero | `19` | `type`, sin cambios | Trazabilidad: el valor original de Discord |
@@ -78,7 +79,7 @@
 | `nombreUsuario` | texto | `"Ana Pérez"` | `author.username` |
 | `nombreVisible` | texto | `"Ana Pérez"` | `author.global_name`; si no existe, `username` |
 | `tipo` | valor fijo (§5) | `"persona"` | Se deduce de `author.bot`, `webhook_id` y el ID de nuestro bot |
-| `rol` | valor fijo (§5) | `"mentor"` | Sale de una **lista configurada** de mentores y *staff*, no de Discord (ver §8). Si la persona no está en la lista, es `miembro` |
+| `rol` | valor fijo (§5) | `"mentor"` | Sale de los **roles de Discord del autor**, traducidos con una configuración que dice qué roles son de mentor y cuáles de *staff* (ver §8, decisión 2). Los alumnos simulados no tienen roles y usan una lista de respaldo. Si no corresponde ninguno, es `miembro`. Es el rol **al momento de la ingesta**, no el que tenía cuando escribió el mensaje |
 
 ### 4.2 `canal`
 
@@ -139,7 +140,15 @@
 | `opciones` | lista de `{ texto, votos }` | |
 | `finalizada` | booleano | |
 
-⚠️ Las §4.7 y §4.8 siguen la documentación de Discord, pero **todavía no hay muestras reales**. Se verifican cuando se amplíe la simulación.
+### 4.9 `hilo`
+
+| Campo | Tipo | Nota |
+|---|---|---|
+| `id` | texto | El ID del hilo, que en Discord es un canal |
+| `nombre` | texto | Por ejemplo `"Error con Gson"` |
+| `etiquetas` | lista de textos | Los nombres de las etiquetas aplicadas (`applied_tags`), solo en foros. `[]` si no hay |
+
+⚠️ Las §4.7, §4.8 y §4.9 siguen la documentación de Discord, pero **todavía no hay muestras reales**. Las §4.7 y §4.8 se verifican cuando se amplíe la simulación; la §4.9, cuando se extraigan hilos (fuera del MVP).
 
 ## 5. Valores fijos
 
@@ -155,8 +164,8 @@
 | | `botPropio` | Nuestro bot (A10) |
 | | `otroBot` | Cualquier otro bot o webhook (I2) |
 | `autor.rol` | `miembro` | Valor por defecto |
-| | `mentor` | Está en la lista configurada de mentores |
-| | `staff` | Está en la lista configurada de *staff* |
+| | `mentor` | Tiene un rol de Discord configurado como de mentor (los simulados: está en la lista de respaldo) |
+| | `staff` | Tiene un rol de Discord configurado como de *staff*. Si tiene los dos, gana `staff` |
 
 ## 6. Lo que NO está en el contrato
 
@@ -169,8 +178,8 @@
 | Mensajes partidos agrupados (A2, A3) | Es un cálculo derivado (P7) | IA o un paso posterior |
 | Deserción y tendencias (E3, E4) | Es un cálculo derivado | Dashboard |
 | Quién reaccionó (C2, G1) | Requiere una petición aparte por cada emoji | Una versión futura |
-| Hilos y foros (G3) | P5 está descartado para el MVP | — |
-| Fecha de ingreso y roles reales de Discord (F1, F3) | Decisión del MVP: no se extraen datos de los miembros | El rol sale de la lista configurada |
+| Los mensajes dentro de hilos y foros (G3) | Extraerlos está fuera del MVP (P5). El campo `hilo` existe, pero va en `null` | Una versión futura de la extracción |
+| Fecha de ingreso, lista de roles y cambios de rol (F1, F3) | Decisión del MVP: no se extraen datos de los miembros. Los roles solo se consultan para calcular `autor.rol` | — |
 | Borrados y salidas de miembros (G6, F4) | Solo existen en tiempo real | La versión de tiempo real |
 | Eventos programados (H2) | No son mensajes, y no están priorizados en el MVP | — |
 | Campos estéticos del perfil, `flags`, `components`, `tts`… | Ningún caso los usa | Quedan en los datos crudos |
@@ -192,6 +201,7 @@
     {
       "id": "1554205178671009863",
       "canal": { "id": "1554158212742127821", "nombre": "dudas" },
+      "hilo": null,
       "fecha": "2026-09-28T18:56:30.331Z",
       "tipo": "mensaje",
       "tipoDiscord": 0,
@@ -270,19 +280,22 @@
 
 **Resultado del prototipo:** los 38 mensajes se convierten sin errores. Los 7 alumnos simulados y el mentor quedan con **un solo ID cada uno en los dos canales**; antes, con el ID de Discord, Ana tenía un ID distinto en cada canal.
 
-## 8. Decisiones para validar
+## 8. Decisiones
 
-| # | Decisión | Propuesta | Por qué |
+> Todas aprobadas el 2026-10-01. El criterio fue que el contrato funcione con una comunidad real, no solo con la simulación ([PROJECT_BRIEF.md](PROJECT_BRIEF.md)).
+
+| # | Decisión | Qué se decidió | Por qué |
 |---|---|---|---|
-| 1 | Identidad de los alumnos simulados | `autor.id` = `sim-` más el nombre normalizado | Probado: da un ID estable en todos los canales |
-| 2 | Rol del autor (mentor o *staff*) | Una lista configurada: IDs de Discord en producción y nombres en la simulación | No se extraen datos de los miembros, pero A8, C2 y H1 necesitan reconocer a los mentores |
-| 3 | URL del adjunto | Se incluye, junto con `urlExpiraEn` | El bot en vivo puede usar la imagen (A3) porque la URL es reciente; en lotes quizá ya venció, y por eso se informa cuándo. **Cambia lo que decía la guía §12 ("sin la URL")** |
-| 4 | Avisos del sistema | Se envían marcados como `avisoSistema`, sin filtrarlos | La ingesta no decide qué es relevante; filtrar es trivial para quien consume |
+| 1 | Identidad de los alumnos simulados | `autor.id` = `sim-` más el nombre normalizado. Las personas reales usan su ID de Discord | Un webhook firma todos sus mensajes con su propio ID: con él, todos los simulados de un canal serían la misma persona, y la misma persona tendría un ID distinto en cada canal. Probado: el nombre da un ID estable |
+| 2 | Rol del autor (mentor o *staff*) | Se usan **los roles de Discord del autor**. Una configuración dice qué roles son de mentor y cuáles de *staff* (`DISCORD_MENTOR_ROLE_IDS`, `DISCORD_STAFF_ROLE_IDS`). Los simulados usan una lista de respaldo (`SIMULATED_MENTORS`) | A8, C2 y H1 necesitan reconocer a los mentores. La institución ya administra los roles en Discord: si llega un mentor nuevo, no hay que tocar el sistema. 📘 En vivo, los roles llegan con el mensaje (`member.roles`); por lotes, se piden una vez por autor (`GET /guilds/{id}/members/{userId}`). Los webhooks no tienen roles |
+| 3 | URL del adjunto | Se incluye, junto con `urlExpiraEn` | 📘 Discord entrega una URL válida cada vez que se recibe o se pide el mensaje, tanto en vivo como por lotes. Lo que vence es la copia guardada: `urlExpiraEn` avisa cuándo. Con `canal.id` e `id` se vuelve a pedir el mensaje para obtener una URL nueva. Guardar la imagen para siempre (por ejemplo, en OCI) le toca a quien genera los activos. **Cambia lo que decía la guía §12 ("sin la URL")** |
+| 4 | Avisos del sistema | Se envían marcados como `avisoSistema`, sin filtrarlos | La ingesta no decide qué es relevante (G4 usa el aviso de mensaje fijado); filtrar es trivial para quien consume |
 | 5 | Mención al bot | `mencionaAlBot` cubre al bot y a su rol | Hallazgo de la prueba real: al escribir `@` se elige fácilmente el rol. Requiere conocer el ID del rol del bot, que se obtiene con una petición a la lista de roles del servidor |
-| 6 | Encuesta y vistas previas | Se definen según la documentación | Todavía sin muestras reales (ver §4.8) |
+| 6 | Encuesta y vistas previas | Se definen según la documentación | Todavía sin muestras reales (ver §4.7 y §4.8). Quitarlas y agregarlas después cambiaría la versión del contrato |
+| 7 | Hilos y foros | El campo `hilo` existe desde la v1, pero en el MVP siempre va en `null` | El brief pide "debates en foros" y una institución real suele usar foros para las dudas. Agregarlo después cambiaría la versión que backend ya programó. Extraer hilos sigue fuera del MVP (P5) |
 
 ## 9. Próximos pasos
 
-1. **Validar este borrador** (tú).
+1. ~~**Validar este borrador.**~~ Hecho el 2026-10-01.
 2. **Comparar con backend (3.6):** poner este contrato al lado de su DTO y conversar las diferencias en las dos direcciones.
 3. **Programar:** el modelo `pydantic` que genera el JSON Schema, la transformación de `data/raw/` al contrato y la validación de todos los mensajes.
