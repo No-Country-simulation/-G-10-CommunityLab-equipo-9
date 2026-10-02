@@ -10,5 +10,29 @@
     "fecha": "2026-09-30T04:14:44.205696",
     "lote_id": "interactivo_002",
     "autor": "tester"
+  },
+  {
+    "pregunta": "¿Cuáles son los requisitos para la beca de apoyo socioeconómico?",
+    "fecha": "2026-10-01T18:06:45.132845",
+    "lote_id": "test",
+    "autor": "tester"
+  },
+  {
+    "pregunta": "¿Cuáles son los requisitos para inscribirme en el curso de Python?",
+    "fecha": "2026-10-01T18:21:58.018177",
+    "lote_id": null,
+    "autor": "Lucas Albuquerque"
+  },
+  {
+    "pregunta": "¿Cuáles son los requisitos para la beca de apoyo socioeconómico?",
+    "fecha": "2026-10-01T18:30:10.248073",
+    "lote_id": null,
+    "autor": "Lucas Albuquerque"
+  },
+  {
+    "pregunta": "¿Cuáles son los requisitos para la beca de apoyo socioeconómico?",
+    "fecha": "2026-10-01T18:30:47.443320",
+    "lote_id": null,
+    "autor": "Lucas Albuquerque"
   }
 ]

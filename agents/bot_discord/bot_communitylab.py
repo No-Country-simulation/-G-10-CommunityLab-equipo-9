@@ -13,15 +13,15 @@ load_dotenv()
 # =====================================================
 
 # Token del bot guardado en una variable de entorno.
-DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+BOT_DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 
 # ID del canal que quieres escuchar.
 # Déjalo como "" para escuchar todos los canales accesibles.
-CANAL_PERMITIDO = ""
+BOT_CANAL_PERMITIDO = ""
 
 # Se agrega URL del Orquestador para implementar FastAPI).
-ORQUESTADOR_URL = os.getenv(
-    "ORQUESTADOR_URL", "http://localhost:8000/procesar"
+BOT_ORQUESTADOR_URL = os.getenv(
+    "BOT_ORQUESTADOR_URL", "http://localhost:8000/procesar"
 )
 
 # =====================================================
@@ -88,7 +88,7 @@ async def enviar_al_orquestador(payload: dict) -> dict:
     """
     async with aiohttp.ClientSession() as session:
         try:
-            async with session.post(ORQUESTADOR_URL, json=payload, timeout=60) as resp:
+            async with session.post(BOT_ORQUESTADOR_URL, json=payload, timeout=60) as resp:
                 if resp.status == 200:
                     return await resp.json()
                 else:
@@ -96,7 +96,7 @@ async def enviar_al_orquestador(payload: dict) -> dict:
                     print(f"[Bot] Error HTTP {resp.status}: {error_text[:200]}")
                     return {"error": f"HTTP {resp.status}"}
         except aiohttp.ClientConnectorError:
-            print(f"[Bot] No se pudo conectar al Orquestador en {ORQUESTADOR_URL}")
+            print(f"[Bot] No se pudo conectar al Orquestador en {BOT_ORQUESTADOR_URL}")
             return {"error": "conexion_rechazada"}
         except Exception as e:
             print(f"[Bot] Error inesperado: {e}")
@@ -156,13 +156,13 @@ class BotCommunityLab(discord.Client):
         print(f"Bot: {self.user}")
         print(f"ID del bot: {self.user.id}")
 
-        if CANAL_PERMITIDO:
-            print(f"Canal configurado: {CANAL_PERMITIDO}")
+        if BOT_CANAL_PERMITIDO:
+            print(f"Canal configurado: {BOT_CANAL_PERMITIDO}")
         else:
             print("Escuchando todos los canales accesibles.")
 
         # Log de la URL del Orquestador
-        print(f"Orquestador URL: {ORQUESTADOR_URL}")
+        print(f"Orquestador URL: {BOT_ORQUESTADOR_URL}")
         print("Esperando mensajes...\n")
 
     async def on_message(self, message):
@@ -176,8 +176,8 @@ class BotCommunityLab(discord.Client):
             return
 
         # Filtrar por canal si se configuró un ID.
-        if CANAL_PERMITIDO:
-            if str(message.channel.id) != CANAL_PERMITIDO:
+        if BOT_CANAL_PERMITIDO:
+            if str(message.channel.id) != BOT_CANAL_PERMITIDO:
                 return
 
         texto = message.content.strip()
@@ -200,7 +200,7 @@ class BotCommunityLab(discord.Client):
         payload = construir_payload_discord(message)
 
         # [NUEVO] Enviar al Orquestador
-        print(f"[Bot] Enviando al Orquestador ({ORQUESTADOR_URL})...")
+        print(f"[Bot] Enviando al Orquestador ({BOT_ORQUESTADOR_URL})...")
         respuesta = await enviar_al_orquestador(payload)
 
         if "error" in respuesta:
@@ -258,11 +258,11 @@ class BotCommunityLab(discord.Client):
 
 if __name__ == "__main__":
 
-    if not DISCORD_TOKEN:
+    if not BOT_DISCORD_TOKEN:
         raise RuntimeError(
-            "No se encontró DISCORD_TOKEN. "
+            "No se encontró BOT_DISCORD_TOKEN. "
             "Configura la variable de entorno antes de ejecutar."
         )
 
     bot = BotCommunityLab(intents=intents)
-    bot.run(DISCORD_TOKEN)
+    bot.run(BOT_DISCORD_TOKEN)
