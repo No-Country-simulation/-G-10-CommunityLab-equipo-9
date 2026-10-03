@@ -1,0 +1,166 @@
+{
+  "versionContrato": "1.0",
+  "loteId": "prueba-t02-0001",
+  "fuente": "discord",
+  "modo": "tiempoReal",
+  "servidorId": "1554157903701741700",
+  "generadoEn": "2026-10-03T20:00:00.000Z",
+  "mensajes": [
+    {
+      "id": "1554205178671009863",
+      "canal": {
+        "id": "1554158212742127821",
+        "nombre": "dudas"
+      },
+      "hilo": null,
+      "fecha": "2026-09-28T18:56:30.331Z",
+      "tipo": "mensaje",
+      "tipoDiscord": 0,
+      "esSimulado": true,
+      "autor": {
+        "id": "sim-ana-perez",
+        "idDiscord": "1554160711800717417",
+        "nombreUsuario": "Ana Pérez",
+        "nombreVisible": "Ana Pérez",
+        "tipo": "persona",
+        "rol": "miembro"
+      },
+      "textoOriginal": "como instalo pyhton en windows?? me sale que pip no se reconoce como comando 😭",
+      "tieneTexto": true,
+      "tieneBloqueCodigo": false,
+      "enlaces": [],
+      "menciones": {
+        "usuarios": [],
+        "roles": [],
+        "todos": false
+      },
+      "mencionaAlBot": false,
+      "respondeA": null,
+      "adjuntos": [],
+      "reacciones": [],
+      "fijado": false,
+      "editado": false,
+      "editadoEn": null,
+      "stickers": [],
+      "vistasPrevias": [],
+      "encuesta": null
+    },
+    {
+      "id": "1554205393054466139",
+      "canal": {
+        "id": "1554158212742127821",
+        "nombre": "dudas"
+      },
+      "hilo": null,
+      "fecha": "2026-09-28T18:56:30.331Z",
+      "tipo": "mensaje",
+      "tipoDiscord": 0,
+      "esSimulado": true,
+      "autor": {
+        "id": "sim-ana-perez",
+        "idDiscord": "1554160711800717417",
+        "nombreUsuario": "Ana Pérez",
+        "nombreVisible": "Ana Pérez",
+        "tipo": "persona",
+        "rol": "miembro"
+      },
+      "textoOriginal": "me contrataron!!!!! después de 6 meses en el bootcamp y 40 postulaciones, empiezo el lunes como QA trainee. No se rindan 🙌🙌",
+      "tieneTexto": true,
+      "tieneBloqueCodigo": false,
+      "enlaces": [],
+      "menciones": {
+        "usuarios": [],
+        "roles": [],
+        "todos": false
+      },
+      "mencionaAlBot": false,
+      "respondeA": null,
+      "adjuntos": [],
+      "reacciones": [],
+      "fijado": false,
+      "editado": false,
+      "editadoEn": null,
+      "stickers": [],
+      "vistasPrevias": [],
+      "encuesta": null
+    },
+    {
+      "id": "1554205400000000001",
+      "canal": {
+        "id": "1554158212742127821",
+        "nombre": "dudas"
+      },
+      "hilo": null,
+      "fecha": "2026-09-28T18:56:30.331Z",
+      "tipo": "mensaje",
+      "tipoDiscord": 0,
+      "esSimulado": true,
+      "autor": {
+        "id": "sim-ana-perez",
+        "idDiscord": "1554160711800717417",
+        "nombreUsuario": "Ana Pérez",
+        "nombreVisible": "Ana Pérez",
+        "tipo": "persona",
+        "rol": "miembro"
+      },
+      "textoOriginal": "me gustó mucho la clase de ayer, por fin entendí recursividad",
+      "tieneTexto": true,
+      "tieneBloqueCodigo": false,
+      "enlaces": [],
+      "menciones": {
+        "usuarios": [],
+        "roles": [],
+        "todos": false
+      },
+      "mencionaAlBot": false,
+      "respondeA": null,
+      "adjuntos": [],
+      "reacciones": [],
+      "fijado": false,
+      "editado": false,
+      "editadoEn": null,
+      "stickers": [],
+      "vistasPrevias": [],
+      "encuesta": null
+    },
+    {
+      "id": "1554205400000000002",
+      "canal": {
+        "id": "1554158212742127821",
+        "nombre": "dudas"
+      },
+      "hilo": null,
+      "fecha": "2026-09-28T18:56:30.331Z",
+      "tipo": "mensaje",
+      "tipoDiscord": 0,
+      "esSimulado": true,
+      "autor": {
+        "id": "sim-ana-perez",
+        "idDiscord": "1554160711800717417",
+        "nombreUsuario": "Ana Pérez",
+        "nombreVisible": "Ana Pérez",
+        "tipo": "persona",
+        "rol": "miembro"
+      },
+      "textoOriginal": "hola buenas noches",
+      "tieneTexto": true,
+      "tieneBloqueCodigo": false,
+      "enlaces": [],
+      "menciones": {
+        "usuarios": [],
+        "roles": [],
+        "todos": false
+      },
+      "mencionaAlBot": false,
+      "respondeA": null,
+      "adjuntos": [],
+      "reacciones": [],
+      "fijado": false,
+      "editado": false,
+      "editadoEn": null,
+      "stickers": [],
+      "vistasPrevias": [],
+      "encuesta": null
+    }
+  ]
+}

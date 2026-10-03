@@ -32,6 +32,8 @@ SentenceTransformer('${FAQ_EMBEDDING_MODEL_NAME}'); CrossEncoder('${FAQ_RERANKER
 ENV HF_HUB_OFFLINE=1
 
 COPY --chown=ia:ia agents agents
+# El contrato v1 de la ingesta: la única definición, que /v1/procesar importa (no se copia a mano)
+COPY --chown=ia:ia ingestion/discord/contract.py ingestion/discord/contract.py
 
 EXPOSE 8000
 

@@ -4,17 +4,23 @@ Servicio FastAPI del Orquestador.
 Expone el endpoint POST /procesar que n8n consume.
 """
 from __future__ import annotations
+import logging
 import threading
+import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from .adaptador import adaptar_webhook
 from .orquestador import Orquestador
-from .config_http import ENDPOINT_PROCESAR, ENDPOINT_HEALTH, HTTP_PORT
+from .config_http import ENDPOINT_PROCESAR, ENDPOINT_PROCESAR_V1, ENDPOINT_HEALTH, HTTP_PORT
+from .contrato_ia import ErrorApi, ErrorCampo, Lote, RespuestaLote
 from .nodos.invocador_faq import precargar_agente_faq, agente_faq_listo
+
+log = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -44,6 +50,44 @@ def _get_orquestador() -> Orquestador:
         _orquestador = Orquestador()
         print("[API] Orquestador listo.")
     return _orquestador
+
+
+# Procesador de /v1/procesar: se crea una sola vez, con el primer pedido
+_procesador_v1 = None
+_lock_procesador_v1 = threading.Lock()
+
+
+def _get_procesador_v1():
+    global _procesador_v1
+    if _procesador_v1 is None:
+        with _lock_procesador_v1:
+            if _procesador_v1 is None:
+                from .clasificadores.etiquetador import construir_etiquetador
+                from .grafo_v1 import ProcesadorV1
+                _procesador_v1 = ProcesadorV1(construir_etiquetador())
+    return _procesador_v1
+
+
+def _respuesta_error(status: int, error: ErrorApi) -> JSONResponse:
+    return JSONResponse(status_code=status, content=error.model_dump())
+
+
+@app.exception_handler(RequestValidationError)
+async def contrato_invalido(request: Request, exc: RequestValidationError):
+    """422 claro para /v1/procesar, sin repetir los datos recibidos (S7)."""
+    errores = [
+        ErrorCampo(
+            campo=".".join(str(p) for p in err.get("loc", ()) if p != "body") or "(cuerpo)",
+            problema=err.get("msg", "valor inválido"),
+        )
+        for err in exc.errors()
+    ]
+    return _respuesta_error(422, ErrorApi(
+        codigo="CONTRATO_INVALIDO",
+        mensaje="El lote no cumple el contrato v1.",
+        errores=errores,
+        id_correlacion=request.headers.get("X-Id-Correlacion") or str(uuid.uuid4()),
+    ))
 
 
 
@@ -93,6 +137,29 @@ async def procesar(request: Request):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno: {e}")
+
+
+@app.post(
+    ENDPOINT_PROCESAR_V1,
+    response_model=RespuestaLote,
+    responses={422: {"model": ErrorApi}, 500: {"model": ErrorApi}},
+)
+def procesar_v1(lote: Lote, x_id_correlacion: str | None = Header(default=None)):
+    """
+    Contrato Java ↔ IA v1: recibe un lote del contrato v1 y devuelve las etiquetas de cada mensaje.
+    En modo tiempoReal, además, la respuesta del Agente FAQ a las dudas.
+
+    Es `def` (no `async def`): FastAPI la corre en otro hilo y la espera al LLM no bloquea el servidor (F6).
+    """
+    try:
+        return _get_procesador_v1().procesar(lote)
+    except Exception:
+        log.exception("Error interno en /v1/procesar (lote %s)", lote.lote_id)
+        return _respuesta_error(500, ErrorApi(
+            codigo="ERROR_INTERNO",
+            mensaje="La IA no pudo procesar el lote. Reintentar más tarde.",
+            id_correlacion=x_id_correlacion or str(uuid.uuid4()),
+        ))
 
 
 

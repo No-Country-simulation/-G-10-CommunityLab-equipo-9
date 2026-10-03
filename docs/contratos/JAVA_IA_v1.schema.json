@@ -1,0 +1,311 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Contrato Java ↔ IA v1.0 — InsightEdu Lab",
+  "description": "Salida de POST /v1/procesar. La entrada es el contrato v1 (ingestion/discord/schema/contract_v1.schema.json).",
+  "respuesta": {
+    "$defs": {
+      "Metricas": {
+        "additionalProperties": false,
+        "properties": {
+          "duracionMs": {
+            "description": "Lo que tardó todo el lote dentro de la IA",
+            "minimum": 0,
+            "title": "Duracionms",
+            "type": "integer"
+          },
+          "tokensIn": {
+            "description": "Tokens de entrada del clasificador (no incluye al Agente FAQ)",
+            "minimum": 0,
+            "title": "Tokensin",
+            "type": "integer"
+          },
+          "tokensOut": {
+            "description": "Tokens de salida del clasificador (no incluye al Agente FAQ)",
+            "minimum": 0,
+            "title": "Tokensout",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "duracionMs",
+          "tokensIn",
+          "tokensOut"
+        ],
+        "title": "Metricas",
+        "type": "object"
+      },
+      "RespuestaFaq": {
+        "additionalProperties": false,
+        "description": "Respuesta del Agente FAQ. Solo en modo tiempoReal y para PREGUNTA_FAQ.",
+        "properties": {
+          "texto": {
+            "description": "Texto para publicar en Discord. Vacío si no hubo respuesta",
+            "title": "Texto",
+            "type": "string"
+          },
+          "encontrada": {
+            "description": "true solo si la respuesta tiene respaldo firme en los documentos (D3). Si es false, el bot no publica el texto y deriva a un mentor",
+            "title": "Encontrada",
+            "type": "boolean"
+          },
+          "fuentes": {
+            "description": "Documento y página que respaldan la respuesta",
+            "items": {
+              "type": "string"
+            },
+            "title": "Fuentes",
+            "type": "array"
+          },
+          "motivo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Por qué no se encontró o requiere revisión",
+            "title": "Motivo"
+          }
+        },
+        "required": [
+          "texto",
+          "encontrada",
+          "fuentes"
+        ],
+        "title": "RespuestaFaq",
+        "type": "object"
+      },
+      "ResultadoMensaje": {
+        "additionalProperties": false,
+        "description": "Las etiquetas de un mensaje. Hay exactamente uno por cada mensaje del lote.",
+        "properties": {
+          "discordId": {
+            "description": "El id del mensaje en el contrato v1",
+            "title": "Discordid",
+            "type": "string"
+          },
+          "estado": {
+            "description": "OK: etiquetas válidas. ERROR: el LLM falló y no hay etiquetas (F4)",
+            "enum": [
+              "OK",
+              "ERROR"
+            ],
+            "title": "Estado",
+            "type": "string"
+          },
+          "metodo": {
+            "description": "llm: lo clasificó el modelo. palabrasClave: clasificador de respaldo elegido por configuración. regla: no se envió al modelo (bot, aviso del sistema o sin texto)",
+            "enum": [
+              "llm",
+              "palabrasClave",
+              "regla"
+            ],
+            "title": "Metodo",
+            "type": "string"
+          },
+          "intencion": {
+            "anyOf": [
+              {
+                "enum": [
+                  "TESTIMONIO",
+                  "PREGUNTA_FAQ",
+                  "COMENTARIO",
+                  "OTRO"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "null si estado = ERROR",
+            "title": "Intencion"
+          },
+          "confianza": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "null si estado = ERROR",
+            "title": "Confianza"
+          },
+          "sentimiento": {
+            "anyOf": [
+              {
+                "enum": [
+                  "MUY_POSITIVO",
+                  "POSITIVO",
+                  "NEUTRO",
+                  "NEGATIVO",
+                  "MUY_NEGATIVO"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "null si estado = ERROR o metodo = regla",
+            "title": "Sentimiento"
+          },
+          "tema": {
+            "anyOf": [
+              {
+                "enum": [
+                  "inscripciones",
+                  "becas_pagos",
+                  "calendario_clases",
+                  "evaluaciones",
+                  "contenido_curso",
+                  "herramientas_entorno",
+                  "plataforma_acceso",
+                  "proyectos",
+                  "empleo",
+                  "comunidad",
+                  "otro"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "null si estado = ERROR o metodo = regla",
+            "title": "Tema"
+          },
+          "razon": {
+            "description": "Por qué se eligió la intención, o el motivo del error o de la regla",
+            "title": "Razon",
+            "type": "string"
+          },
+          "respuesta": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/RespuestaFaq"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Solo en tiempoReal y para PREGUNTA_FAQ"
+          }
+        },
+        "required": [
+          "discordId",
+          "estado",
+          "metodo",
+          "razon"
+        ],
+        "title": "ResultadoMensaje",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "description": "Lo que devuelve POST /v1/procesar.",
+    "properties": {
+      "versionContratoIa": {
+        "const": "1.0",
+        "description": "Cambia si cambia este formato",
+        "title": "Versioncontratoia",
+        "type": "string"
+      },
+      "loteId": {
+        "description": "El loteId recibido",
+        "title": "Loteid",
+        "type": "string"
+      },
+      "resultados": {
+        "description": "Uno por mensaje, en el mismo orden del lote",
+        "items": {
+          "$ref": "#/$defs/ResultadoMensaje"
+        },
+        "title": "Resultados",
+        "type": "array"
+      },
+      "metricas": {
+        "$ref": "#/$defs/Metricas"
+      }
+    },
+    "required": [
+      "versionContratoIa",
+      "loteId",
+      "resultados",
+      "metricas"
+    ],
+    "title": "RespuestaLote",
+    "type": "object"
+  },
+  "error": {
+    "$defs": {
+      "ErrorCampo": {
+        "additionalProperties": false,
+        "properties": {
+          "campo": {
+            "description": "Ruta del campo, por ejemplo mensajes.0.autor.tipo",
+            "title": "Campo",
+            "type": "string"
+          },
+          "problema": {
+            "title": "Problema",
+            "type": "string"
+          }
+        },
+        "required": [
+          "campo",
+          "problema"
+        ],
+        "title": "ErrorCampo",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "description": "Formato común de error (análisis §2). Nunca repite los datos recibidos ni detalles internos (S7).",
+    "properties": {
+      "codigo": {
+        "enum": [
+          "CONTRATO_INVALIDO",
+          "ERROR_INTERNO"
+        ],
+        "title": "Codigo",
+        "type": "string"
+      },
+      "mensaje": {
+        "title": "Mensaje",
+        "type": "string"
+      },
+      "errores": {
+        "items": {
+          "$ref": "#/$defs/ErrorCampo"
+        },
+        "title": "Errores",
+        "type": "array"
+      },
+      "idCorrelacion": {
+        "description": "El de la cabecera X-Id-Correlacion, o uno nuevo",
+        "title": "Idcorrelacion",
+        "type": "string"
+      }
+    },
+    "required": [
+      "codigo",
+      "mensaje",
+      "idCorrelacion"
+    ],
+    "title": "ErrorApi",
+    "type": "object"
+  }
+}

@@ -16,6 +16,8 @@ RUTA_HISTORIAL_PREGUNTAS = BASE_DIR / "data" / "historial_preguntas.json"
 FAQ_PROVIDER: str = os.getenv("FAQ_PROVIDER", "google")  # "google" | "openai" | "cohere"
 FAQ_MODEL_NAME: str = os.getenv("FAQ_MODEL_NAME", "gemini-3.1-flash-lite")
 FAQ_TEMPERATURE: float = 0.1
+# Tiempo máximo de cada llamada al LLM (D4, F8); la misma variable que usa el orquestador
+FAQ_LLM_TIMEOUT_S: float = float(os.getenv("LLM_TIMEOUT_S", "20"))
 
 # --- Embeddings ---
 FAQ_EMBEDDING_PROVIDER: str = os.getenv("FAQ_EMBEDDING_PROVIDER", "huggingface")  # "huggingface" | "google" | "openai"

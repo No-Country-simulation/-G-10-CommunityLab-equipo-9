@@ -8,7 +8,8 @@ fastapi>=0.110.0
 uvicorn>=0.28.0
 
 # Orquestación y agentes
-pydantic>=2.7.0
+# 2.11 o más: el contrato v1 (ingestion/discord/contract.py) usa validate_by_name y serialize_by_alias
+pydantic>=2.11.0
 python-dotenv>=1.0.0
 langgraph>=0.2.0
 langchain-core>=0.3.0

@@ -20,6 +20,11 @@ CLASIFICADOR_PROVIDER: str = os.getenv("ORQ_CLASIFICADOR_PROVIDER", "google")
 CLASIFICADOR_MODEL: str = os.getenv("ORQ_CLASIFICADOR_MODEL", "gemini-3.5-flash-lite")
 CLASIFICADOR_TEMPERATURE: float = 0.0
 
+# Tiempo máximo de cada llamada al LLM (D4, F8): modelo 20 s < Java → IA 30 s < bot → Java 40 s
+LLM_TIMEOUT_S: float = float(os.getenv("LLM_TIMEOUT_S", "20"))
+# Reintentos propios de /v1/procesar si el LLM falla (no se reintenta si se agotó el tiempo)
+LLM_REINTENTOS: int = int(os.getenv("LLM_REINTENTOS", "1"))
+
 
 # API keys (todas disponibles, solo se usa la del provider activo)
 GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY")

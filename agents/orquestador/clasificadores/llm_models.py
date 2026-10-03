@@ -5,6 +5,7 @@ from langchain_core.language_models import BaseChatModel
 from ..config import (
     CLASIFICADOR_PROVIDER, CLASIFICADOR_MODEL, CLASIFICADOR_TEMPERATURE,
     GEMINI_API_KEY, OPENAI_API_KEY, COHERE_API_KEY, ANTHROPIC_API_KEY,
+    LLM_TIMEOUT_S,
 )
 
 
@@ -21,6 +22,9 @@ def build_llm() -> BaseChatModel | None:
             model=CLASIFICADOR_MODEL,
             temperature=CLASIFICADOR_TEMPERATURE,
             google_api_key=GEMINI_API_KEY,
+            # Sin esto Gemini espera sin límite y reintenta 6 veces por su cuenta (F8)
+            timeout=LLM_TIMEOUT_S,
+            max_retries=0,
         )
 
     if provider == "openai":
@@ -32,6 +36,8 @@ def build_llm() -> BaseChatModel | None:
             model=CLASIFICADOR_MODEL,
             temperature=CLASIFICADOR_TEMPERATURE,
             api_key=OPENAI_API_KEY,
+            timeout=LLM_TIMEOUT_S,
+            max_retries=0,
         )
 
     if provider == "cohere":
@@ -54,6 +60,8 @@ def build_llm() -> BaseChatModel | None:
             model=CLASIFICADOR_MODEL,
             temperature=CLASIFICADOR_TEMPERATURE,
             api_key=ANTHROPIC_API_KEY,
+            timeout=LLM_TIMEOUT_S,
+            max_retries=0,
         )
 
     print(f"[llm_factory] Provider no soportado: {provider}")
