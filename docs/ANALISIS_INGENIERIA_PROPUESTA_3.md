@@ -86,7 +86,7 @@ Si falta tiempo, lo último que se recorta es OE1, OE3 y OE6.
 |---|---|---|---|
 | 2026-10-03 | `1fb58e2` | La IA atiende pedidos en paralelo y crea el Agente FAQ una sola vez | F6, F7 |
 | 2026-10-03 | `220273f` | `docker compose` con base de datos (`postgres:17`, volumen, sin puerto publicado), API Java e IA, con healthchecks; `.env.example` unificado; guía [OPERACION.md](OPERACION.md) | O1 (3 de 6 servicios), O2, O5, S5, M2, parte de O8 |
-| 2026-10-03 | (pendiente) | La IA precarga el Agente FAQ al arrancar, carga los embeddings una sola vez y no consulta internet; **se quitó ChromaDB** (solo se escribía, nunca se leía) | Arranque en frío, F12 (parte de ChromaDB) |
+| 2026-10-03 | `1e05c5b` | La IA precarga el Agente FAQ al arrancar, carga los embeddings una sola vez y no consulta internet; **se quitó ChromaDB** (solo se escribía, nunca se leía) | Arranque en frío, F12 (parte de ChromaDB) |
 
 ---
 

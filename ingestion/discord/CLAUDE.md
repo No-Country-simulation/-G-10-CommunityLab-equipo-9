@@ -1,5 +1,7 @@
 # CLAUDE.md — Ingesta de Discord (InsightEdu Lab)
 
+> ⚠️ **En la rama `feature/integracion-arquitectura-3` manda el [CLAUDE.md de la raíz](../../CLAUDE.md).** Este archivo se escribió para la rama `feature/discord-ingestion`: sus secciones de estado, ramas y continuación son **históricas**. Siguen vigentes sus convenciones del módulo de ingesta.
+
 Contexto para Claude Code al trabajar en `ingestion/discord/`, desde cualquier máquina. La memoria de sesiones anteriores **no viaja entre máquinas**: este archivo y la carpeta `docs/` son la fuente de contexto.
 
 ## Antes de responder
