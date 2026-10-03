@@ -23,7 +23,8 @@
 | [docs/referencias/Propuesta_3_Arquitectura_InsightEdu.pdf](docs/referencias/Propuesta_3_Arquitectura_InsightEdu.pdf) | Arquitectura: piezas, flujos y necesidades **N1 a N7** | Arquitectura |
 | [ingestion/discord/docs/PROJECT_BRIEF.md](ingestion/discord/docs/PROJECT_BRIEF.md) | Brief del cliente y alcance del MVP (ojo: ahí "N1 a N5" es otra numeración) | Qué se pide |
 | [ingestion/discord/docs/CONTRACT.md](ingestion/discord/docs/CONTRACT.md) y [schema/contract_v1.schema.json](ingestion/discord/schema/contract_v1.schema.json) | **Contrato v1**: el formato de cada mensaje. Código: [ingestion/discord/contract.py](ingestion/discord/contract.py) | **Fuente única de verdad del formato** |
-| [ingestion/discord/docs/INGESTION_GUIDE.md](ingestion/discord/docs/INGESTION_GUIDE.md) §11 | "Opción C": cómo recibe Java el contrato | Decisión aprobada |
+| [docs/contratos/JAVA_IA_v1.md](docs/contratos/JAVA_IA_v1.md) y su JSON Schema | **Contrato Java ↔ IA v1**: lo que Java envía a `POST /v1/procesar` y lo que la IA devuelve | **Fuente única de verdad entre Java y la IA** |
+| [ingestion/discord/docs/INGESTION_GUIDE.md](ingestion/discord/docs/INGESTION_GUIDE.md) §11 | "Opción C": cómo recibía Java el contrato. 🔎 La decisión D8 (ficha T03) propone reemplazarla por el contrato v1 tal cual | Histórica, pendiente de D8 |
 | [docs/OPERACION.md](docs/OPERACION.md) | Cómo levantar, revisar y detener todo con Docker | Operación |
 | [docs/tareas/](docs/tareas/) | Fichas de tarea, plantilla e informes | Trabajo en curso |
 
@@ -51,7 +52,7 @@ Hay **dos `.env`**: el de la raíz es para `docker compose` y `ingestion/discord
 ## 4. Cómo levantar y probar
 
 - Levantar todo: `docker compose up -d --build` (detalle en [docs/OPERACION.md](docs/OPERACION.md)).
-- Pruebas de la IA (sin gastar llamadas al LLM): `python -m pytest agents/orquestador/tests -q`, con el entorno `%USERPROFILE%\.venvs\insightedu-discord`.
+- Pruebas de la IA (sin gastar llamadas al LLM): `python -m pytest agents/orquestador/tests -q`, con el entorno `%USERPROFILE%\.venvs\insightedu-discord`. A ese entorno se le instalaron `fastapi`, `langgraph` y `langchain-core` (las mismas versiones que la imagen `ia`) para poder correr estas pruebas.
 - Pruebas de la ingesta: desde `ingestion/discord`, `python -m pytest -q`, con el mismo entorno.
 - Java: **no hay JDK instalado en Windows**. Se compila y se prueba dentro de Docker, contra la base `insightedu_test` ([docs/OPERACION.md §5](docs/OPERACION.md)). Las tablas las crea **Flyway**: una migración aplicada nunca se edita; los cambios van en `V2__…`.
 
