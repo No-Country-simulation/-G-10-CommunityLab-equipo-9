@@ -5,6 +5,7 @@ Expone el endpoint POST /procesar que n8n consume.
 """
 from __future__ import annotations
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 
 from .adaptador import adaptar_webhook
@@ -67,9 +68,10 @@ async def procesar(request: Request):
                 detail="No se detectaron mensajes válidos en el payload.",
             )
 
-        # Procesar
+        # Procesar en un hilo aparte: procesar_lote espera al LLM y, si corriera
+        # aquí, bloquearía el servidor y ningún otro pedido (ni /health) se atendería.
         orquestador = _get_orquestador()
-        output = orquestador.procesar_lote(input_orq)
+        output = await run_in_threadpool(orquestador.procesar_lote, input_orq)
 
         return JSONResponse(content=output.model_dump())
 
