@@ -1,6 +1,6 @@
 # Análisis de ingeniería — Propuesta de arquitectura 3
 
-> **Estado:** borrador v0.1 para revisión · **Fecha:** 2026-10-03 · **Rama:** `feature/integracion-arquitectura-3` (commit base `02e6caf`)
+> **Estado:** v0.2, aprobado por Harrison (decisiones D1 a D7 validadas) · **Fecha:** 2026-10-03 · **Rama:** `feature/integracion-arquitectura-3` (commit base `02e6caf`)
 > **Preparado por:** Harrison Tutalcha, con asistencia de Claude · **Entrega final del proyecto:** 2026-10-26
 
 ## Cómo leer este documento
@@ -15,6 +15,7 @@
 | 💻 | Verificado en el código de esta rama (con archivo y línea) |
 | 🧪 | Observado al ejecutar algo |
 | 🔎 | Deducción o recomendación nuestra: hay que validarla |
+| 👤 | Decisión tomada por Harrison, con su fecha |
 
 **Prioridad de cada tarea.**
 
@@ -58,11 +59,11 @@
 | 5 | La IA atiende **un pedido a la vez** y **vuelve a cargar los modelos del Agente FAQ en cada pregunta** | Respuestas lentas; con varios alumnos a la vez, el bot deja de responder | [4](#4-fallos-y-duplicados) |
 | 6 | Solo backend y la base de datos tienen Docker. IA, bot, panel e ingesta no; y la base no guarda sus datos en un volumen con nombre | No se puede desplegar todo con un comando, y hay riesgo de perder los datos | [7](#7-operación-y-despliegue) |
 
-### Decisiones pendientes
+### Decisiones
 
-Cada una trae una recomendación con su motivo. Se marcan como decididas cuando Harrison las valide.
+👤 **Todas validadas por Harrison el 2026-10-03:** se adopta la opción de la columna "Decisión tomada".
 
-| # | Decisión | Opciones | Recomendación 🔎 | Motivo |
+| # | Decisión | Opciones | Decisión tomada 👤 | Motivo |
 |---|---|---|---|---|
 | D1 | ¿Seguimos trayendo los cambios nuevos de las ramas de los equipos? | (a) Base congelada: se parte de lo que hay hoy; (b) traer sus cambios cada tanto | **(a) Base congelada**, trayendo solo algo puntual si sirve | Al cambiar el código de backend e IA aquí, traer sus cambios genera conflictos en cada fusión |
 | D2 | ¿Qué se guarda en OCI? | (a) Solo lo aprobado (propuesta 3); (b) todo lo generado (texto literal del brief: *"persistir todos los paquetes de activos generados"*); (c) las dos cosas en carpetas separadas | **(c)** `generados/` y `aprobados/` | Cumple la letra del brief y la intención de la propuesta. Es poco trabajo extra |
@@ -149,7 +150,7 @@ OBJETIVO (propuesta 3)
 | S1 | **API Java sin identificación**: cualquiera que llegue a la puerta puede cargar lotes, editar borradores y subir a OCI | 💻 No hay control en [CommunityController.java](../backend-java/src/main/java/com/insightedulab/backend_java/controller/CommunityController.java), y `pom.xml` no incluye Spring Security | Una **API key** por cliente (bot, ingesta, panel) en la cabecera `X-Api-Key`, revisada por un filtro de Java. JWT no hace falta: los clientes son programas, no personas | 🔴 · S |
 | S2 | **IA sin identificación** y aceptando conexiones de cualquier dirección | 💻 [config_http.py:13](../agents/orquestador/config_http.py#L13), [api.py:89](../agents/orquestador/api.py#L89) | No publicar su puerto (solo red interna) + API key de Java hacia la IA | 🔴 · S |
 | S3 | **Panel sin inicio de sesión**, y es la única pieza abierta a internet ([PDF §8](#referencias)) | 💻 [app.py](../panel/app.py) no pide credenciales | Contraseña para entrar (variable de entorno, nunca en el código). HTTPS si el servidor tiene dominio | 🔴 · S (contraseña) · 🟡 · S (HTTPS) |
-| S4 | **URL PAR de OCI en el historial público de git** | 💻 Estuvo en `application.properties` en los commits `eacfe5b` y `bff59f5`; `0f2b407` la quitó del archivo. 🧪 El repositorio es público. 📘 *"Anyone you provide this URL to can access the Object Storage resources"*, *"Deleting a pre-authenticated request revokes user access"* y el vencimiento *"has no limits"* | Backend la elimina en la consola de OCI y crea una nueva: solo para escribir, limitada al bucket y con vencimiento cercano a la entrega. La nueva va solo en `.env` | 🔴 · S (urgente) |
+| S4 | **URL PAR de OCI en el historial público de git** | 💻 Estuvo en `application.properties` en los commits `eacfe5b` y `bff59f5`; `0f2b407` la quitó del archivo. 🧪 El repositorio es público. 📘 *"Anyone you provide this URL to can access the Object Storage resources"*, *"Deleting a pre-authenticated request revokes user access"* y el vencimiento *"has no limits"* | Backend la elimina en la consola de OCI y crea una nueva: solo para escribir, limitada al bucket y con vencimiento cercano a la entrega. La nueva va solo en `.env`. **Estado 👤 (2026-10-03):** Harrison lo da por cerrado sin esperar a backend; es un **riesgo aceptado**. Mientras nadie la elimine, esa URL sigue funcionando. Esta rama usa siempre una PAR nueva en su `.env`, nunca la expuesta | ⚪ · riesgo aceptado |
 | S5 | Base de datos y API abiertas en la máquina | 💻 [compose.yml:9-10](../compose.yml#L9-L10) (5432) y [compose.yml:18-19](../compose.yml#L18-L19) (8008) | En el servidor, la base sin puerto publicado. La API solo en la red interna si el panel corre en el mismo servidor | 🔴 · S |
 | S6 | CORS abierto a cualquier sitio y con credenciales | 💻 [CorsConfig.java:18-22](../backend-java/src/main/java/com/insightedulab/backend_java/config/CorsConfig.java#L18-L22) | 🔎 Streamlit llama a Java desde el servidor, no desde el navegador, así que CORS no hace falta: cerrarlo | 🟡 · S |
 | S7 | Los errores muestran detalles internos | 💻 La IA responde `"Error interno: {e}"` ([api.py:79](../agents/orquestador/api.py#L79)) | Mensaje genérico para el cliente; el detalle, solo en el registro | 🟡 · S |
@@ -339,7 +340,7 @@ Del 2026-10-03 al 2026-10-26 hay **23 días**. Se reservan los últimos 3 para d
 
 | Fase | Días | Tareas | Necesidad | Prioridad |
 |---|---|---|---|---|
-| 0 · Urgente | Hoy | S4: backend revoca la PAR de OCI | — | 🔴 |
+| 0 · Urgente | Hoy | S4: cerrado como riesgo aceptado (ver S4) | — | ⚪ |
 | 1 · Base que corre | 1–3 | F6 y F7 (IA atiende varios pedidos y no recarga modelos) · O4 (revisar el servidor) · O1, O2 y O5 (compose completo, sin puertos de más) · S13 (versiones fijas) | — | 🔴 / 🟡 |
 | 2 · Datos y captura | 4–7 | Modelo de la sección 5 + Flyway · C1 (opción C) · F1 a F3 (upsert) · S1 (API key) · prueba real de `send_batch.py` · Q1 y Q2 | N1 | 🔴 |
 | 3 · Clasificar y responder | 8–11 | C3 y C4 (IA acepta el contrato y devuelve intención, sentimiento y tema) · F4 (`ERROR` ≠ `OTRO`) · C2 (bot → Java) · F5, F8, S8 y S10 (bot correcto) · S2 | N2 · N4 | 🔴 |
