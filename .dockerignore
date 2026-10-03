@@ -1,0 +1,15 @@
+# Directorios de compilación y dependencias locales
+target/
+.mvn/wrapper/maven-wrapper.properties
+.git
+.gitignore
+
+# Entornos virtuales y archivos de configuración de IDEs
+.idea/
+*.iml
+.vscode/
+*.log
+
+# Archivos de entorno local (¡Importante por seguridad!)
+.env
+.env-example
