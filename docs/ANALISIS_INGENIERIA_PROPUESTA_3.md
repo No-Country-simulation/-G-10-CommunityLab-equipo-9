@@ -1,6 +1,6 @@
 # Análisis de ingeniería — Propuesta de arquitectura 3
 
-> **Estado:** v0.2, aprobado por Harrison (decisiones D1 a D7 validadas) · **Fecha:** 2026-10-03 · **Rama:** `feature/integracion-arquitectura-3` (commit base `02e6caf`)
+> **Estado:** v0.3, aprobado por Harrison (decisiones D1 a D7 validadas; objetivos agregados) · **Fecha:** 2026-10-03 · **Rama:** `feature/integracion-arquitectura-3` (commit base `02e6caf`)
 > **Preparado por:** Harrison Tutalcha, con asistencia de Claude · **Entrega final del proyecto:** 2026-10-26
 
 ## Cómo leer este documento
@@ -41,6 +41,52 @@
 | CI (integración continua) | GitHub corre las pruebas solo cada vez que se sube código |
 | Id de correlación | Un identificador que acompaña a un mensaje por todas las piezas, para poder seguirlo en los registros |
 | Inyección de instrucciones (*prompt injection*) | Un texto que intenta engañar a la IA para que haga algo que no debe ("ignora tus reglas y…") |
+
+---
+
+## Objetivos
+
+👤 Validados por Harrison el 2026-10-03. Ante cualquier duda de "¿esto sirve?", se mira aquí.
+
+### De dónde salen
+
+```
+1. Brief del cliente  (resumen: ingestion/discord/docs/PROJECT_BRIEF.md)   QUÉ problema y qué requisitos técnicos
+2. Decisiones del equipo sobre el MVP  (PROJECT_BRIEF.md §3)              QUÉ entra y qué no
+3. Propuesta de arquitectura 3  (docs/referencias/, PDF)                  CON QUÉ piezas; necesidades N1 a N7
+4. Este análisis                                                          CÓMO construirlo y en qué orden
+5. Decisiones de Harrison  (D1 a D7 y modo de trabajo, sección 8)         CON QUÉ ritmo y reglas
+```
+
+⚠️ **Dos numeraciones "N":** en `PROJECT_BRIEF.md`, N1 a N5 son frases del brief (ahí N4 es *Community Highlights*, que quedó fuera). **En el trabajo se usan las N1 a N7 de la propuesta 3** (ahí N4 es *FAQ y bot*).
+
+### Objetivo principal
+
+> **Entregar el 2026-10-26 un MVP de InsightEdu Lab que funcione de punta a punta y esté desplegado. Debe convertir la actividad de un servidor de Discord en activos de marketing, respuestas a dudas y alertas sobre la comunidad, con una persona que apruebe antes de publicar. Se construye sobre la arquitectura 3, de forma segura y demostrable.**
+
+### Objetivos específicos
+
+Si falta tiempo, lo último que se recorta es OE1, OE3 y OE6.
+
+| # | Objetivo específico | Necesidad | Fase (sección 9) | Estado al 2026-10-03 |
+|---|---|---|---|---|
+| OE1 | Capturar los mensajes de Discord **en vivo** (bot) y **por lotes** (cada hora), y guardarlos en PostgreSQL a través de la API Java, **sin duplicados** | N1 | 2 | 🟡 La ingesta está lista (34 pruebas). Java recibe pero duplica, y el bot no pasa por Java |
+| OE2 | Que la IA etiquete cada mensaje con **intención, sentimiento y tema**, sin perder mensajes si falla | N2 | 3 | 🟡 Clasifica la intención (🧪 probado). Faltan el sentimiento y el tema |
+| OE3 | Generar, para cada logro, un **borrador de post de LinkedIn** y un **caso de éxito** con la voz de la marca | N3 | 4 | 🔴 El Agente-Mod no existe |
+| OE4 | **Responder dudas en vivo** con los PDFs de la institución, y convertir las preguntas repetidas en borradores de FAQ | N4 | 3 · 4 | 🟡 El Agente FAQ responde (🧪 probado). El bot no pasa por Java y la FAQ semanal falta |
+| OE5 | Un **dashboard** con sentimiento, temas en tendencia y alertas (deserción, frustración, dudas sin responder) | N5 | 5 | 🔴 No existe |
+| OE6 | Un **panel con inicio de sesión** para revisar, editar, aprobar o rechazar, con la casilla de consentimiento | N6 | 5 | 🔴 El panel solo usa datos de ejemplo |
+| OE7 | Guardar en **OCI** los activos generados y los aprobados | N7 | 6 | 🟡 Java sube a OCI, pero con el error del JSON (F10) y sin una URL PAR válida |
+| OE8 | Que todo **corra con un comando**, sea **seguro** (claves, puertos cerrados) y tenga **pruebas** del flujo completo | Transversal | 1 a 6 | 🟡 3 de 6 servicios en Docker; F6 y F7 resueltos |
+| OE9 | **Desplegarlo y ensayar la demo** | Transversal | 6 | ⏸️ La revisión del servidor (O4) quedó pospuesta por Harrison el 2026-10-03; se retoma en la fase 6 |
+
+### Registro de avance
+
+| Fecha | Commit | Qué quedó hecho | Tareas del análisis |
+|---|---|---|---|
+| 2026-10-03 | `1fb58e2` | La IA atiende pedidos en paralelo y crea el Agente FAQ una sola vez | F6, F7 |
+| 2026-10-03 | `220273f` | `docker compose` con base de datos (`postgres:17`, volumen, sin puerto publicado), API Java e IA, con healthchecks; `.env.example` unificado; guía [OPERACION.md](OPERACION.md) | O1 (3 de 6 servicios), O2, O5, S5, M2, parte de O8 |
+| 2026-10-03 | (pendiente) | La IA precarga el Agente FAQ al arrancar, carga los embeddings una sola vez y no consulta internet; **se quitó ChromaDB** (solo se escribía, nunca se leía) | Arranque en frío, F12 (parte de ChromaDB) |
 
 ---
 
@@ -229,7 +275,7 @@ actualizados             texto                             estado: PENDIENTE | A
 | Índices para el dashboard | Únicos en `discord_id`; de búsqueda en `(autor_id, fecha)`, `(fecha)` e `(intencion)` | 🔴 · S |
 | Volumen de la base | Un volumen con nombre en `compose.yml`. 🔎 Sin él, al recrear el contenedor los datos quedan en un volumen huérfano | 🔴 · S |
 | Versión de PostgreSQL | Fijar la versión mayor (por ejemplo, `postgres:17`). 🔎 Una versión mayor nueva no lee los datos de la anterior sin migrarlos | 🔴 · S |
-| Estado dentro de la IA | ChromaDB, el historial de preguntas y FAISS viven en archivos de la IA. 🔎 Se aceptan como **copias derivadas** que se pueden reconstruir desde Java, nunca como la única copia (regla 3 de la propuesta). Llevan volumen en Docker | 🟡 · S |
+| Estado dentro de la IA | El historial de preguntas y FAISS viven en archivos de la IA. 🔎 Se aceptan como **copias derivadas** que se pueden reconstruir desde Java, nunca como la única copia (regla 3 de la propuesta). Llevan volumen en Docker. 👤 ChromaDB se quitó el 2026-10-03: solo se escribía y nunca se leía | 🟡 · S |
 | Respaldos | Una copia diaria de la base (`pg_dump`) en OCI | 🟡 · S |
 | Zonas horarias | Ya está bien: `Instant` en Java y UTC en el contrato 💻 | — |
 
@@ -356,7 +402,8 @@ Del 2026-10-03 al 2026-10-26 hay **23 días**. Se reservan los últimos 3 para d
 
 | Documento | Dónde |
 |---|---|
-| Propuesta de arquitectura 3 (PDF, 2026-10-02) | Fuera del repositorio: carpeta del proyecto de Harrison, `Propuesta_3_Arquitectura_InsightEdu.pdf` |
+| Propuesta de arquitectura 3 (PDF, 2026-10-02) | [docs/referencias/Propuesta_3_Arquitectura_InsightEdu.pdf](referencias/Propuesta_3_Arquitectura_InsightEdu.pdf) |
+| Operación con Docker | [docs/OPERACION.md](OPERACION.md) |
 | Brief y alcance del MVP | [ingestion/discord/docs/PROJECT_BRIEF.md](../ingestion/discord/docs/PROJECT_BRIEF.md), [SCOPE.md](../ingestion/discord/docs/SCOPE.md) |
 | Contrato de ingesta v1 | [ingestion/discord/docs/CONTRACT.md](../ingestion/discord/docs/CONTRACT.md) |
 | Opción C y comparación con backend | [ingestion/discord/docs/INGESTION_GUIDE.md](../ingestion/discord/docs/INGESTION_GUIDE.md) |
