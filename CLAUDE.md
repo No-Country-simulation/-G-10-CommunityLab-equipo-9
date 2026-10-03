@@ -53,7 +53,7 @@ Hay **dos `.env`**: el de la raíz es para `docker compose` y `ingestion/discord
 - Levantar todo: `docker compose up -d --build` (detalle en [docs/OPERACION.md](docs/OPERACION.md)).
 - Pruebas de la IA (sin gastar llamadas al LLM): `python -m pytest agents/orquestador/tests -q`, con el entorno `%USERPROFILE%\.venvs\insightedu-discord`.
 - Pruebas de la ingesta: desde `ingestion/discord`, `python -m pytest -q`, con el mismo entorno.
-- Java: **no hay JDK instalado en Windows**. Se compila y se prueba dentro de Docker (el Dockerfile de backend ya lo hace). Cada ficha dice cómo probar lo suyo.
+- Java: **no hay JDK instalado en Windows**. Se compila y se prueba dentro de Docker, contra la base `insightedu_test` ([docs/OPERACION.md §5](docs/OPERACION.md)). Las tablas las crea **Flyway**: una migración aplicada nunca se edita; los cambios van en `V2__…`.
 
 ## 5. Reglas que no se rompen
 

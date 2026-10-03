@@ -70,7 +70,7 @@ Si falta tiempo, lo último que se recorta es OE1, OE3 y OE6.
 
 | # | Objetivo específico | Necesidad | Fase (sección 9) | Estado al 2026-10-03 |
 |---|---|---|---|---|
-| OE1 | Capturar los mensajes de Discord **en vivo** (bot) y **por lotes** (cada hora), y guardarlos en PostgreSQL a través de la API Java, **sin duplicados** | N1 | 2 | 🟡 La ingesta está lista (34 pruebas). Java recibe pero duplica, y el bot no pasa por Java |
+| OE1 | Capturar los mensajes de Discord **en vivo** (bot) y **por lotes** (cada hora), y guardarlos en PostgreSQL a través de la API Java, **sin duplicados** | N1 | 2 | 🟡 La ingesta está lista (34 pruebas). El modelo de datos y el upsert sin duplicados están listos (T01). Falta la puerta de lotes (T03), y el bot todavía no pasa por Java |
 | OE2 | Que la IA etiquete cada mensaje con **intención, sentimiento y tema**, sin perder mensajes si falla | N2 | 3 | 🟡 Clasifica la intención (🧪 probado). Faltan el sentimiento y el tema |
 | OE3 | Generar, para cada logro, un **borrador de post de LinkedIn** y un **caso de éxito** con la voz de la marca | N3 | 4 | 🔴 El Agente-Mod no existe |
 | OE4 | **Responder dudas en vivo** con los PDFs de la institución, y convertir las preguntas repetidas en borradores de FAQ | N4 | 3 · 4 | 🟡 El Agente FAQ responde (🧪 probado). El bot no pasa por Java y la FAQ semanal falta |
@@ -86,6 +86,7 @@ Si falta tiempo, lo último que se recorta es OE1, OE3 y OE6.
 |---|---|---|---|
 | 2026-10-03 | `1fb58e2` | La IA atiende pedidos en paralelo y crea el Agente FAQ una sola vez | F6, F7 |
 | 2026-10-03 | `220273f` | `docker compose` con base de datos (`postgres:17`, volumen, sin puerto publicado), API Java e IA, con healthchecks; `.env.example` unificado; guía [OPERACION.md](OPERACION.md) | O1 (3 de 6 servicios), O2, O5, S5, M2, parte de O8 |
+| 2026-10-03 | `6034d64` | **T01:** modelo de datos nuevo (`lotes_recibidos`, `mensajes`, `borradores`) con Flyway y `validate`; upsert por `discord_id` que no duplica ni pisa las etiquetas; 11 pruebas con PostgreSQL real. Se quitó el modelo viejo y su puerta `/process`, que vuelve en T03 | F1, F2, F3, migraciones e índices de §5 |
 | 2026-10-03 | `1e05c5b` | La IA precarga el Agente FAQ al arrancar, carga los embeddings una sola vez y no consulta internet; **se quitó ChromaDB** (solo se escribía, nunca se leía) | Arranque en frío, F12 (parte de ChromaDB) |
 
 ---
