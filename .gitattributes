@@ -1,0 +1,4 @@
+# Archivos que se ejecutan dentro de contenedores Linux: siempre con fin de línea LF,
+# aunque se clonen en Windows (con CRLF, Linux no los interpreta bien).
+Dockerfile text eol=lf
+*.sh text eol=lf

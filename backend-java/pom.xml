@@ -42,6 +42,12 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
+		<!-- Puerta de salud /actuator/health (incluye la conexión a la base) para el healthcheck de Docker -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+
 		<!-- Integración automática de Docker Compose para desarrollo local -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

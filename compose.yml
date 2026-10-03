@@ -1,30 +1,84 @@
+# InsightEdu Lab · sistema con Docker (propuesta de arquitectura 3)
+#
+#   docker compose up -d --build   levanta todo (desde la raíz del repositorio)
+#   docker compose ps              muestra el estado y la salud de cada servicio
+#   docker compose down            lo detiene; los datos quedan en los volúmenes
+#
+# Las variables vienen del archivo .env de la raíz (plantilla: .env.example) y
+# cada servicio recibe solo las que necesita.
+# Los puertos publicados escuchan solo en 127.0.0.1: se usan desde esta misma
+# máquina y no quedan abiertos a la red (S5 del análisis).
+# Guía: docs/OPERACION.md
+
+name: insightedu
+
 services:
   postgres:
-    image: postgres:latest
-    container_name: community-postgres
+    image: postgres:17
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - '5432:5432'
-    restart: always
+    volumes:
+      - postgres-datos:/var/lib/postgresql/data
+    # Sin puertos publicados: solo la API Java llega a la base, por la red interna.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
 
-  backend-java:
-    build:
-      context: ./backend-java
-      dockerfile: Dockerfile
-    container_name: community-backend-java
-    ports:
-      - '8008:8080'
-    env_file:
-      - .env
+  api-java:
+    build: ./backend-java
     environment:
-      - POSTGRES_HOST=postgres  # <--- Esto sobreescribe el 'localhost' del .env solo para Docker
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB}
-      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
-      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      OCI_PAR_URL: ${OCI_PAR_URL:-}
+      # Dentro de Docker la IA se encuentra por el nombre de su servicio, no por localhost.
+      PYTHON_NLP_URL: http://ia:8000
+    ports:
+      - "127.0.0.1:8008:8080"
     depends_on:
-      - postgres
-    restart: always
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+
+  ia:
+    build:
+      context: .
+      dockerfile: agents/Dockerfile
+    environment:
+      # D5: un solo proveedor y un solo modelo para el clasificador y el Agente FAQ.
+      ORQ_CLASIFICADOR_PROVIDER: ${ORQ_CLASIFICADOR_PROVIDER:-google}
+      ORQ_CLASIFICADOR_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
+      FAQ_PROVIDER: google
+      FAQ_MODEL_NAME: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      # Estado que la IA escribe; son copias derivadas que se pueden reconstruir (sección 5 del análisis).
+      - ia-preguntas:/app/agents/agent_faq/data/vectorstore/faiss_preguntas
+      - ia-chroma:/app/agents/orquestador/data/chroma
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  postgres-datos:
+  ia-preguntas:
+  ia-chroma:

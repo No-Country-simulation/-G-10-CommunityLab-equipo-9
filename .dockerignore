@@ -1,15 +1,25 @@
-# Directorios de compilación y dependencias locales
-target/
-.mvn/wrapper/maven-wrapper.properties
+# Se aplica a las imágenes que se construyen desde la raíz del repositorio (la IA).
+# backend-java se construye desde su propia carpeta y solo copia pom.xml, .mvn y src.
+
+# Secretos: ningún .env entra a una imagen, en ninguna carpeta (S8 del análisis)
+**/.env
+**/.env.*
+!**/.env.example
+
+# Datos de Discord con información personal (ingesta)
+ingestion/**/data/
+
+# Control de versiones, editores y entornos locales
 .git
 .gitignore
-
-# Entornos virtuales y archivos de configuración de IDEs
 .idea/
 *.iml
 .vscode/
+**/.venv/
+**/venv/
+**/__pycache__/
+**/.pytest_cache/
 *.log
 
-# Archivos de entorno local (¡Importante por seguridad!)
-.env
-.env-example
+# Compilados de Java
+**/target/
