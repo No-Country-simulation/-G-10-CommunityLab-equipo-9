@@ -4,6 +4,9 @@ Servicio FastAPI del Orquestador.
 Expone el endpoint POST /procesar que n8n consume.
 """
 from __future__ import annotations
+import threading
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
@@ -11,11 +14,22 @@ from fastapi.responses import JSONResponse
 from .adaptador import adaptar_webhook
 from .orquestador import Orquestador
 from .config_http import ENDPOINT_PROCESAR, ENDPOINT_HEALTH, HTTP_PORT
+from .nodos.invocador_faq import precargar_agente_faq, agente_faq_listo
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Precarga el Agente FAQ en segundo plano (~16 s): el servicio atiende /health
+    # mientras tanto y la primera pregunta ya no espera la carga de modelos.
+    threading.Thread(target=precargar_agente_faq, daemon=True).start()
+    yield
+
 
 app = FastAPI(
     title="InsightEdu Lab — Orquestador",
     description="Motor inteligente de transformación y distribución para comunidades digitales.",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Instancia única del Orquestador (compartida entre requests)
@@ -37,7 +51,7 @@ def _get_orquestador() -> Orquestador:
 @app.get(ENDPOINT_HEALTH)
 async def health():
     """Endpoint de salud."""
-    return {"status": "ok", "service": "orquestador", "port": HTTP_PORT}
+    return {"status": "ok", "service": "orquestador", "port": HTTP_PORT, "faq_listo": agente_faq_listo()}
 
 
 @app.post(ENDPOINT_PROCESAR)

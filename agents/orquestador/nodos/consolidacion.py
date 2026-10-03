@@ -2,7 +2,7 @@
 Nodo 4: consolidación.
 
 Empaqueta el paquete final, construye el log, genera la respuesta_discord,
-y sube todo a OCI (si está configurado) + ChromaDB.
+y sube todo a OCI (si está configurado).
 """
 from __future__ import annotations
 from datetime import datetime, timezone
@@ -13,7 +13,6 @@ from ..contratos import (
     RespuestaDiscord, RespuestaIndividual,
 )
 from ..storage.oci_client import OCIClient
-from ..storage.chroma_client import ChromaClient
 
 
 def _construir_respuesta_discord(
@@ -153,19 +152,5 @@ def consolidar(
         oci.subir_log(lote_id, log.model_dump())
     except Exception as e:
         log.errores.append(f"Error OCI: {e}")
-
-    # --- Persistencia ChromaDB (opcional, falla silenciosa) ---
-    try:
-        chroma = ChromaClient()
-        for r in (resultados_mod + resultados_faq):
-            if r.get("status") == "exito":
-                chroma.registrar_interaccion(
-                    mensaje_id=r["mensaje_id"],
-                    intencion=r["intencion"],
-                    output=r.get("output", {}),
-                    metadata=r.get("metadata", {}),
-                )
-    except Exception as e:
-        log.errores.append(f"Error ChromaDB: {e}")
 
     return paquete, log, respuesta_discord

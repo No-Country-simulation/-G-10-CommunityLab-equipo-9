@@ -36,6 +36,20 @@ def _obtener_agente_faq():
     return _agente_faq
 
 
+def precargar_agente_faq() -> None:
+    """Crea el Agente FAQ al arrancar el servicio. Si falla, se reintenta con la primera pregunta."""
+    try:
+        _obtener_agente_faq()
+        print("[invocador_faq] Agente FAQ precargado.")
+    except Exception as e:
+        print(f"[invocador_faq] No se pudo precargar el Agente FAQ: {e}")
+
+
+def agente_faq_listo() -> bool:
+    """Indica si el Agente FAQ ya está cargado (lo muestra /health)."""
+    return _agente_faq is not None
+
+
 def _invocar_uno(mensaje: dict, clasificacion: dict) -> OutputSubAgente:
     """Invoca el Agente FAQ para un solo mensaje."""
     t0 = time.time()

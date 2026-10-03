@@ -13,7 +13,6 @@ load_dotenv()
 
 # --- Rutas base --- 
 BASE_DIR: Path = Path(__file__).resolve().parent
-RUTA_CHROMA: Path = BASE_DIR / "data" / "chroma"
 
 # --- CLASIFICADOR (ORQUESTADOR) ---
 # Proveedor: "gemini" | "openai" | "cohere" | "laya" | "keyword"
@@ -90,6 +89,3 @@ OCI_PREFIJO_ACTIVOS: str = "activos"
 OCI_PREFIJO_REPORTES: str = "reportes"
 OCI_PREFIJO_LOGS: str = "logs"
 
-
-# --- CHROMADB ---
-CHROMA_COLLECTION_INTERACCIONES: str = "interacciones"

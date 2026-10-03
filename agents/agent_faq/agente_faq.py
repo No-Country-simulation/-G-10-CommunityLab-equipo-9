@@ -39,7 +39,8 @@ class AgenteFAQ:
         self.reranker = Reranker()
 
         # 4. Vectorstore de preguntas
-        self.preguntas_store = PreguntasStore()
+        # Reutiliza el modelo de embeddings ya cargado: cargarlo dos veces duplica memoria y tiempo.
+        self.preguntas_store = PreguntasStore(embeddings=self.store.embeddings)
 
         # 5. Tools
         self.buscador = BuscadorTool(self.store, self.reranker, self.llm)

@@ -28,10 +28,10 @@ ARG FAQ_EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-small
 ARG FAQ_RERANKER_MODEL=cross-encoder/ms-marco-MiniLM-L-6-v2
 RUN python -c "from sentence_transformers import SentenceTransformer, CrossEncoder; \
 SentenceTransformer('${FAQ_EMBEDDING_MODEL_NAME}'); CrossEncoder('${FAQ_RERANKER_MODEL}')"
+# Los modelos ya están en la imagen: no consultar internet al arrancar.
+ENV HF_HUB_OFFLINE=1
 
 COPY --chown=ia:ia agents agents
-# Carpeta de ChromaDB (no está en git); se crea aquí para que el volumen la herede con dueño `ia`.
-RUN mkdir -p agents/orquestador/data/chroma
 
 EXPOSE 8000
 

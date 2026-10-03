@@ -24,8 +24,8 @@ class PreguntasStore:
     Gestiona el histórico de preguntas para detección de repeticiones.
     """
 
-    def __init__(self):
-        self.embeddings = select_embeddings()
+    def __init__(self, embeddings=None):
+        self.embeddings = embeddings or select_embeddings()
         self.vectorstore: FAISS | None = None
         # El orquestador atiende pedidos en paralelo y la instancia es compartida:
         # FAISS y el historial JSON no admiten lecturas y escrituras simultáneas.

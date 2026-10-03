@@ -69,7 +69,6 @@ services:
     volumes:
       # Estado que la IA escribe; son copias derivadas que se pueden reconstruir (sección 5 del análisis).
       - ia-preguntas:/app/agents/agent_faq/data/vectorstore/faiss_preguntas
-      - ia-chroma:/app/agents/orquestador/data/chroma
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
       interval: 10s
@@ -81,4 +80,3 @@ services:
 volumes:
   postgres-datos:
   ia-preguntas:
-  ia-chroma:
