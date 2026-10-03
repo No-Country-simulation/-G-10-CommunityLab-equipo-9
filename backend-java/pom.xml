@@ -63,6 +63,16 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- Flyway: crea y versiona las tablas con archivos SQL (db/migration). Versión fijada por Spring Boot -->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
+		</dependency>
+
 		<!-- Lombok para reducir código boilerplate -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
