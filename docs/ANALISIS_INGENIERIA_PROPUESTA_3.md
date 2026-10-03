@@ -120,6 +120,7 @@ Si falta tiempo, lo último que se recorta es OE1, OE3 y OE6.
 | D5 | ¿Cuántos proveedores de modelos de IA usamos? | Hoy hay uno distinto por agente: Gemini para clasificar y FAQ, OpenAI para el Agente-Mod | **Uno solo** para todo | Una sola clave, una sola cuenta y un solo límite de uso que vigilar |
 | D6 | ¿Cómo se registra el consentimiento del alumno antes de publicar su nombre o su cita? (pendiente P3 de la ingesta) | (a) Una casilla en el panel; (b) anonimizar siempre | **(a)** Una casilla obligatoria antes de aprobar un post o caso de éxito con nombre | Es simple y deja constancia de quién confirmó y cuándo |
 | D7 | ¿Dónde se despliega? | El servidor del equipo, o una máquina gratuita de OCI | Revisar primero el servidor del equipo (memoria, disco, Docker) | Ya existe y el equipo lo probó |
+| D8 | ¿Qué formato recibe Java de la ingesta? (decidida el 2026-10-03, ficha T03) | (a) El contrato v1 tal cual; (b) la "opción C" (campos viejos de backend más la caja) | **(a)** | Un solo formato en todo el sistema (regla 1 de la propuesta 3). La opción C era un puente para no depender de backend, y desde T01 ese formato ya no existe |
 
 ---
 

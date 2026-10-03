@@ -24,7 +24,7 @@
 | [ingestion/discord/docs/PROJECT_BRIEF.md](ingestion/discord/docs/PROJECT_BRIEF.md) | Brief del cliente y alcance del MVP (ojo: ahí "N1 a N5" es otra numeración) | Qué se pide |
 | [ingestion/discord/docs/CONTRACT.md](ingestion/discord/docs/CONTRACT.md) y [schema/contract_v1.schema.json](ingestion/discord/schema/contract_v1.schema.json) | **Contrato v1**: el formato de cada mensaje. Código: [ingestion/discord/contract.py](ingestion/discord/contract.py) | **Fuente única de verdad del formato** |
 | [docs/contratos/JAVA_IA_v1.md](docs/contratos/JAVA_IA_v1.md) y su JSON Schema | **Contrato Java ↔ IA v1**: lo que Java envía a `POST /v1/procesar` y lo que la IA devuelve | **Fuente única de verdad entre Java y la IA** |
-| [ingestion/discord/docs/INGESTION_GUIDE.md](ingestion/discord/docs/INGESTION_GUIDE.md) §11 | "Opción C": cómo recibía Java el contrato. 🔎 La decisión D8 (ficha T03) propone reemplazarla por el contrato v1 tal cual | Histórica, pendiente de D8 |
+| [ingestion/discord/docs/INGESTION_GUIDE.md](ingestion/discord/docs/INGESTION_GUIDE.md) §11 | "Opción C": cómo recibía Java el contrato antes | **Histórica**: la reemplazó la decisión **D8** (2026-10-03). Java recibe el contrato v1 tal cual |
 | [docs/OPERACION.md](docs/OPERACION.md) | Cómo levantar, revisar y detener todo con Docker | Operación |
 | [docs/tareas/](docs/tareas/) | Fichas de tarea, plantilla e informes | Trabajo en curso |
 

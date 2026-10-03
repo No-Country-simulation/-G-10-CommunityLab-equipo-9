@@ -9,7 +9,7 @@
 | Modelo de Claude recomendado | **Sonnet 5.5**: la ficha es acotada. Si se traba con la seguridad o las transacciones, cambiar a Opus 5.5 |
 | Depende de | T01 (tablas y upsert) ✅ |
 | Rama | `tarea/T03-puerta-lotes` |
-| Decisión previa | **D8**: formato que recibe Java (sección 3.1). 👤 Validar con Harrison antes de empezar |
+| Decisión previa | **D8**: formato que recibe Java (sección 3.1). 👤 **Validada el 2026-10-03: opción (a), el contrato v1 tal cual** |
 
 ## 1. Objetivo
 
