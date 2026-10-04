@@ -46,6 +46,11 @@ public class ApiKeyFilter extends OncePerRequestFilter {
             "/api/v1/lotes", ClientePermitido.INGESTA,
             "/api/v1/mensajes/en-vivo", ClientePermitido.BOT);
 
+    /** Las rutas del panel (T07) llevan un id (/api/v1/borradores/5/aprobar): se protege la ruta y todo lo que cuelga de ella. */
+    static final Map<String, String> CLIENTE_POR_PREFIJO = Map.of(
+            "/api/v1/borradores", ClientePermitido.PANEL,
+            "/api/v1/errores", ClientePermitido.PANEL);
+
     private final Map<String, byte[]> huellasPorCliente = new LinkedHashMap<>();
     private final RespuestaError respuestaError;
 
@@ -57,7 +62,7 @@ public class ApiKeyFilter extends OncePerRequestFilter {
             }
         });
         if (huellasPorCliente.isEmpty()) {
-            log.warn("No hay ninguna API key configurada (API_KEY_INGESTA, API_KEY_BOT): se rechaza todo salvo /actuator/health.");
+            log.warn("No hay ninguna API key configurada (API_KEY_INGESTA, API_KEY_BOT, API_KEY_PANEL): se rechaza todo salvo /actuator/health.");
         } else {
             log.info("API keys configuradas para: {}", huellasPorCliente.keySet());
         }
@@ -80,7 +85,7 @@ public class ApiKeyFilter extends OncePerRequestFilter {
             return;
         }
         String ruta = rutaNormalizada(request);
-        String duenio = CLIENTE_POR_RUTA.get(ruta);
+        String duenio = duenioDe(ruta);
         if (duenio != null && !duenio.equals(cliente)) {
             log.warn("Pedido rechazado: el cliente {} no puede usar {} {}", cliente, request.getMethod(), ruta);
             respuestaError.escribir(request, response, HttpServletResponse.SC_FORBIDDEN,
@@ -99,6 +104,20 @@ public class ApiKeyFilter extends OncePerRequestFilter {
      */
     static String rutaNormalizada(HttpServletRequest request) {
         return UrlPathHelper.defaultInstance.getPathWithinApplication(request);
+    }
+
+    /** El único cliente que puede usar la ruta (ya normalizada), o null si la puede usar cualquier cliente conocido. */
+    static String duenioDe(String ruta) {
+        String duenio = CLIENTE_POR_RUTA.get(ruta);
+        if (duenio != null) {
+            return duenio;
+        }
+        for (Map.Entry<String, String> e : CLIENTE_POR_PREFIJO.entrySet()) {
+            if (ruta.equals(e.getKey()) || ruta.startsWith(e.getKey() + "/")) {
+                return e.getValue();
+            }
+        }
+        return null;
     }
 
     /** El cliente dueño de la clave, o null. Recorre todas las claves para tardar siempre lo mismo. */

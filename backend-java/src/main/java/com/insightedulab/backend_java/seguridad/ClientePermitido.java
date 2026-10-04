@@ -11,6 +11,7 @@ public final class ClientePermitido {
 
     public static final String INGESTA = "ingesta";
     public static final String BOT = "bot";
+    public static final String PANEL = "panel";
 
     private ClientePermitido() {
     }

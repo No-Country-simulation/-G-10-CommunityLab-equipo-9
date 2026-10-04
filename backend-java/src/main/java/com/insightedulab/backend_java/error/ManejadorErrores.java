@@ -11,7 +11,10 @@ import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import java.util.List;
 
 /**
  * Manejo global de errores (F13). Todas las respuestas usan ErrorApi, con el id de correlación.
@@ -27,6 +30,25 @@ public class ManejadorErrores {
         log.warn("Lote rechazado: {} errores de contrato", e.getErrores().size());
         return responder(HttpStatus.UNPROCESSABLE_ENTITY, new ErrorApi("CONTRATO_INVALIDO",
                 "El lote no cumple el contrato v1.", e.getErrores(), IdCorrelacionFilter.de(req)));
+    }
+
+    @ExceptionHandler(DatoInvalidoException.class)
+    public ResponseEntity<ErrorApi> datoInvalido(DatoInvalidoException e, HttpServletRequest req) {
+        log.warn("Pedido rechazado: el campo {} no es válido ({} {})", e.getCampo(), req.getMethod(), req.getRequestURI());
+        return responder(HttpStatus.UNPROCESSABLE_ENTITY, new ErrorApi("DATO_INVALIDO", e.getMessage(),
+                List.of(new ErrorApi.ErrorCampo(e.getCampo(), e.getMessage())), IdCorrelacionFilter.de(req)));
+    }
+
+    @ExceptionHandler(ConflictoException.class)
+    public ResponseEntity<ErrorApi> conflicto(ConflictoException e, HttpServletRequest req) {
+        log.info("Pedido rechazado por el estado: {} ({} {})", e.getMessage(), req.getMethod(), req.getRequestURI());
+        return responder(HttpStatus.CONFLICT, ErrorApi.de("CONFLICTO", e.getMessage(), IdCorrelacionFilter.de(req)));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorApi> parametroInvalido(MethodArgumentTypeMismatchException e, HttpServletRequest req) {
+        return responder(HttpStatus.UNPROCESSABLE_ENTITY, new ErrorApi("DATO_INVALIDO", "Un parámetro no es válido.",
+                List.of(new ErrorApi.ErrorCampo(e.getName(), "No tiene el formato esperado.")), IdCorrelacionFilter.de(req)));
     }
 
     @ExceptionHandler(ProhibidoException.class)

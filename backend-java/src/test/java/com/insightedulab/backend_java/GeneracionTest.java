@@ -290,7 +290,10 @@ class GeneracionTest {
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .hasMessageContaining("uq_borradores_pendiente_por_tipo");
         // Uno APROBADO no bloquea: se puede volver a generar en el futuro (T07)
-        jdbc.update("UPDATE borradores SET estado = 'APROBADO' WHERE tipo = 'POST_LINKEDIN'");
+        // (con quién, cuándo, texto final y consentimiento: los exige la V6 de T07)
+        jdbc.update("""
+                UPDATE borradores SET estado = 'APROBADO', aprobado_por = 'prueba', aprobado_en = now(),
+                       texto_final = texto_ia, consentimiento_confirmado = true WHERE tipo = 'POST_LINKEDIN'""");
         repo.insertarBorrador(id, "POST_LINKEDIN", "otro", 0, 0);
         assertThatThrownBy(() -> jdbc.update("UPDATE mensajes SET generacion_estado = 'LISTO'"))
                 .isInstanceOf(DataIntegrityViolationException.class);
