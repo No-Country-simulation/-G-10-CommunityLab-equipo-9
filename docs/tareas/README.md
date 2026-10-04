@@ -9,7 +9,7 @@ Cada tarea tiene una **ficha** (la orden de trabajo, que escribe el chat princip
 | [T03](T03-puerta-lotes.md) | Puerta de lotes en Java: contrato v1 (D8), upsert, idempotencia y API key; `send_batch.py` al Java real | T01 | Sonnet 5.5 (se usó Opus 5.5) | ✅ Aprobada el 2026-10-04 (`c895af3`) · [informe](T03-informe.md) |
 | [T04](T04-clasificacion-java-ia.md) | Java clasifica en segundo plano los mensajes `PENDIENTE` con la IA y guarda las etiquetas; API key entre Java y la IA (S2); carácter NUL | T01, T02, T03 | Opus 5.5 | ✅ Aprobada el 2026-10-04 (`3ea907b`) · [informe](T04-informe.md) |
 | [T05](T05-bot-en-vivo.md) | El bot pasa por Java: puerta en vivo, respuesta guardada, tope total en la IA, bot en Docker (C2, F5, S8, S10) | T03, T04 | Opus 5.5 | ✅ Aprobada el 2026-10-04 (`c815546`, con los cambios de la auditoría) · [informe](T05-informe.md) · [contrato bot ↔ Java](../contratos/BOT_JAVA_v1.md) |
-| [T06](T06-agente-mod.md) | Agente-Mod: borradores de post de LinkedIn y caso de éxito con la voz de CommunityLab; puerta `/v1/generar`; generación automática en Java (OE3) | T04, T05 | Opus 5.5 | 📝 Ficha lista (decisiones validadas el 2026-10-04) |
+| [T06](T06-agente-mod.md) | Agente-Mod: borradores de post de LinkedIn y caso de éxito con la voz de CommunityLab; puerta `/v1/generar`; generación automática en Java (OE3) | T04, T05 | Opus 5.5 | ✅ Aprobada el 2026-10-04 (`158ff7f`) · [informe](T06-informe.md) · [guía de voz](../../agents/agent_mod/guia_de_voz.md) |
 | T06b | FAQ semanal: Java junta las dudas de la semana y la IA escribe un borrador de FAQ (OE4) | T05, T06 | Por definir | ⏳ Ficha pendiente (DEC-83) |
 
 Estados: 📝 ficha lista · 🔨 en curso · 🔍 en auditoría · ✅ aprobada o fusionada · ⏳ ficha pendiente
@@ -53,3 +53,10 @@ Estados: 📝 ficha lista · 🔨 en curso · 🔍 en auditoría · ✅ aprobada
 | T05 | Si falta el token, el aviso del bot lo escribe `config.py` de la ingesta y menciona su `.env`, no el de la raíz | 🟡 |
 | T05 | Las ediciones de mensajes no pasan por el bot: las toma el lote de la hora. Una duda ya respondida que se edita vuelve a `PENDIENTE`, pero no se responde otra vez | — (comportamiento esperado) |
 | T05 | Las claves que se pegaron en el chat de T05 (token del bot, webhooks y clave de la ingesta) no se cambiaron (DEC-71, riesgo aceptado). Al desplegar se generan claves nuevas para el servidor | T10 |
+| T06 | Un fallo de la generación (también la IA caída unos 3 minutos) suma intentos y, al tercero, deja el logro en `ERROR` para siempre. Hoy se reintenta con el `UPDATE` de [OPERACION.md](../OPERACION.md) §8. El panel debería ofrecer "reintentar" para los `ERROR` de la clasificación y de la generación (DEC-91) | T07 |
+| T06 | Si se edita el mensaje de un logro, sus borradores no se regeneran y `generacion_estado` sigue `GENERADO`. El panel podría ofrecer "volver a generar" | T07 |
+| T06 | Los borradores nombran al alumno por su primer nombre: el panel tiene que pedir el consentimiento (D6) antes de aprobar | T07 |
+| T06 | La entidad JPA `Mensaje` tampoco tiene las columnas de la V4. Agregarlas cuando el panel o el dashboard las lean | T07 y T08 |
+| T06 | Los tokens de cada redacción van en el `POST_LINKEDIN`, y el `CASO_EXITO` lleva 0 (DEC-90). Tenerlo en cuenta si el dashboard suma tokens | T08 |
+| T06 | Los borradores `PENDIENTE` son los activos "generados" de D2: son los que van a `generados/` en OCI | T09 |
+| T06 | 🧪 Los textos salen más cortos que lo que pide la guía (posts de 63 a 92 palabras; pide 90 a 160), y un post mencionó celebraciones que todavía no había. Harrison lo aceptó (DEC-92). Mejoras posibles: exigir los largos en el prompt, decirle al LLM "Reacciones: ninguna" o probar otro modelo con `MOD_MODEL_NAME` | 🟡 |
