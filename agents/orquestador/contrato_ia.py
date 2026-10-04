@@ -108,6 +108,53 @@ class RespuestaLote(ModeloIa):
     metricas: Metricas
 
 
+# ── POST /v1/generar (T06, DEC-82): el Agente-Mod redacta un post y un caso de éxito ──
+
+MAX_RESPUESTAS_GENERAR = 20
+
+
+class PedidoGenerar(ModeloIa):
+    """Lo que Java envía a POST /v1/generar: un logro (TESTIMONIO) y, si las hay, las respuestas que recibió."""
+
+    version_contrato: Literal["1.0"] = Field(description="La versión del contrato v1 de las cajas")
+    pedido_id: str = Field(min_length=1, max_length=100, description="Lo pone Java; vuelve en la respuesta")
+    logro: MensajeContrato = Field(description="La caja del contrato v1 del mensaje del logro, tal cual")
+    respuestas: list[MensajeContrato] = Field(
+        default_factory=list, max_length=MAX_RESPUESTAS_GENERAR,
+        description="Las cajas de los mensajes que responden al logro (respondeA), "
+        f"como máximo {MAX_RESPUESTAS_GENERAR}",
+    )
+
+
+class RespuestaGenerar(ModeloIa):
+    """Lo que devuelve POST /v1/generar. Un fallo del LLM es ERROR, nunca un borrador vacío ni inventado (F4)."""
+
+    version_contrato_ia: Literal["1.0"] = Field(description="Cambia si cambia este formato")
+    pedido_id: str = Field(description="El pedidoId recibido")
+    discord_id: str = Field(description="El id del mensaje del logro")
+    estado: Estado = Field(description="OK: la IA decidió. ERROR: el LLM falló y no hay decisión ni textos")
+    publicable: bool | None = Field(
+        default=None, description="true si el logro vale un post (DEC-53). null si estado = ERROR")
+    motivo: str = Field(description="Por qué es publicable o no, o el motivo del error")
+    post_linkedin: str | None = Field(default=None, description="Borrador del post. Solo si publicable = true")
+    caso_exito: str | None = Field(default=None, description="Borrador del caso de éxito. Solo si publicable = true")
+    metricas: Metricas
+
+    @model_validator(mode="after")
+    def _coherencia(self) -> "RespuestaGenerar":
+        textos = (self.post_linkedin, self.caso_exito)
+        if self.estado == "ERROR":
+            if self.publicable is not None or any(t is not None for t in textos):
+                raise ValueError("Un resultado con estado ERROR no lleva decisión ni textos")
+        elif self.publicable is None:
+            raise ValueError("Un resultado con estado OK necesita publicable")
+        elif self.publicable and not all(t and t.strip() for t in textos):
+            raise ValueError("Un logro publicable necesita los dos textos")
+        elif not self.publicable and any(t is not None for t in textos):
+            raise ValueError("Un logro no publicable no lleva textos")
+        return self
+
+
 class ErrorCampo(ModeloIa):
     campo: str = Field(description="Ruta del campo, por ejemplo mensajes.0.autor.tipo")
     problema: str
@@ -131,6 +178,11 @@ def generar_esquema() -> dict:
         "(ingestion/discord/schema/contract_v1.schema.json).",
         "respuesta": RespuestaLote.model_json_schema(mode="serialization"),
         "error": ErrorApi.model_json_schema(mode="serialization"),
+        # T06: POST /v1/generar (solo agrega; /v1/procesar no cambia)
+        "generar": {
+            "pedido": PedidoGenerar.model_json_schema(mode="validation"),
+            "respuesta": RespuestaGenerar.model_json_schema(mode="serialization"),
+        },
     }
     return esquema
 

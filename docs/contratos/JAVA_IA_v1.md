@@ -3,6 +3,7 @@
 > **Estado:** v1.0 · **Fecha:** 2026-10-03 · **Tarea:** T02 · **Lo implementa del lado Java:** T04
 > **Cambio de T04 (2026-10-04, validado por Harrison):** `/v1/procesar` exige `X-Api-Key` (S2) y hay un código de error más, `NO_AUTORIZADO` (401). Es un cambio que solo agrega: nada de lo anterior cambió.
 > **Cambio de T05 (2026-10-04, DEC-54):** en `tiempoReal`, todo el pedido tiene un **tope de 25 s** (`TIEMPO_REAL_TOPE_S`, §6). Si se agota, la duda llega con sus etiquetas y `respuesta.encontrada = false`. Solo agrega: ningún campo cambió. Además se quitó la puerta vieja `POST /procesar`.
+> **Cambio de T06 (2026-10-04, DEC-82):** una puerta nueva, **`POST /v1/generar`**: el Agente-Mod redacta un post de LinkedIn y un caso de éxito a partir de un logro (§9). Solo agrega: `/v1/procesar` no cambió.
 
 ## 0. Sobre este documento
 
@@ -53,7 +54,7 @@ Una prueba falla si el archivo publicado y los modelos no coinciden.
 | El LLM falla o no responde a tiempo | 1 reintento, salvo que se haya agotado el tiempo | `estado = ERROR`, **sin etiquetas** (F4) |
 | `PREGUNTA_FAQ` en modo `tiempoReal` | Además, le pregunta al Agente FAQ, con el tiempo que queda del tope (§6) | Trae `respuesta` |
 | `PREGUNTA_FAQ` en modo `historial` | Nada más: no se gasta en respuestas | `respuesta = null` |
-| `TESTIMONIO` | Solo se etiqueta. El Agente-Mod llega en la fase 4 | — |
+| `TESTIMONIO` | Solo se etiqueta. Los borradores los pide Java después, en otra puerta: `POST /v1/generar` (§9) | — |
 
 La IA **no** guarda nada ni sube nada a OCI (D2): eso le toca a Java.
 
@@ -241,6 +242,122 @@ Todos usan el mismo formato y **nunca repiten los datos recibidos** (S7).
 
 | Qué | Dónde se resuelve |
 |---|---|
-| Posts de LinkedIn y casos de éxito (Agente-Mod) | Fase 4 |
+| Posts de LinkedIn y casos de éxito (Agente-Mod) | ✅ En `POST /v1/generar` (§9, T06) |
 | FAQ semanal | Fase 4 |
 | Sacar a `/procesar` | ✅ Hecho en T05 |
+
+## 9. `POST /v1/generar`: post de LinkedIn y caso de éxito (T06)
+
+**Qué hace.** Recibe un logro (un mensaje con `intencion = TESTIMONIO`) y, si las hay, las respuestas que recibió. El **Agente-Mod** (`agents/agent_mod/`) decide si el logro **vale la pena publicarse** (DEC-53) y, si es así, redacta los dos borradores con la **guía de voz** de la institución ([agents/agent_mod/guia_de_voz.md](../../agents/agent_mod/guia_de_voz.md), DEC-84). Hace **una** llamada al LLM, con salida estructurada.
+
+Es una puerta aparte de `/v1/procesar` (DEC-82): redactar no hace más lenta la clasificación. Nada se publica: Java guarda los borradores como `PENDIENTE` y Marketing los aprueba en el panel (N6).
+
+### 9.1 La puerta
+
+| Dato | Valor |
+|---|---|
+| Método y ruta | `POST /v1/generar` (dentro de Docker, `http://ia:8000/v1/generar`) |
+| Cabecera obligatoria | `X-Api-Key` con `API_KEY_IA`, igual que `/v1/procesar` (S2) |
+| Cabecera opcional | `X-Id-Correlacion`: vuelve en los errores |
+| Respuesta | `200` con la decisión (también cuando el LLM falla: entonces `estado = ERROR`), `401`, `422` o `500`, con el formato común de error (§7) |
+| Tiempo | Una sola llamada, con un tope de **25 s** (`MOD_TIMEOUT_S`) y sin reintento: cabe en los 30 s de lectura de Java. Si falla, Java la pide otra vez en la siguiente vuelta |
+| Modelo | `MOD_MODEL_NAME` (DEC-85). Si está vacío, el mismo que clasifica. Mismo proveedor y clave (D5). Temperatura `MOD_TEMPERATURE` (0,7) |
+
+### 9.2 El pedido
+
+| Campo | Tipo | Nota |
+|---|---|---|
+| `versionContrato` | `"1.0"` | La versión del contrato v1 de las cajas |
+| `pedidoId` | texto, de 1 a 100 caracteres | Lo pone Java; vuelve en la respuesta |
+| `logro` | caja del contrato v1 | El mensaje del logro, tal cual está en `mensajes.contrato` |
+| `respuestas` | lista de cajas del contrato v1 | Los mensajes con `respondeA` igual al `id` del logro. **Como máximo 20** (si son más, `422`). Puede ir vacía |
+
+### 9.3 Qué ve el LLM (DEC-81)
+
+El Agente-Mod **no** le envía la caja al LLM. Le envía solo:
+- el **primer nombre** del autor, sacado de `autor.nombreVisible` ("Camila Rojas" → "Camila");
+- el canal, el `textoOriginal` del logro (para la cita textual) y el total de reacciones con sus emojis;
+- de cada respuesta, solo el `rol` de quien responde y su texto.
+
+**Nunca** le llegan el nombre completo, `nombreUsuario`, los IDs ni los nombres de quienes respondieron. Las menciones de Discord (`<@123>`, `<@&123>`, `<#123>`) se cambian por `@alguien` antes de enviar. Como última defensa, si el borrador trae el nombre completo o el usuario del autor (por ejemplo, porque el alumno los escribió en su mensaje), se reemplazan por el primer nombre.
+
+### 9.4 Ejemplo
+
+**Pedido** (con las cajas acortadas)
+
+```json
+{
+  "versionContrato": "1.0",
+  "pedidoId": "gen-7c1d0a5e-3b2f-4e8a-9f61-2d4b8c0e1a77",
+  "logro": {
+    "id": "1556321890585419808",
+    "canal": { "id": "1554158272867467374", "nombre": "logros" },
+    "autor": { "id": "111111111111111111", "nombreVisible": "Camila Rojas", "tipo": "persona", "rol": "miembro", "…": "…" },
+    "textoOriginal": "me contrataron!!!!! después de 6 meses en el bootcamp y 40 postulaciones, empiezo el lunes como QA trainee. No se rindan",
+    "reacciones": [ { "emoji": "🎉", "emojiId": null, "cantidad": 12 } ],
+    "…": "el resto de los campos del contrato v1"
+  },
+  "respuestas": [
+    { "id": "1556321900000000001", "respondeA": "1556321890585419808",
+      "autor": { "rol": "mentor", "…": "…" }, "textoOriginal": "felicitaciones!! 👏", "…": "…" }
+  ]
+}
+```
+
+**Respuesta: publicable**
+
+```json
+{
+  "versionContratoIa": "1.0",
+  "pedidoId": "gen-7c1d0a5e-3b2f-4e8a-9f61-2d4b8c0e1a77",
+  "discordId": "1556321890585419808",
+  "estado": "OK",
+  "publicable": true,
+  "motivo": "Es una contratación después de un proceso largo.",
+  "postLinkedin": "🎉 Después de 6 meses de bootcamp y 40 postulaciones, Camila empieza su primer trabajo en tecnología…",
+  "casoExito": "**Situación:** …
+**Desafío:** …
+**Logro:** …
+**En sus palabras:** \"me contrataron!!!!! …\"
+**Cierre:** …",
+  "metricas": { "duracionMs": 6120, "tokensIn": 1450, "tokensOut": 520 }
+}
+```
+
+**No publicable** y **error**
+
+```json
+{ "versionContratoIa": "1.0", "pedidoId": "gen-…", "discordId": "…", "estado": "OK",
+  "publicable": false, "motivo": "Es un avance de aprendizaje del día a día.",
+  "postLinkedin": null, "casoExito": null, "metricas": { "…": "…" } }
+
+{ "versionContratoIa": "1.0", "pedidoId": "gen-…", "discordId": "…", "estado": "ERROR",
+  "publicable": null, "motivo": "El LLM no respondió en 25 s.",
+  "postLinkedin": null, "casoExito": null, "metricas": { "…": "…" } }
+```
+
+### 9.5 Campos de la respuesta
+
+| Campo | Tipo | Nota |
+|---|---|---|
+| `versionContratoIa` | `"1.0"` | |
+| `pedidoId` | texto | El recibido |
+| `discordId` | texto | El `id` del logro |
+| `estado` | `OK` \| `ERROR` | `ERROR`: el LLM falló, no respondió a tiempo, devolvió algo sin formato o marcó el logro como publicable sin escribir los dos textos. **Nunca** trae un borrador vacío ni a medias (F4) |
+| `publicable` | booleano o `null` | `null` solo si `ERROR` |
+| `motivo` | texto | Por qué es publicable o no, o el motivo del error (sin el detalle del proveedor: ese va al registro) |
+| `postLinkedin`, `casoExito` | texto o `null` | Los dos, solo si `publicable = true`. Si no, `null` |
+| `metricas` | objeto | `duracionMs`, `tokensIn` y `tokensOut` del Agente-Mod |
+
+El JSON Schema está en [JAVA_IA_v1.schema.json](JAVA_IA_v1.schema.json), en la clave `generar` (`pedido` y `respuesta`).
+
+### 9.6 Qué hace Java con cada respuesta
+
+Lo hace la generación en segundo plano (`backend-java/.../generacion/`, T06): cada tanto toma los logros (`TESTIMONIO`, `OK`, de una persona) que todavía no tienen generación, de a pocos y con reserva, y los envía uno por uno.
+
+| Respuesta | Qué guarda Java |
+|---|---|
+| `OK` y `publicable = true` | Dos filas en `borradores` (`POST_LINKEDIN` y `CASO_EXITO`), `PENDIENTE`, con `texto_ia` y los tokens; la generación del mensaje queda `GENERADO`. Todo en una transacción, y solo si el mensaje no cambió mientras la IA redactaba |
+| `OK` y `publicable = false` | Ningún borrador. La generación queda `NO_PUBLICABLE`, con el motivo |
+| `ERROR`, `422`, `500`, tiempo agotado o IA caída | Suma un intento y libera la reserva. Al máximo de intentos, `ERROR` |
+

@@ -1,7 +1,7 @@
 """
 Servicio FastAPI de la IA.
 
-Expone POST /v1/procesar (contrato Java ↔ IA v1, docs/contratos/JAVA_IA_v1.md) y GET /health.
+Expone POST /v1/procesar y POST /v1/generar (contrato Java ↔ IA v1, docs/contratos/JAVA_IA_v1.md) y GET /health.
 La puerta vieja POST /procesar, que usaba el bot directo, se quitó en T05: ahora el bot pasa por Java (C2).
 """
 from __future__ import annotations
@@ -17,8 +17,10 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from . import config as config_orq
-from .config_http import ENDPOINT_PROCESAR_V1, ENDPOINT_HEALTH, HTTP_PORT
-from .contrato_ia import ErrorApi, ErrorCampo, Lote, RespuestaLote
+from .config_http import ENDPOINT_GENERAR_V1, ENDPOINT_PROCESAR_V1, ENDPOINT_HEALTH, HTTP_PORT
+from .contrato_ia import (
+    VERSION_CONTRATO_IA, ErrorApi, ErrorCampo, Lote, Metricas, PedidoGenerar, RespuestaGenerar, RespuestaLote,
+)
 from .nodos.invocador_faq import precargar_agente_faq, agente_faq_listo
 
 log = logging.getLogger(__name__)
@@ -53,6 +55,21 @@ def _get_procesador_v1():
                 from .grafo_v1 import ProcesadorV1
                 _procesador_v1 = ProcesadorV1(construir_etiquetador())
     return _procesador_v1
+
+
+# Agente-Mod de /v1/generar (T06): se crea una sola vez (lee la guía de voz), con el primer pedido
+_agente_mod = None
+_lock_agente_mod = threading.Lock()
+
+
+def _get_agente_mod():
+    global _agente_mod
+    if _agente_mod is None:
+        with _lock_agente_mod:
+            if _agente_mod is None:
+                from agents.agent_mod.agente_mod import construir_agente_mod
+                _agente_mod = construir_agente_mod()
+    return _agente_mod
 
 
 def _respuesta_error(status: int, error: ErrorApi) -> JSONResponse:
@@ -139,6 +156,36 @@ def procesar_v1(lote: Lote, x_id_correlacion: str | None = Header(default=None))
             id_correlacion=x_id_correlacion or str(uuid.uuid4()),
         ))
 
+
+@app.post(
+    ENDPOINT_GENERAR_V1,
+    response_model=RespuestaGenerar,
+    responses={422: {"model": ErrorApi}, 500: {"model": ErrorApi}},
+)
+def generar_v1(pedido: PedidoGenerar, x_id_correlacion: str | None = Header(default=None)):
+    """
+    Agente-Mod (T06, N3): recibe un logro (TESTIMONIO) y sus respuestas, decide si es publicable y, si lo es,
+    redacta un post de LinkedIn y un caso de éxito con la guía de voz. Un fallo del LLM es estado ERROR (F4).
+    Protegida por X-Api-Key como toda ruta /v1/… (S2). Es `def`: la espera al LLM no bloquea el servidor.
+    """
+    try:
+        r = _get_agente_mod().redactar(pedido.logro, pedido.respuestas)
+        metricas = Metricas(duracion_ms=r.duracion_ms, tokens_in=r.tokens_in, tokens_out=r.tokens_out)
+        comunes = dict(version_contrato_ia=VERSION_CONTRATO_IA, pedido_id=pedido.pedido_id,
+                       discord_id=pedido.logro.id, metricas=metricas)
+        if r.error is not None:
+            log.info("Generar %s: ERROR (%s)", pedido.logro.id, r.error)  # sin textos (S11)
+            return RespuestaGenerar(estado="ERROR", motivo=r.error, **comunes)
+        log.info("Generar %s: publicable=%s · %d ms", pedido.logro.id, r.publicable, r.duracion_ms)
+        return RespuestaGenerar(estado="OK", publicable=r.publicable, motivo=r.motivo,
+                                post_linkedin=r.post_linkedin, caso_exito=r.caso_exito, **comunes)
+    except Exception:
+        log.exception("Error interno en /v1/generar (pedido %s)", pedido.pedido_id)
+        return _respuesta_error(500, ErrorApi(
+            codigo="ERROR_INTERNO",
+            mensaje="La IA no pudo generar el borrador. Reintentar más tarde.",
+            id_correlacion=x_id_correlacion or str(uuid.uuid4()),
+        ))
 
 
 # --- PUNTO DE ENTRADA (dev) ---

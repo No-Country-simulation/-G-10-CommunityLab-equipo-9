@@ -308,5 +308,804 @@
     ],
     "title": "ErrorApi",
     "type": "object"
+  },
+  "generar": {
+    "pedido": {
+      "$defs": {
+        "Adjunto": {
+          "additionalProperties": false,
+          "description": "Un archivo adjunto.",
+          "properties": {
+            "id": {
+              "examples": [
+                "1554205178671009863"
+              ],
+              "pattern": "^\\d+$",
+              "title": "Id",
+              "type": "string"
+            },
+            "nombre": {
+              "examples": [
+                "captura.jpg"
+              ],
+              "title": "Nombre",
+              "type": "string"
+            },
+            "tipoContenido": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "examples": [
+                "image/jpeg"
+              ],
+              "title": "Tipocontenido"
+            },
+            "tamanoBytes": {
+              "minimum": 0,
+              "title": "Tamanobytes",
+              "type": "integer"
+            },
+            "ancho": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Solo en imágenes y videos",
+              "title": "Ancho"
+            },
+            "alto": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Solo en imágenes y videos",
+              "title": "Alto"
+            },
+            "url": {
+              "description": "Temporal: no guardarla como enlace permanente (decisión 3)",
+              "title": "Url",
+              "type": "string"
+            },
+            "urlExpiraEn": {
+              "anyOf": [
+                {
+                  "examples": [
+                    "2026-09-28T18:56:30.331Z"
+                  ],
+                  "format": "date-time",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cuándo deja de funcionar la url",
+              "title": "Urlexpiraen"
+            }
+          },
+          "required": [
+            "id",
+            "nombre",
+            "tipoContenido",
+            "tamanoBytes",
+            "ancho",
+            "alto",
+            "url",
+            "urlExpiraEn"
+          ],
+          "title": "Adjunto",
+          "type": "object"
+        },
+        "Autor": {
+          "additionalProperties": false,
+          "description": "Quién escribió el mensaje.",
+          "properties": {
+            "id": {
+              "description": "Identidad estable. Persona real: su ID de Discord. Simulado: 'sim-' + nombre normalizado (decisión 1)",
+              "examples": [
+                "sim-ana-perez"
+              ],
+              "minLength": 1,
+              "title": "Id",
+              "type": "string"
+            },
+            "idDiscord": {
+              "description": "author.id sin cambios. En los simulados es el ID del webhook",
+              "examples": [
+                "1554205178671009863"
+              ],
+              "pattern": "^\\d+$",
+              "title": "Iddiscord",
+              "type": "string"
+            },
+            "nombreUsuario": {
+              "description": "author.username",
+              "title": "Nombreusuario",
+              "type": "string"
+            },
+            "nombreVisible": {
+              "description": "author.global_name; si no existe, username",
+              "title": "Nombrevisible",
+              "type": "string"
+            },
+            "tipo": {
+              "description": "persona (incluye a los simulados), botPropio (nuestro bot) u otroBot",
+              "enum": [
+                "persona",
+                "botPropio",
+                "otroBot"
+              ],
+              "title": "Tipo",
+              "type": "string"
+            },
+            "rol": {
+              "description": "Sale de los roles de Discord del autor al momento de la ingesta (decisión 2)",
+              "enum": [
+                "miembro",
+                "mentor",
+                "staff"
+              ],
+              "title": "Rol",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "idDiscord",
+            "nombreUsuario",
+            "nombreVisible",
+            "tipo",
+            "rol"
+          ],
+          "title": "Autor",
+          "type": "object"
+        },
+        "Canal": {
+          "additionalProperties": false,
+          "description": "Canal donde se escribió el mensaje.",
+          "properties": {
+            "id": {
+              "examples": [
+                "1554205178671009863"
+              ],
+              "pattern": "^\\d+$",
+              "title": "Id",
+              "type": "string"
+            },
+            "nombre": {
+              "examples": [
+                "dudas"
+              ],
+              "title": "Nombre",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "nombre"
+          ],
+          "title": "Canal",
+          "type": "object"
+        },
+        "Encuesta": {
+          "additionalProperties": false,
+          "description": "Encuesta del mensaje. Sin muestras reales todavía (decisión 6).",
+          "properties": {
+            "pregunta": {
+              "title": "Pregunta",
+              "type": "string"
+            },
+            "opciones": {
+              "items": {
+                "$ref": "#/$defs/OpcionEncuesta"
+              },
+              "title": "Opciones",
+              "type": "array"
+            },
+            "finalizada": {
+              "title": "Finalizada",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "pregunta",
+            "opciones",
+            "finalizada"
+          ],
+          "title": "Encuesta",
+          "type": "object"
+        },
+        "Enlace": {
+          "additionalProperties": false,
+          "description": "Un link escrito en el texto.",
+          "properties": {
+            "url": {
+              "title": "Url",
+              "type": "string"
+            },
+            "dominio": {
+              "description": "Sin 'www.'",
+              "examples": [
+                "github.com"
+              ],
+              "title": "Dominio",
+              "type": "string"
+            }
+          },
+          "required": [
+            "url",
+            "dominio"
+          ],
+          "title": "Enlace",
+          "type": "object"
+        },
+        "Hilo": {
+          "additionalProperties": false,
+          "description": "Hilo o publicación de foro. En el MVP no se extraen hilos: el campo va en null (decisión 7).",
+          "properties": {
+            "id": {
+              "examples": [
+                "1554205178671009863"
+              ],
+              "pattern": "^\\d+$",
+              "title": "Id",
+              "type": "string"
+            },
+            "nombre": {
+              "title": "Nombre",
+              "type": "string"
+            },
+            "etiquetas": {
+              "description": "Nombres de las etiquetas aplicadas; solo en foros",
+              "items": {
+                "type": "string"
+              },
+              "title": "Etiquetas",
+              "type": "array"
+            }
+          },
+          "required": [
+            "id",
+            "nombre",
+            "etiquetas"
+          ],
+          "title": "Hilo",
+          "type": "object"
+        },
+        "Menciones": {
+          "additionalProperties": false,
+          "description": "A quién menciona el mensaje.",
+          "properties": {
+            "usuarios": {
+              "items": {
+                "examples": [
+                  "1554205178671009863"
+                ],
+                "pattern": "^\\d+$",
+                "type": "string"
+              },
+              "title": "Usuarios",
+              "type": "array"
+            },
+            "roles": {
+              "items": {
+                "examples": [
+                  "1554205178671009863"
+                ],
+                "pattern": "^\\d+$",
+                "type": "string"
+              },
+              "title": "Roles",
+              "type": "array"
+            },
+            "todos": {
+              "description": "true si menciona a @everyone",
+              "title": "Todos",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "usuarios",
+            "roles",
+            "todos"
+          ],
+          "title": "Menciones",
+          "type": "object"
+        },
+        "Mensaje": {
+          "additionalProperties": false,
+          "description": "1 mensaje de Discord = 1 registro. Siempre van todos los campos.",
+          "properties": {
+            "id": {
+              "description": "ID del mensaje en Discord: único en todo Discord",
+              "examples": [
+                "1554205178671009863"
+              ],
+              "pattern": "^\\d+$",
+              "title": "Id",
+              "type": "string"
+            },
+            "canal": {
+              "$ref": "#/$defs/Canal"
+            },
+            "hilo": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Hilo"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "En el MVP siempre null (decisión 7)"
+            },
+            "fecha": {
+              "description": "Cuándo se escribió",
+              "examples": [
+                "2026-09-28T18:56:30.331Z"
+              ],
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+              "title": "Fecha",
+              "type": "string"
+            },
+            "tipo": {
+              "description": "mensaje (type 0), respuesta (19), avisoSistema (6, 7, 18, 46) u otro",
+              "enum": [
+                "mensaje",
+                "respuesta",
+                "avisoSistema",
+                "otro"
+              ],
+              "title": "Tipo",
+              "type": "string"
+            },
+            "tipoDiscord": {
+              "description": "El type original de Discord",
+              "title": "Tipodiscord",
+              "type": "integer"
+            },
+            "esSimulado": {
+              "description": "true si lo publicó uno de nuestros webhooks de simulación",
+              "title": "Essimulado",
+              "type": "boolean"
+            },
+            "autor": {
+              "$ref": "#/$defs/Autor"
+            },
+            "textoOriginal": {
+              "description": "content sin cambios. Puede venir vacío",
+              "title": "Textooriginal",
+              "type": "string"
+            },
+            "tieneTexto": {
+              "title": "Tienetexto",
+              "type": "boolean"
+            },
+            "tieneBloqueCodigo": {
+              "title": "Tienebloquecodigo",
+              "type": "boolean"
+            },
+            "enlaces": {
+              "items": {
+                "$ref": "#/$defs/Enlace"
+              },
+              "title": "Enlaces",
+              "type": "array"
+            },
+            "menciones": {
+              "$ref": "#/$defs/Menciones"
+            },
+            "mencionaAlBot": {
+              "description": "Menciona a nuestro bot o a su rol (decisión 5)",
+              "title": "Mencionaalbot",
+              "type": "boolean"
+            },
+            "respondeA": {
+              "anyOf": [
+                {
+                  "examples": [
+                    "1554205178671009863"
+                  ],
+                  "pattern": "^\\d+$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ID del mensaje al que responde; solo en respuestas",
+              "title": "Respondea"
+            },
+            "adjuntos": {
+              "items": {
+                "$ref": "#/$defs/Adjunto"
+              },
+              "title": "Adjuntos",
+              "type": "array"
+            },
+            "reacciones": {
+              "items": {
+                "$ref": "#/$defs/Reaccion"
+              },
+              "title": "Reacciones",
+              "type": "array"
+            },
+            "fijado": {
+              "title": "Fijado",
+              "type": "boolean"
+            },
+            "editado": {
+              "title": "Editado",
+              "type": "boolean"
+            },
+            "editadoEn": {
+              "anyOf": [
+                {
+                  "examples": [
+                    "2026-09-28T18:56:30.331Z"
+                  ],
+                  "format": "date-time",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Editadoen"
+            },
+            "stickers": {
+              "description": "Nombres de los stickers",
+              "items": {
+                "type": "string"
+              },
+              "title": "Stickers",
+              "type": "array"
+            },
+            "vistasPrevias": {
+              "items": {
+                "$ref": "#/$defs/VistaPrevia"
+              },
+              "title": "Vistasprevias",
+              "type": "array"
+            },
+            "encuesta": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Encuesta"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "canal",
+            "hilo",
+            "fecha",
+            "tipo",
+            "tipoDiscord",
+            "esSimulado",
+            "autor",
+            "textoOriginal",
+            "tieneTexto",
+            "tieneBloqueCodigo",
+            "enlaces",
+            "menciones",
+            "mencionaAlBot",
+            "respondeA",
+            "adjuntos",
+            "reacciones",
+            "fijado",
+            "editado",
+            "editadoEn",
+            "stickers",
+            "vistasPrevias",
+            "encuesta"
+          ],
+          "title": "Mensaje",
+          "type": "object"
+        },
+        "OpcionEncuesta": {
+          "additionalProperties": false,
+          "description": "Una opción de una encuesta.",
+          "properties": {
+            "texto": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Texto"
+            },
+            "votos": {
+              "minimum": 0,
+              "title": "Votos",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "texto",
+            "votos"
+          ],
+          "title": "OpcionEncuesta",
+          "type": "object"
+        },
+        "Reaccion": {
+          "additionalProperties": false,
+          "description": "Un emoji puesto sobre el mensaje, con su cantidad.",
+          "properties": {
+            "emoji": {
+              "description": "El emoji; en los personalizados, su nombre",
+              "examples": [
+                "🎉"
+              ],
+              "title": "Emoji",
+              "type": "string"
+            },
+            "emojiId": {
+              "anyOf": [
+                {
+                  "examples": [
+                    "1554205178671009863"
+                  ],
+                  "pattern": "^\\d+$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "null si es un emoji estándar",
+              "title": "Emojiid"
+            },
+            "cantidad": {
+              "description": "No dice quién reaccionó",
+              "minimum": 1,
+              "title": "Cantidad",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "emoji",
+            "emojiId",
+            "cantidad"
+          ],
+          "title": "Reaccion",
+          "type": "object"
+        },
+        "VistaPrevia": {
+          "additionalProperties": false,
+          "description": "Vista previa de un link (embed). Sin muestras reales todavía (decisión 6).",
+          "properties": {
+            "tipo": {
+              "examples": [
+                "link"
+              ],
+              "title": "Tipo",
+              "type": "string"
+            },
+            "url": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Url"
+            },
+            "titulo": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Titulo"
+            },
+            "descripcion": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Descripcion"
+            }
+          },
+          "required": [
+            "tipo",
+            "url",
+            "titulo",
+            "descripcion"
+          ],
+          "title": "VistaPrevia",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Lo que Java envía a POST /v1/generar: un logro (TESTIMONIO) y, si las hay, las respuestas que recibió.",
+      "properties": {
+        "versionContrato": {
+          "const": "1.0",
+          "description": "La versión del contrato v1 de las cajas",
+          "title": "Versioncontrato",
+          "type": "string"
+        },
+        "pedidoId": {
+          "description": "Lo pone Java; vuelve en la respuesta",
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Pedidoid",
+          "type": "string"
+        },
+        "logro": {
+          "$ref": "#/$defs/Mensaje",
+          "description": "La caja del contrato v1 del mensaje del logro, tal cual"
+        },
+        "respuestas": {
+          "description": "Las cajas de los mensajes que responden al logro (respondeA), como máximo 20",
+          "items": {
+            "$ref": "#/$defs/Mensaje"
+          },
+          "maxItems": 20,
+          "title": "Respuestas",
+          "type": "array"
+        }
+      },
+      "required": [
+        "versionContrato",
+        "pedidoId",
+        "logro"
+      ],
+      "title": "PedidoGenerar",
+      "type": "object"
+    },
+    "respuesta": {
+      "$defs": {
+        "Metricas": {
+          "additionalProperties": false,
+          "properties": {
+            "duracionMs": {
+              "description": "Lo que tardó todo el lote dentro de la IA",
+              "minimum": 0,
+              "title": "Duracionms",
+              "type": "integer"
+            },
+            "tokensIn": {
+              "description": "Tokens de entrada del clasificador (no incluye al Agente FAQ)",
+              "minimum": 0,
+              "title": "Tokensin",
+              "type": "integer"
+            },
+            "tokensOut": {
+              "description": "Tokens de salida del clasificador (no incluye al Agente FAQ)",
+              "minimum": 0,
+              "title": "Tokensout",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "duracionMs",
+            "tokensIn",
+            "tokensOut"
+          ],
+          "title": "Metricas",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Lo que devuelve POST /v1/generar. Un fallo del LLM es ERROR, nunca un borrador vacío ni inventado (F4).",
+      "properties": {
+        "versionContratoIa": {
+          "const": "1.0",
+          "description": "Cambia si cambia este formato",
+          "title": "Versioncontratoia",
+          "type": "string"
+        },
+        "pedidoId": {
+          "description": "El pedidoId recibido",
+          "title": "Pedidoid",
+          "type": "string"
+        },
+        "discordId": {
+          "description": "El id del mensaje del logro",
+          "title": "Discordid",
+          "type": "string"
+        },
+        "estado": {
+          "description": "OK: la IA decidió. ERROR: el LLM falló y no hay decisión ni textos",
+          "enum": [
+            "OK",
+            "ERROR"
+          ],
+          "title": "Estado",
+          "type": "string"
+        },
+        "publicable": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "true si el logro vale un post (DEC-53). null si estado = ERROR",
+          "title": "Publicable"
+        },
+        "motivo": {
+          "description": "Por qué es publicable o no, o el motivo del error",
+          "title": "Motivo",
+          "type": "string"
+        },
+        "postLinkedin": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Borrador del post. Solo si publicable = true",
+          "title": "Postlinkedin"
+        },
+        "casoExito": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Borrador del caso de éxito. Solo si publicable = true",
+          "title": "Casoexito"
+        },
+        "metricas": {
+          "$ref": "#/$defs/Metricas"
+        }
+      },
+      "required": [
+        "versionContratoIa",
+        "pedidoId",
+        "discordId",
+        "estado",
+        "motivo",
+        "metricas"
+      ],
+      "title": "RespuestaGenerar",
+      "type": "object"
+    }
   }
 }

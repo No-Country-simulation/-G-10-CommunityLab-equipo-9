@@ -28,6 +28,14 @@ LLM_REINTENTOS: int = int(os.getenv("LLM_REINTENTOS", "1"))
 # respuesta.encontrada = false y el bot deriva al mentor, antes de los 30 s que espera Java. 0 = sin tope
 TIEMPO_REAL_TOPE_S: float = float(os.getenv("TIEMPO_REAL_TOPE_S", "25"))
 
+# Agente-Mod (T06): redacta posts de LinkedIn y casos de éxito en POST /v1/generar.
+# DEC-85: el modelo se configura; por defecto, el mismo que clasifica. Mismo proveedor (D5).
+MOD_MODEL_NAME: str = os.getenv("MOD_MODEL_NAME", "").strip() or CLASIFICADOR_MODEL
+# Una sola llamada, sin reintentos: tiene que caber en los 30 s de lectura de Java (D4). Si falla, Java reintenta
+MOD_TIMEOUT_S: float = float(os.getenv("MOD_TIMEOUT_S", "25"))
+# Algo de creatividad para redactar (el clasificador usa 0)
+MOD_TEMPERATURE: float = float(os.getenv("MOD_TEMPERATURE", "0.7"))
+
 # S2: clave que Java envía en X-Api-Key a /v1/procesar. Vacía: /v1/procesar rechaza todo con 401.
 # La genera scripts/generar_api_key.py --cliente ia (sin mostrarla)
 API_KEY_IA: str = os.getenv("API_KEY_IA", "").strip()

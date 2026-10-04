@@ -16,6 +16,7 @@ HTTP_PORT: int = 8000           # Puerto estándar de FastAPI
 
 # --- 2. ENDPOINTS EXPUESTOS ---
 ENDPOINT_PROCESAR_V1: str = "/v1/procesar"  # POST — contrato Java ↔ IA v1 (docs/contratos/JAVA_IA_v1.md)
+ENDPOINT_GENERAR_V1: str = "/v1/generar"    # POST — Agente-Mod: post de LinkedIn y caso de éxito (T06)
 ENDPOINT_HEALTH: str = "/health"         # GET  — verifica salud
 ENDPOINT_DOCS: str = "/docs"             # GET  — Swagger UI
 
