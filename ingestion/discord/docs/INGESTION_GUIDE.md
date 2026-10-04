@@ -680,6 +680,8 @@ packageResultRepository.save(pkg);                              ← guarda todo,
 
 ## 11. Opciones A, B y C
 
+> ⚠️ **Histórico.** En la rama `feature/integracion-arquitectura-3`, la decisión **D8** (2026-10-03) reemplazó la opción C: Java recibe el contrato v1 tal cual en `POST /api/v1/lotes` (tarea T03). Ver `docs/ANALISIS_INGENIERIA_PROPUESTA_3.md`.
+
 > Qué vas a entender aquí: tres formas de resolver las diferencias, cuánto le cuesta cada una a cada equipo y cuál recomendamos.
 
 ### Opción A · La ingesta se adapta al DTO actual

@@ -85,6 +85,6 @@ Este documento fija la pauta de cómo entran los mensajes de Discord a InsightEd
 - [x] No hay tokens, IDs ni URLs escritos en el código.
 - [x] Hay muestras crudas guardadas y un diccionario de datos ([DISCORD_DATA_GUIDE.md](DISCORD_DATA_GUIDE.md)).
 - [x] El contrato v1 existe como JSON Schema ([schema/contract_v1.schema.json](../schema/contract_v1.schema.json)) y los 38 mensajes extraídos lo cumplen (2026-10-02).
-- [ ] La salida a archivo funciona y la salida HTTP está probada. La salida a archivo funciona. El envío HTTP (opción C) está probado contra un backend simulado; falta probarlo contra el backend real.
+- [ ] La salida a archivo funciona y la salida HTTP está probada. La salida a archivo funciona. El envío HTTP (opción C, histórica: reemplazada por D8 el 2026-10-03) está probado contra un backend simulado; falta probarlo contra el backend real.
 - [ ] Backend recibió la especificación del endpoint.
 - [ ] Hay un pull request abierto hacia `main`.

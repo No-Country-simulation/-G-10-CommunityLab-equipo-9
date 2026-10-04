@@ -45,7 +45,7 @@ Lee, en este orden:
   - Archivos: `contract.py` (pydantic y JSON Schema), `transform.py` (función pura), `extract.py` (incremental, con marcador, relectura de 7 días y roles en `context.json`), `build_batch.py` (valida y arma el lote) y `send_batch.py` (opción C, "etiqueta + caja", y marcador).
   - 34 pruebas con `pytest`. Los 38 mensajes cumplen el contrato.
 - **Falta:**
-  - probar el envío contra el backend real cuando aplique la opción C;
+  - ~~probar el envío contra el backend real cuando aplique la opción C~~ hecho en T03 con el contrato v1 tal cual (D8);
   - el pull request a `main` (meta: 2026-10-10);
   - el bot en vivo, en otra rama.
 - **Especificación del endpoint para backend:** por ahora la cubren el JSON Schema y [docs/INGESTION_GUIDE.md](docs/INGESTION_GUIDE.md) §11. Se cierra cuando backend elija una opción.

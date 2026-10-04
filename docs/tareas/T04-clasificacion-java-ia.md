@@ -7,7 +7,7 @@
 | Hallazgos que resuelve | C3 (lado Java), S2, F4 (lado Java), F8 (lado Java) y observaciones de T02 ([README](README.md)) |
 | Tamaño | M |
 | Modelo de Claude recomendado | **Opus 5.5**: procesamiento en segundo plano, concurrencia y cambios en Java y en Python |
-| Depende de | T01 ✅, T02 ✅ y **T03**. T03 también toca `backend-java/` y deja la API key y el formato de error que esta tarea reutiliza: **no empezar hasta que T03 esté fusionada** |
+| Depende de | T01 ✅, T02 ✅ y T03 ✅. T03 dejó la API key de los clientes (`seguridad.api-keys.*`, `ApiKeyFilter`), el formato común de error (`ErrorApi`, `ManejadorErrores`) y el id de correlación: **reutilizarlos** |
 | Rama | `tarea/T04-clasificacion-java-ia` |
 
 ## 1. Objetivo
@@ -60,6 +60,7 @@ Se hace **en segundo plano y en tandas chicas**, sin que un fallo de la IA pierd
    - la clave se genera sin mostrarla y se escribe en `.env`, igual que en T03; `compose.yml` la pasa a `ia` y a `api-java`;
    - se agrega a `.env.example`.
 5. **Registros:** cada ejecución registra cuántos mensajes tomó, cuántos quedaron en `OK`, en `ERROR` y en reintento, y cuánto tardó. **Sin el texto de los mensajes** (S11).
+6. **Carácter NUL** (observación de T03): al recibir un lote en `POST /api/v1/lotes`, se quita `\u0000` del texto y de los textos de la caja, para que un solo mensaje no haga fallar todo el lote con 500. Agregar una prueba. Es la opción recomendada 🔎, pendiente del 👤 OK de Harrison; la otra opción es rechazar el lote con 422.
 
 ## 4. Fuera de alcance
 
@@ -103,7 +104,7 @@ Se hace **en segundo plano y en tandas chicas**, sin que un fallo de la IA pierd
 
 ## 7. Comandos de git para Harrison
 
-**Al empezar**, con T03 ya fusionada, desde `C:\Users\LENOVO\Documents\Cursos\No Country\Hackaton ONE 10\insightedu-lab`:
+**Al empezar**, desde `C:\Users\LENOVO\Documents\Cursos\No Country\Hackaton ONE 10\insightedu-lab`:
 ```
 git switch feature/integracion-arquitectura-3
 git pull
