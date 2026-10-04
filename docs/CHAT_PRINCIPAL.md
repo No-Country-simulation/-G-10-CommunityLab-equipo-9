@@ -8,7 +8,7 @@
 1. Lee `CLAUDE.md`, este archivo, [docs/DECISIONES.md](DECISIONES.md) (todas las decisiones en un solo lugar), [docs/tareas/README.md](tareas/README.md) (estado de las tareas y observaciones) y, del [análisis](ANALISIS_INGENIERIA_PROPUESTA_3.md), las secciones **Objetivos**, **0 · Decisiones** y **9 · Prioridades**.
 2. Comprueba el estado real con comandos de solo lectura: `git fetch`, `git status -sb`, `git log --oneline -5 feature/integracion-arquitectura-3` y `docker compose ps`.
 3. **Primera tarea: auditar T04** (procedimiento en la sección 3). Ojo: T04 **modificó `docs/contratos/JAVA_IA_v1.md` y su JSON Schema**. Verifica qué cambió y si cambia el contrato Java ↔ IA v1 sin aprobación de Harrison.
-4. **Después de T04, el ciclo se repite hasta la entrega**, una tarea a la vez y en el orden de la sección 6 (**T05 → T06 → T06b → T07 → T08 → T09 → T10**):
+4. **Después de T04, el ciclo se repite hasta la entrega**, una tarea a la vez y en el orden de la sección 6 (**T05 → T06 → T06b → T07 → T08 → T09 → T10**, DEC-93):
 
    ```
    escribir la ficha → plantear a Harrison sus decisiones previas → Harrison abre el chat de tarea
@@ -33,10 +33,10 @@ El chat principal sí puede editar la documentación de seguimiento: índice, re
 | Qué | Estado |
 |---|---|
 | Rama de integración | `feature/integracion-arquitectura-3`. Harrison desarrolla todo aquí; base congelada (D1) |
-| Tareas | T01 ✅ · T02 ✅ · T03 ✅ · T04 ✅ (fusión `--no-ff`) · T05 ✅ (auditada el 2026-10-04 con un cambio pedido y corregido) · T06 ✅ (auditada el 2026-10-04, sin cambios pedidos) · **T06b y T07 a T10 sin ficha** |
+| Tareas | T01 ✅ · T02 ✅ · T03 ✅ · T04 ✅ (fusión `--no-ff`) · T05 ✅ (auditada el 2026-10-04 con un cambio pedido y corregido) · T06 ✅ (auditada el 2026-10-04, sin cambios pedidos) · T06b ✅ (auditada el 2026-10-04, sin cambios pedidos) · **T07 a T10 sin ficha** |
 | Docker local | `postgres` (sin puerto), `api-java` (`127.0.0.1:8008`), `ia` (`127.0.0.1:8000`) y `bot` (sin puerto). Faltan el panel y la ingesta programada (cron, O3) |
 | Datos | 39 mensajes reales del servidor de pruebas en `mensajes`, **todos clasificados** por T04 (🧪 39 en `OK`, migración V2 aplicada) |
-| Decisiones | D1 a D8 en el análisis §0 y DEC-01 a DEC-92 en [DECISIONES.md](DECISIONES.md). **D3:** el bot responde sin aprobación, solo con respaldo en los PDFs |
+| Decisiones | D1 a D8 en el análisis §0 y DEC-01 a DEC-108 en [DECISIONES.md](DECISIONES.md). **D3:** el bot responde sin aprobación, solo con respaldo en los PDFs |
 | Plan de 2 días | ✅ Cumplido (T01 a T03) |
 | Entrega final | **2026-10-26** |
 

@@ -10,7 +10,7 @@ Cada tarea tiene una **ficha** (la orden de trabajo, que escribe el chat princip
 | [T04](T04-clasificacion-java-ia.md) | Java clasifica en segundo plano los mensajes `PENDIENTE` con la IA y guarda las etiquetas; API key entre Java y la IA (S2); carácter NUL | T01, T02, T03 | Opus 5.5 | ✅ Aprobada el 2026-10-04 (`3ea907b`) · [informe](T04-informe.md) |
 | [T05](T05-bot-en-vivo.md) | El bot pasa por Java: puerta en vivo, respuesta guardada, tope total en la IA, bot en Docker (C2, F5, S8, S10) | T03, T04 | Opus 5.5 | ✅ Aprobada el 2026-10-04 (`c815546`, con los cambios de la auditoría) · [informe](T05-informe.md) · [contrato bot ↔ Java](../contratos/BOT_JAVA_v1.md) |
 | [T06](T06-agente-mod.md) | Agente-Mod: borradores de post de LinkedIn y caso de éxito con la voz de CommunityLab; puerta `/v1/generar`; generación automática en Java (OE3) | T04, T05 | Opus 5.5 | ✅ Aprobada el 2026-10-04 (`158ff7f`) · [informe](T06-informe.md) · [guía de voz](../../agents/agent_mod/guia_de_voz.md) |
-| T06b | FAQ semanal: Java junta las dudas de la semana y la IA escribe un borrador de FAQ (OE4) | T05, T06 | Por definir | ⏳ Ficha pendiente (DEC-83) |
+| [T06b](T06b-faq-semanal.md) | FAQ semanal: Java junta las dudas de la semana; la IA agrupa las repetidas, responde solo con respaldo en los PDF y lista aparte lo que no tiene respuesta; puerta `/v1/faq` (OE4) | T05, T06 | Opus 5.5 | ✅ Aprobada el 2026-10-04 (`b860789`) · [informe](T06b-informe.md) |
 
 Estados: 📝 ficha lista · 🔨 en curso · 🔍 en auditoría · ✅ aprobada o fusionada · ⏳ ficha pendiente
 
@@ -60,3 +60,8 @@ Estados: 📝 ficha lista · 🔨 en curso · 🔍 en auditoría · ✅ aprobada
 | T06 | Los tokens de cada redacción van en el `POST_LINKEDIN`, y el `CASO_EXITO` lleva 0 (DEC-90). Tenerlo en cuenta si el dashboard suma tokens | T08 |
 | T06 | Los borradores `PENDIENTE` son los activos "generados" de D2: son los que van a `generados/` en OCI | T09 |
 | T06 | 🧪 Los textos salen más cortos que lo que pide la guía (posts de 63 a 92 palabras; pide 90 a 160), y un post mencionó celebraciones que todavía no había. Harrison lo aceptó (DEC-92). Mejoras posibles: exigir los largos en el prompt, decirle al LLM "Reacciones: ninguna" o probar otro modelo con `MOD_MODEL_NAME` | 🟡 |
+| T06b | 🧪 `gemini-3.5-flash-lite` ignora `temperature`: `FAQ_AGRUPAR_TEMPERATURE` y `MOD_TEMPERATURE` (DEC-88) no tienen efecto con este modelo. Solo importan si se cambia de modelo | 🟡 |
+| T06b | El servicio `ia` no configura el registro de Python en nivel INFO: no se ven los `log.info` de `/v1/generar` ni de `/v1/faq` | 🟡 (O6) |
+| T06b | Si un alumno escribe su nombre **dentro** de una duda, solo las instrucciones del LLM impiden copiarlo en la FAQ: no hay defensa en código como DEC-87. Marketing revisa antes de aprobar (DEC-108) | T07 (revisión humana) |
+| T06b | Si Java está apagado el lunes a las 8:00, esa semana no tiene FAQ (DEC-104). En el servidor, `api-java` tiene que quedar encendido; si no, se usa `FAQ_SEMANAL_AL_ARRANCAR` | T10 |
+| T06b | El arreglo del "¿" inicial en las preguntas de la FAQ se hizo después de la prueba real: se ve recién al reconstruir la IA (`docker compose up -d --build ia`) | T10 (al desplegar se reconstruye todo) |
