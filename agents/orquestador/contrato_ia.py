@@ -116,7 +116,7 @@ class ErrorCampo(ModeloIa):
 class ErrorApi(ModeloIa):
     """Formato común de error (análisis §2). Nunca repite los datos recibidos ni detalles internos (S7)."""
 
-    codigo: Literal["CONTRATO_INVALIDO", "ERROR_INTERNO"]
+    codigo: Literal["CONTRATO_INVALIDO", "NO_AUTORIZADO", "ERROR_INTERNO"]
     mensaje: str
     errores: list[ErrorCampo] = Field(default_factory=list)
     id_correlacion: str = Field(description="El de la cabecera X-Id-Correlacion, o uno nuevo")

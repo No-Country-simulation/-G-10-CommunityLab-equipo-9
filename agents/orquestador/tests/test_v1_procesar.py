@@ -15,6 +15,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from agents.orquestador import api, contrato_ia
+from agents.orquestador import config as config_orq
 from agents.orquestador.clasificadores.etiquetador import (
     EtiquetadorLLM,
     EtiquetadorPalabrasClave,
@@ -101,14 +102,23 @@ def _comentario(id_: str = "1554205400000000001") -> dict:
     return dp.crudo_real(id=id_, content="graciasss era eso 🙏")
 
 
+CLAVE_IA = "clave-de-prueba-ia"
+
+
+@pytest.fixture(autouse=True)
+def clave_ia(monkeypatch):
+    """S2 (T04): la IA tiene configurada una clave en todas estas pruebas."""
+    monkeypatch.setattr(config_orq, "API_KEY_IA", CLAVE_IA)
+
+
 @pytest.fixture
 def cliente(monkeypatch):
-    """Cliente HTTP con el procesador armado con dobles. Sin 'with': no precarga el Agente FAQ real."""
+    """Cliente HTTP con el procesador armado con dobles y la clave de Java. Sin 'with': no precarga el Agente FAQ real."""
     llm, faq = LLMFalso(), FaqFalso()
 
     def usar(etiquetador=None):
         monkeypatch.setattr(api, "_procesador_v1", ProcesadorV1(etiquetador or EtiquetadorLLM(llm), faq))
-        return TestClient(api.app)
+        return TestClient(api.app, headers={"X-Api-Key": CLAVE_IA})
 
     usar.llm, usar.faq = llm, faq
     return usar
@@ -352,3 +362,50 @@ def test_procesar_viejo_sigue_respondiendo_con_su_formato(monkeypatch):
     cuerpo = r.json()
     assert set(cuerpo) == {"lote_id", "respuesta_discord", "paquete_final", "log_ejecucion"}
     assert cuerpo["respuesta_discord"]["respuestas"][0]["texto_respuesta"] == "eco"
+
+
+# ── S2 (T04): /v1/procesar exige la API key de Java ───────────────────────────
+
+def test_sin_clave_es_401_y_no_llama_al_llm(cliente):
+    cliente()  # arma el procesador con el LLM falso
+    r = TestClient(api.app).post("/v1/procesar", json=_lote([_logro()]), headers={"X-Id-Correlacion": "corr-1"})
+
+    assert r.status_code == 401
+    assert r.json() == {"codigo": "NO_AUTORIZADO", "mensaje": "Falta la cabecera X-Api-Key o la clave no es válida.",
+                        "errores": [], "idCorrelacion": "corr-1"}
+    assert cliente.llm.llamadas == 0
+
+
+def test_con_clave_incorrecta_es_401(cliente):
+    cliente()
+    r = TestClient(api.app).post("/v1/procesar", json=_lote([_logro()]), headers={"X-Api-Key": "otra-clave"})
+
+    assert r.status_code == 401
+    assert "otra-clave" not in r.text and CLAVE_IA not in r.text
+    assert cliente.llm.llamadas == 0
+
+
+def test_sin_clave_configurada_en_la_ia_se_rechaza_todo(cliente, monkeypatch):
+    monkeypatch.setattr(config_orq, "API_KEY_IA", "")
+
+    r = cliente().post("/v1/procesar", json=_lote([_logro()]))  # aunque envíe una clave
+
+    assert r.status_code == 401
+
+
+def test_la_clave_se_revisa_antes_que_el_cuerpo(cliente):
+    cliente()
+    r = TestClient(api.app).post("/v1/procesar", content=b"{no es json", headers={"Content-Type": "application/json"})
+
+    assert r.status_code == 401  # sin clave no se le dice nada del contrato
+
+
+def test_health_no_pide_clave():
+    r = TestClient(api.app).get("/health")
+
+    assert r.status_code == 200 and r.json()["status"] == "ok"
+
+
+def test_el_json_schema_incluye_el_error_no_autorizado():
+    codigos = contrato_ia.generar_esquema()["error"]["properties"]["codigo"]["enum"]
+    assert codigos == ["CONTRATO_INVALIDO", "NO_AUTORIZADO", "ERROR_INTERNO"]

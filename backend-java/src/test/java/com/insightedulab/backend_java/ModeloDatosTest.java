@@ -29,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Usan la base que digan POSTGRES_HOST / POSTGRES_DB (ver docs/tareas/T01-informe.md).
  * ⚠️ Vacían las tablas antes de cada prueba: nunca correrlas contra la base principal.
  */
-@SpringBootTest
+@SpringBootTest(properties = "clasificacion.habilitada=false")  // que la tarea programada no tome sus mensajes
 class ModeloDatosTest {
 
     private static final String DISCORD_ID = "1554205393054466139";
@@ -207,7 +207,8 @@ class ModeloDatosTest {
                 "esSimulado", true,
                 "reacciones", List.of(Map.of("emoji", "🎉", "cantidad", reacciones)));
         return new DatosMensaje(DISCORD_ID, "1554158272867467374", "sim-camila-rojas",
-                AutorTipo.persona, AutorRol.miembro, true, FECHA, null, texto, contrato, "1.0");
+                AutorTipo.persona, AutorRol.miembro, true, FECHA, null, texto, contrato, "1.0",
+                "1554157903701741700");
     }
 
     /** Simula lo que hará la IA (T04): guardar sus etiquetas. */

@@ -40,7 +40,8 @@ public class MensajeUpsertRepository {
             String respondeA,
             String texto,
             Map<String, Object> contrato,
-            String versionContrato
+            String versionContrato,
+            String servidorId           // del sobre del lote: la IA lo exige para clasificar (T04)
     ) {}
 
     public enum Resultado {
@@ -53,9 +54,9 @@ public class MensajeUpsertRepository {
     // Si nada cambió, el WHERE del DO UPDATE no actualiza y RETURNING no devuelve filas.
     private static final String SQL = """
             INSERT INTO mensajes (discord_id, canal_id, autor_id, autor_tipo, autor_rol, es_simulado,
-                                  fecha, responde_a, texto, contrato, version_contrato)
+                                  fecha, responde_a, texto, contrato, version_contrato, servidor_id)
             VALUES (:discordId, :canalId, :autorId, :autorTipo, :autorRol, :esSimulado,
-                    :fecha, :respondeA, :texto, CAST(:contrato AS jsonb), :versionContrato)
+                    :fecha, :respondeA, :texto, CAST(:contrato AS jsonb), :versionContrato, :servidorId)
             ON CONFLICT (discord_id) DO UPDATE SET
                 canal_id             = EXCLUDED.canal_id,
                 autor_id             = EXCLUDED.autor_id,
@@ -67,18 +68,26 @@ public class MensajeUpsertRepository {
                 texto                = EXCLUDED.texto,
                 contrato             = EXCLUDED.contrato,
                 version_contrato     = EXCLUDED.version_contrato,
+                -- Un envío sin servidor no borra el que ya estaba
+                servidor_id          = COALESCE(EXCLUDED.servidor_id, mensajes.servidor_id),
                 actualizado_en       = now(),
                 estado_clasificacion = CASE
                     WHEN mensajes.texto IS DISTINCT FROM EXCLUDED.texto THEN 'PENDIENTE'
                     ELSE mensajes.estado_clasificacion
+                END,
+                -- Un texto nuevo vuelve a tener todos sus intentos
+                intentos_clasificacion = CASE
+                    WHEN mensajes.texto IS DISTINCT FROM EXCLUDED.texto THEN 0
+                    ELSE mensajes.intentos_clasificacion
                 END
             WHERE (mensajes.canal_id, mensajes.autor_id, mensajes.autor_tipo, mensajes.autor_rol,
                    mensajes.es_simulado, mensajes.fecha, mensajes.responde_a, mensajes.texto,
-                   mensajes.contrato, mensajes.version_contrato)
+                   mensajes.contrato, mensajes.version_contrato, mensajes.servidor_id)
                   IS DISTINCT FROM
                   (EXCLUDED.canal_id, EXCLUDED.autor_id, EXCLUDED.autor_tipo, EXCLUDED.autor_rol,
                    EXCLUDED.es_simulado, EXCLUDED.fecha, EXCLUDED.responde_a, EXCLUDED.texto,
-                   EXCLUDED.contrato, EXCLUDED.version_contrato)
+                   EXCLUDED.contrato, EXCLUDED.version_contrato,
+                   COALESCE(EXCLUDED.servidor_id, mensajes.servidor_id))
             RETURNING (xmax = 0) AS insertado
             """;
 
@@ -103,7 +112,8 @@ public class MensajeUpsertRepository {
                 .addValue("respondeA", m.respondeA())
                 .addValue("texto", m.texto() == null ? "" : m.texto())
                 .addValue("contrato", aJson(m.contrato()))
-                .addValue("versionContrato", m.versionContrato());
+                .addValue("versionContrato", m.versionContrato())
+                .addValue("servidorId", m.servidorId());
 
         List<Boolean> filas = jdbc.query(SQL, params, (rs, i) -> rs.getBoolean("insertado"));
         if (filas.isEmpty()) {

@@ -40,6 +40,8 @@ services:
       OCI_PAR_URL: ${OCI_PAR_URL:-}
       # S1: clave de la ingesta para POST /api/v1/lotes. Vacía = la API rechaza todo salvo /actuator/health
       API_KEY_INGESTA: ${API_KEY_INGESTA:-}
+      # S2: clave que Java envía a la IA en X-Api-Key (la misma que recibe el servicio ia)
+      API_KEY_IA: ${API_KEY_IA:-}
       # Dentro de Docker la IA se encuentra por el nombre de su servicio, no por localhost.
       PYTHON_NLP_URL: http://ia:8000
     ports:
@@ -66,6 +68,8 @@ services:
       FAQ_PROVIDER: google
       FAQ_MODEL_NAME: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      # S2: /v1/procesar exige esta clave en X-Api-Key. Vacía = /v1/procesar rechaza todo con 401
+      API_KEY_IA: ${API_KEY_IA:-}
     ports:
       - "127.0.0.1:8000:8000"
     volumes:

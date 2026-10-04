@@ -2,6 +2,7 @@ package com.insightedulab.backend_java;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.insightedulab.backend_java.repository.MensajeUpsertRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +10,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -23,6 +25,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
@@ -34,6 +38,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @SpringBootTest(properties = {
         "seguridad.api-keys.ingesta=" + LotesApiTest.CLAVE,
         "seguridad.max-bytes-cuerpo=200000",
+        "clasificacion.habilitada=false",  // que la tarea programada no tome los mensajes de estas pruebas
 })
 @AutoConfigureMockMvc
 class LotesApiTest {
@@ -44,6 +49,8 @@ class LotesApiTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
     @Autowired ObjectMapper json;
+    // Espía: hace lo de siempre, salvo cuando una prueba le pide fallar
+    @MockitoSpyBean MensajeUpsertRepository upsertRepo;
 
     @BeforeEach
     void vaciarTablas() {
@@ -247,17 +254,45 @@ class LotesApiTest {
 
     @Test
     void siLaBaseFallaEnMedioSeDeshaceTodo() throws Exception {
-        // PostgreSQL rechaza el carácter NUL en un texto: el 1.º upsert entra y el 2.º falla dentro de la transacción
-        Map<String, Object> conNul = mensaje("102", 1);
-        conNul.put("textoOriginal", "hola\u0000mundo");
+        // El 1.er upsert entra de verdad y el 2.º falla dentro de la transacción
+        doCallRealMethod().doThrow(new IllegalStateException("falla simulada de la base"))
+                .when(upsertRepo).upsert(any());
 
-        MvcResult r = enviar(lote("lote-1", mensaje("101", 1), conNul, mensaje("103", 1)));
+        MvcResult r = enviar(lote("lote-1", mensaje("101", 1), mensaje("102", 1), mensaje("103", 1)));
 
         assertThat(r.getResponse().getStatus()).isEqualTo(500);
         assertThat(cuerpo(r).get("codigo").asText()).isEqualTo("ERROR_INTERNO");
-        assertThat(r.getResponse().getContentAsString()).doesNotContain("SQL").doesNotContain("0x00");
+        assertThat(r.getResponse().getContentAsString()).doesNotContain("falla simulada");
         assertThat(contar("mensajes")).isZero();
         assertThat(contar("lotes_recibidos")).isZero();
+    }
+
+    // ── T04: el carácter NUL se quita al recibir ──
+
+    @Test
+    void elCaracterNulSeQuitaDelTextoYDeLaCaja() throws Exception {
+        Map<String, Object> conNul = mensaje("102", 1);
+        conNul.put("textoOriginal", "hola\u0000mundo");
+        autorDe(conNul).put("nombreVisible", "Ana\u0000Pérez");
+
+        MvcResult r = enviar(lote("lote-1", mensaje("101", 1), conNul, mensaje("103", 1)));
+
+        assertThat(r.getResponse().getStatus()).isEqualTo(200);
+        assertThat(cuerpo(r).get("nuevos").asInt()).isEqualTo(3);
+        assertThat(jdbc.queryForObject("SELECT texto FROM mensajes WHERE discord_id = '102'", String.class))
+                .isEqualTo("holamundo");
+        assertThat(jdbc.queryForObject(
+                "SELECT contrato->>'textoOriginal' || '|' || (contrato->'autor'->>'nombreVisible') "
+                        + "FROM mensajes WHERE discord_id = '102'", String.class))
+                .isEqualTo("holamundo|AnaPérez");
+    }
+
+    @Test
+    void laPuertaGuardaElServidorDelLote() throws Exception {
+        enviar(lote("lote-1", mensaje("101", 1)));
+
+        assertThat(jdbc.queryForObject("SELECT servidor_id FROM mensajes WHERE discord_id = '101'", String.class))
+                .isEqualTo("1554157903701741700");
     }
 
     // ── Topes y errores generales ──

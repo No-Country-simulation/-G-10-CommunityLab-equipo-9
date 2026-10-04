@@ -25,6 +25,10 @@ LLM_TIMEOUT_S: float = float(os.getenv("LLM_TIMEOUT_S", "20"))
 # Reintentos propios de /v1/procesar si el LLM falla (no se reintenta si se agotó el tiempo)
 LLM_REINTENTOS: int = int(os.getenv("LLM_REINTENTOS", "1"))
 
+# S2: clave que Java envía en X-Api-Key a /v1/procesar. Vacía: /v1/procesar rechaza todo con 401.
+# La genera scripts/generar_api_key.py --cliente ia (sin mostrarla)
+API_KEY_IA: str = os.getenv("API_KEY_IA", "").strip()
+
 
 # API keys (todas disponibles, solo se usa la del provider activo)
 GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY")
