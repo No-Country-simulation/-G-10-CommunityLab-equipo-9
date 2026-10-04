@@ -29,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Usan la base que digan POSTGRES_HOST / POSTGRES_DB (ver docs/tareas/T01-informe.md).
  * ⚠️ Vacían las tablas antes de cada prueba: nunca correrlas contra la base principal.
  */
-@SpringBootTest(properties = "clasificacion.habilitada=false")  // que la tarea programada no tome sus mensajes
+@SpringBootTest(properties = {"clasificacion.habilitada=false", "generacion.habilitada=false"})  // que la tarea programada no tome sus mensajes
 class ModeloDatosTest {
 
     private static final String DISCORD_ID = "1554205393054466139";

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.insightedulab.backend_java.client.IaNoDisponibleException;
 import com.insightedulab.backend_java.client.IaRechazoException;
 import com.insightedulab.backend_java.client.NlpDataClient;
+import com.insightedulab.backend_java.client.RespuestaGenerar;
 import com.insightedulab.backend_java.client.RespuestaIa;
 import com.insightedulab.backend_java.config.RestClientConfig;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,6 +68,41 @@ class NlpDataClientTest {
         assertThat(resultado.tema()).isEqualTo("empleo");
         assertThat(resultado.confianza()).isEqualTo(0.95);
         ia.verify();
+    }
+
+    // ── T06: POST /v1/generar, con las mismas cabeceras y el mismo manejo de errores ──
+
+    @Test
+    void generarEnviaElPedidoConLaClaveYLeeLaRespuesta() {
+        ia.expect(requestTo("http://ia:8000/v1/generar")).andExpect(method(HttpMethod.POST))
+                .andExpect(header("X-Api-Key", "clave-ia"))
+                .andExpect(header("X-Id-Correlacion", "gen-1"))
+                .andExpect(jsonPath("$.pedidoId").value("gen-1"))
+                .andRespond(withSuccess("""
+                        {"versionContratoIa":"1.0","pedidoId":"gen-1","discordId":"101","estado":"OK",
+                         "publicable":true,"motivo":"Es una contratación.","postLinkedin":"post","casoExito":"caso",
+                         "metricas":{"duracionMs":6120,"tokensIn":1450,"tokensOut":520}}
+                        """, MediaType.APPLICATION_JSON));
+
+        RespuestaGenerar r = cliente.generar(Map.of("pedidoId", "gen-1"), "gen-1");
+
+        assertThat(r.ok()).isTrue();
+        assertThat(r.publicable()).isTrue();
+        assertThat(r.postLinkedin()).isEqualTo("post");
+        assertThat(r.metricas().tokensIn()).isEqualTo(1450);
+        ia.verify();
+    }
+
+    @Test
+    void generarCon500Y422LanzaLasMismasExcepciones() {
+        ia.expect(requestTo("http://ia:8000/v1/generar")).andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
+        assertThatThrownBy(() -> cliente.generar(Map.of(), "gen-1")).isInstanceOf(IaNoDisponibleException.class);
+
+        ia.reset();
+        ia.expect(requestTo("http://ia:8000/v1/generar")).andRespond(withStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"codigo\":\"CONTRATO_INVALIDO\",\"mensaje\":\"x\",\"errores\":[],\"idCorrelacion\":\"gen-1\"}"));
+        assertThatThrownBy(() -> cliente.generar(Map.of(), "gen-1")).isInstanceOf(IaRechazoException.class);
     }
 
     @Test

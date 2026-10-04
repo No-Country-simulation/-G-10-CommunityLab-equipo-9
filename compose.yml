@@ -46,6 +46,8 @@ services:
       API_KEY_IA: ${API_KEY_IA:-}
       # Dentro de Docker la IA se encuentra por el nombre de su servicio, no por localhost.
       PYTHON_NLP_URL: http://ia:8000
+      # T06: false apaga la generación de borradores del Agente-Mod (cada logro gasta una llamada a Gemini)
+      GENERACION_HABILITADA: ${GENERACION_HABILITADA:-true}
     ports:
       - "127.0.0.1:8008:8080"
     depends_on:
@@ -74,6 +76,8 @@ services:
       API_KEY_IA: ${API_KEY_IA:-}
       # DEC-54: tope total de un pedido en tiempoReal, para responder antes de los 30 s de Java
       TIEMPO_REAL_TOPE_S: ${TIEMPO_REAL_TOPE_S:-25}
+      # T06 · Agente-Mod (DEC-85): el modelo que redacta. Vacío = el mismo que clasifica
+      MOD_MODEL_NAME: ${MOD_MODEL_NAME:-}
     ports:
       - "127.0.0.1:8000:8000"
     volumes:

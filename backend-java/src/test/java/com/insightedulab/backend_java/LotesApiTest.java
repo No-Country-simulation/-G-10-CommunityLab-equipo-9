@@ -39,6 +39,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
         "seguridad.api-keys.ingesta=" + LotesApiTest.CLAVE,
         "seguridad.max-bytes-cuerpo=200000",
         "clasificacion.habilitada=false",  // que la tarea programada no tome los mensajes de estas pruebas
+        "generacion.habilitada=false",  // T06: que la generación no tome los logros de estas pruebas
 })
 @AutoConfigureMockMvc
 class LotesApiTest {

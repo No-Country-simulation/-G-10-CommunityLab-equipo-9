@@ -51,6 +51,7 @@ import static org.mockito.Mockito.when;
  */
 @SpringBootTest(properties = {
         "clasificacion.habilitada=false",  // la tarea programada no corre: las pruebas llaman a procesarTanda()
+        "generacion.habilitada=false",  // T06: que la generación no tome los logros de estas pruebas
         "clasificacion.tanda=5",
         "clasificacion.max-intentos=3",
 })

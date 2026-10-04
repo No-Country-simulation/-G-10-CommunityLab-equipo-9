@@ -56,6 +56,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
         "seguridad.api-keys.ingesta=" + EnVivoApiTest.CLAVE_INGESTA,
         "seguridad.api-keys.bot=" + EnVivoApiTest.CLAVE_BOT,
         "clasificacion.habilitada=false",  // las pruebas llaman a procesarTanda() cuando lo necesitan
+        "generacion.habilitada=false",  // T06: que la generación no tome los logros de estas pruebas
         "clasificacion.max-intentos=3",
 })
 @AutoConfigureMockMvc

@@ -1,6 +1,6 @@
 # Operación — levantar InsightEdu Lab con Docker
 
-> **Estado:** v0.2 · **Fecha:** 2026-10-04 · **Rama:** `feature/integracion-arquitectura-3`
+> **Estado:** v0.3 · **Fecha:** 2026-10-04 · **Rama:** `feature/integracion-arquitectura-3`
 > Cubre los servicios que ya están en `compose.yml`: base de datos, API Java, IA y bot de Discord (T05). El panel y la ingesta se suman en las fases siguientes del [análisis](ANALISIS_INGENIERIA_PROPUESTA_3.md).
 
 Todos los comandos se ejecutan **desde la raíz del repositorio**, en PowerShell.
@@ -22,6 +22,8 @@ Abrir `.env` y completar:
 |---|---|---|
 | `POSTGRES_PASSWORD` | Sí | Una contraseña larga inventada. Sin ella, la base de datos no arranca |
 | `GEMINI_API_KEY` | No | La clave de Google AI Studio. Sin ella, la IA clasifica por palabras clave y el Agente FAQ no responde |
+| `MOD_MODEL_NAME` | No | T06 · El modelo de Gemini que redacta los posts y casos de éxito (DEC-85). Vacío: el mismo de `GEMINI_MODEL` |
+| `GENERACION_HABILITADA` | No | T06 · `true` por defecto. Con `false`, Java no pide borradores al Agente-Mod (cada logro nuevo gasta una llamada a Gemini) |
 | `OCI_PAR_URL` | No | Una URL PAR nueva de OCI. Sin ella, la API arranca igual pero no sube a OCI |
 | `API_KEY_INGESTA` | Sí, para recibir lotes | **No se escribe a mano.** Desde la raíz, `python scripts/generar_api_key.py` la crea al azar y la escribe aquí y en `ingestion/discord/.env` (`BACKEND_API_KEY`), sin mostrarla. Sin ella, la API Java rechaza todo con 401, salvo `/actuator/health` |
 | `API_KEY_IA` | Sí, para clasificar | **No se escribe a mano.** `python scripts/generar_api_key.py --cliente ia` la crea y la escribe aquí, sin mostrarla. La usan los dos servicios: la API Java la envía y la IA la exige en `/v1/procesar`. Sin ella, los mensajes se quedan en `PENDIENTE` |
@@ -100,3 +102,27 @@ El bot escucha **solo** `#dudas` y `#logros`, envía cada mensaje a la API Java 
 Si Java o la IA fallan, el bot **no responde nada** y lo registra (DEC-67). El mensaje queda `PENDIENTE` en la base, lo clasifica la tarea en segundo plano y, si era una duda, aparece como "sin responder".
 
 Si falta `DISCORD_BOT_TOKEN`, `API_KEY_BOT` o el ID de un canal, el bot se detiene con un aviso en `docker compose logs bot` y Docker lo vuelve a intentar cada tanto (`restart: unless-stopped`). Para que deje de intentarlo: `docker compose stop bot`.
+
+## 8. Borradores del Agente-Mod (T06)
+
+Cada logro (`TESTIMONIO`, ya clasificado, de una persona) se convierte solo en dos borradores: un **post de LinkedIn** y un **caso de éxito**. Java revisa cada minuto si hay logros nuevos, de a 3 por vez, y se los pide a la IA (`POST /v1/generar`). Antes de redactar, la IA decide si el logro **vale la pena publicarse**: si no, no hay borrador y queda escrito el motivo. **Nada se publica**: los borradores quedan `PENDIENTE` hasta que Marketing los apruebe en el panel (T07).
+
+La voz de los textos sale de [agents/agent_mod/guia_de_voz.md](../agents/agent_mod/guia_de_voz.md). Para cambiarla, se edita ese archivo y se reconstruye la IA: `docker compose up -d --build ia`.
+
+| Para… | Comando (desde la raíz) |
+|---|---|
+| Ver qué pasó con cada logro | `docker compose exec postgres psql -U insightedu -d insightedu -P pager=off -c "SELECT discord_id, generacion_estado, generacion_intentos, generado_en, generacion_motivo FROM mensajes WHERE intencion = 'TESTIMONIO' ORDER BY fecha;"` |
+| Ver los borradores (los primeros 300 caracteres) | `docker compose exec postgres psql -U insightedu -d insightedu -P pager=off -c "SELECT b.id, m.discord_id, b.tipo, b.estado, b.tokens_in, b.tokens_out, left(b.texto_ia, 300) AS texto FROM borradores b JOIN mensajes m ON m.id = b.mensaje_id ORDER BY b.id;"` |
+| Comprobar que **ningún** borrador tiene el nombre completo ni el usuario del autor | `docker compose exec postgres psql -U insightedu -d insightedu -P pager=off -c "SELECT count(*) AS con_nombre_completo FROM borradores b JOIN mensajes m ON m.id = b.mensaje_id WHERE (position(' ' in m.contrato->'autor'->>'nombreVisible') > 0 AND b.texto_ia ILIKE concat('%', m.contrato->'autor'->>'nombreVisible', '%')) OR b.texto_ia ILIKE concat('%', m.contrato->'autor'->>'nombreUsuario', '%');"` (debería dar `0`) |
+| Ver la tarea en el registro de Java | `docker compose logs api-java \| Select-String "Generaci"` (una línea por tanda, con números y sin textos) |
+| Apagar la generación (por ejemplo, para no gastar llamadas a Gemini) | Poner `GENERACION_HABILITADA=false` en el `.env` y `docker compose up -d api-java` |
+
+| Estado de generación | Qué significa |
+|---|---|
+| (vacío) | Todavía no se pidió, o falló y se va a reintentar |
+| `GENERADO` | Tiene sus dos borradores `PENDIENTE` |
+| `NO_PUBLICABLE` | La IA decidió que no vale un post; el motivo está en `generacion_motivo` |
+| `ERROR` | Falló 3 veces (la IA caída, sin clave de Gemini o una respuesta inválida). No se vuelve a intentar solo |
+
+⚠️ Si la IA estuvo caída un buen rato, varios logros pueden quedar en `ERROR`. Para que se vuelvan a intentar: `docker compose exec postgres psql -U insightedu -d insightedu -c "UPDATE mensajes SET generacion_estado = NULL, generacion_intentos = 0 WHERE generacion_estado = 'ERROR';"`
+

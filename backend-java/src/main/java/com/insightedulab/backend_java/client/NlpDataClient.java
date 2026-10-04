@@ -13,10 +13,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Cliente de la IA: POST /v1/procesar con un Lote del contrato v1 (contrato Java ↔ IA v1).
+ * Cliente de la IA (contrato Java ↔ IA v1):
+ * POST /v1/procesar con un Lote del contrato v1, y POST /v1/generar con un logro (Agente-Mod, T06).
  *
  * <ul>
- *   <li>200 → {@link RespuestaIa}.</li>
+ *   <li>200 → {@link RespuestaIa} o {@link RespuestaGenerar}.</li>
  *   <li>422 → {@link IaRechazoException}: el lote está mal armado (error nuestro, no pasajero).</li>
  *   <li>Otro error HTTP, tiempo agotado (30 s) o IA caída → {@link IaNoDisponibleException} (pasajero).</li>
  * </ul>
@@ -25,6 +26,7 @@ import java.util.Map;
 public class NlpDataClient {
 
     public static final String RUTA_PROCESAR = "/v1/procesar";
+    public static final String RUTA_GENERAR = "/v1/generar";
 
     private final RestClient iaRestClient;
     private final ObjectMapper objectMapper;
@@ -35,12 +37,28 @@ public class NlpDataClient {
     }
 
     public RespuestaIa procesar(Map<String, Object> lote, String idCorrelacion) {
-        RespuestaIa respuesta;
+        RespuestaIa respuesta = enviar(RUTA_PROCESAR, lote, idCorrelacion, RespuestaIa.class);
+        if (respuesta == null || respuesta.resultados() == null) {
+            throw new IaNoDisponibleException("La IA respondió sin resultados");
+        }
+        return respuesta;
+    }
+
+    /** El Agente-Mod: post de LinkedIn y caso de éxito de un logro (§9 del contrato). Mismas cabeceras y tiempos. */
+    public RespuestaGenerar generar(Map<String, Object> pedido, String idCorrelacion) {
+        RespuestaGenerar respuesta = enviar(RUTA_GENERAR, pedido, idCorrelacion, RespuestaGenerar.class);
+        if (respuesta == null || respuesta.estado() == null) {
+            throw new IaNoDisponibleException("La IA respondió sin resultado");
+        }
+        return respuesta;
+    }
+
+    private <T> T enviar(String ruta, Map<String, Object> cuerpo, String idCorrelacion, Class<T> tipo) {
         try {
-            respuesta = iaRestClient.post()
-                    .uri(RUTA_PROCESAR)
+            return iaRestClient.post()
+                    .uri(ruta)
                     .header(IdCorrelacionFilter.CABECERA, idCorrelacion)
-                    .body(lote)
+                    .body(cuerpo)
                     .retrieve()
                     .onStatus(estado -> estado.value() == 422, (pedido, r) -> {
                         throw new IaRechazoException(erroresDe(r.getBody().readAllBytes()));
@@ -48,15 +66,11 @@ public class NlpDataClient {
                     .onStatus(HttpStatusCode::isError, (pedido, r) -> {
                         throw new IaNoDisponibleException("La IA respondió HTTP " + r.getStatusCode().value());
                     })
-                    .body(RespuestaIa.class);
+                    .body(tipo);
         } catch (ResourceAccessException e) {
             // Conexión rechazada o tiempo agotado
             throw new IaNoDisponibleException("No se pudo hablar con la IA: " + e.getMostSpecificCause().getClass().getSimpleName(), e);
         }
-        if (respuesta == null || respuesta.resultados() == null) {
-            throw new IaNoDisponibleException("La IA respondió sin resultados");
-        }
-        return respuesta;
     }
 
     private List<ErrorApi.ErrorCampo> erroresDe(byte[] cuerpo) {
