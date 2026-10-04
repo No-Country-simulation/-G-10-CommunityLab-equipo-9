@@ -4,6 +4,8 @@ Servicio FastAPI del Orquestador.
 Expone el endpoint POST /procesar que n8n consume.
 """
 from __future__ import annotations
+import hashlib
+import hmac
 import logging
 import threading
 import uuid
@@ -14,6 +16,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from . import config as config_orq
 from .adaptador import adaptar_webhook
 from .orquestador import Orquestador
 from .config_http import ENDPOINT_PROCESAR, ENDPOINT_PROCESAR_V1, ENDPOINT_HEALTH, HTTP_PORT
@@ -70,6 +73,38 @@ def _get_procesador_v1():
 
 def _respuesta_error(status: int, error: ErrorApi) -> JSONResponse:
     return JSONResponse(status_code=status, content=error.model_dump())
+
+
+def _clave_valida(recibida: str | None) -> bool:
+    """S2: compara huellas SHA-256 con compare_digest, que tarda lo mismo acierte o no."""
+    esperada = config_orq.API_KEY_IA
+    if not esperada or not recibida:
+        return False
+    return hmac.compare_digest(
+        hashlib.sha256(recibida.strip().encode("utf-8")).digest(),
+        hashlib.sha256(esperada.encode("utf-8")).digest(),
+    )
+
+
+@app.middleware("http")
+async def exigir_api_key(request: Request, call_next):
+    """
+    S2: toda ruta /v1/… exige X-Api-Key (la que envía Java). Corre antes que todo lo demás,
+    así un pedido sin clave no llega ni a leer el cuerpo. /health y /procesar (el del bot, hasta C2) quedan igual.
+    La clave nunca se escribe en el registro.
+    """
+    if request.url.path.startswith("/v1/") and not _clave_valida(request.headers.get("X-Api-Key")):
+        log.warning("Pedido rechazado sin API key válida: %s %s", request.method, request.url.path)
+        return _respuesta_error(401, ErrorApi(
+            codigo="NO_AUTORIZADO",
+            mensaje="Falta la cabecera X-Api-Key o la clave no es válida.",
+            id_correlacion=request.headers.get("X-Id-Correlacion") or str(uuid.uuid4()),
+        ))
+    return await call_next(request)
+
+
+if not config_orq.API_KEY_IA:
+    log.warning("API_KEY_IA está vacía: /v1/procesar rechazará todos los pedidos con 401.")
 
 
 @app.exception_handler(RequestValidationError)

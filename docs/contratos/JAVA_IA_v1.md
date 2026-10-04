@@ -1,6 +1,7 @@
 # Contrato Java ↔ IA v1 — InsightEdu Lab
 
 > **Estado:** v1.0 · **Fecha:** 2026-10-03 · **Tarea:** T02 · **Lo implementa del lado Java:** T04
+> **Cambio de T04 (2026-10-04, validado por Harrison):** `/v1/procesar` exige `X-Api-Key` (S2) y hay un código de error más, `NO_AUTORIZADO` (401). Es un cambio que solo agrega: nada de lo anterior cambió.
 
 ## 0. Sobre este documento
 
@@ -33,8 +34,9 @@ Una prueba falla si el archivo publicado y los modelos no coinciden.
 | Método y ruta | `POST /v1/procesar` |
 | Dentro de Docker | `http://ia:8000/v1/procesar` (la variable `PYTHON_NLP_URL` de Java ya apunta a `http://ia:8000`) |
 | Cuerpo | Un **lote del contrato v1**, tal cual: `versionContrato`, `loteId`, `fuente`, `modo`, `servidorId`, `generadoEn` y `mensajes`. Cada mensaje es la "caja" que Java guarda en `mensajes.contrato` |
-| Cabecera opcional | `X-Id-Correlacion`: la IA la devuelve en los errores |
-| Respuesta | `200` con los resultados, `422` si el lote no cumple el contrato, `500` si falló la IA por completo |
+| Cabecera obligatoria | `X-Api-Key`: la clave `API_KEY_IA` (S2). La genera `python scripts/generar_api_key.py --cliente ia`. Sin ella, o con otra: `401` |
+| Cabecera opcional | `X-Id-Correlacion`: la IA la devuelve en los errores. Java pone el `loteId` de la tanda |
+| Respuesta | `200` con los resultados, `401` sin clave válida, `422` si el lote no cumple el contrato, `500` si falló la IA por completo |
 | Tiempos | Cada llamada al LLM tiene un tope de **20 s** (`LLM_TIMEOUT_S`). Ver la sección 6 |
 
 ⚠️ `POST /procesar`, **sin** `/v1`, es la puerta vieja del bot y tiene otro formato. Se quita cuando el bot pase por Java (C2).
@@ -185,11 +187,13 @@ Validada por Harrison el 2026-10-03. Está pensada para que el dashboard pueda c
 |---|---|
 | `estado = OK` | Guarda `intencion`, `confianza`, `sentimiento` y `tema`. Pone `estado_clasificacion = 'OK'` y `clasificado_en = now()` |
 | `estado = OK` y `metodo = regla` | Lo mismo: `sentimiento` y `tema` quedan en `null`. 🔎 El dashboard puede filtrar con `autor_tipo = 'persona'` |
-| `estado = ERROR` | **No toca** las etiquetas. Pone `estado_clasificacion = 'ERROR'` y registra `razon`. Más tarde lo reintenta y lo muestra en el panel (F4) |
+| `estado = ERROR` | **No toca** las etiquetas. Suma un intento (`intentos_clasificacion`) y registra `razon`. Sigue `PENDIENTE` hasta el máximo (3); ahí pasa a `ERROR` y lo verá el panel (F4) |
 | Trae `respuesta` con `encontrada = true` | En `tiempoReal`, se la devuelve al bot para publicar. Opcional: guardarla como borrador `RESPUESTA_BOT` |
 | Trae `respuesta` con `encontrada = false` | El bot avisa que un mentor revisará la duda. 🔎 Aparece en "dudas sin responder" (N5) |
-| Error `422` | El lote está mal armado: es un error de programación. No se reintenta; se registra con `idCorrelacion` |
-| Error `500`, o la IA no responde | Los mensajes quedan `PENDIENTE` y se reintentan después (F9) |
+| Error `422` | El lote está mal armado: es un error de programación y se registra. Solo los mensajes que señala `errores[].campo` (`mensajes.<i>.…`) suman un intento, y al máximo pasan a `ERROR`: no se reintenta sin fin. Si no se puede saber cuál es, suman todos |
+| Error `401`, `500`, o la IA no responde | Los mensajes quedan `PENDIENTE`, suman un intento y se reintentan en la siguiente vuelta (F9) |
+
+Así lo hace Java desde T04 (`ClasificacionService`): cada 30 s toma hasta 5 mensajes `PENDIENTE` y los envía en un lote `historial`. Un resultado se guarda solo si el mensaje no cambió mientras la IA lo procesaba (`actualizado_en`).
 
 ## 6. Tiempos (D4, F8)
 
@@ -197,14 +201,14 @@ Validada por Harrison el 2026-10-03. Está pensada para que el dashboard pueda c
 |---|---|
 | Cada llamada al LLM, del clasificador y del Agente FAQ | **20 s** (`LLM_TIMEOUT_S`). Si se agota, no se reintenta |
 | Reintentos del clasificador por otros errores | **1** (`LLM_REINTENTOS`) |
-| Java → IA | 30 s (lo configura T04) |
+| Java → IA | 30 s de lectura y 5 s de conexión (`RestClientConfig`, T04) |
 | Bot → Java | 40 s |
 
 ⚠️ **Riesgo para T04.** En `tiempoReal`, una duda encadena hasta 3 llamadas al LLM: clasificar, generar la respuesta y el control anti-alucinación. Si las tres llegan a su tope, la suma supera los 30 s de Java. En la práctica, cada llamada tarda pocos segundos. Si Java corta a los 30 s, el mensaje queda `PENDIENTE` y se reintenta.
 
 ## 7. Errores
 
-Los dos usan el mismo formato y **nunca repiten los datos recibidos** (S7).
+Todos usan el mismo formato y **nunca repiten los datos recibidos** (S7).
 
 ```json
 {
@@ -220,6 +224,7 @@ Los dos usan el mismo formato y **nunca repiten los datos recibidos** (S7).
 
 | `codigo` | HTTP | Cuándo |
 |---|---|---|
+| `NO_AUTORIZADO` | 401 | Falta `X-Api-Key`, la clave no es la de `API_KEY_IA` o la IA no tiene clave configurada. Se revisa **antes** que el cuerpo |
 | `CONTRATO_INVALIDO` | 422 | El cuerpo no es JSON o no cumple el contrato v1 |
 | `ERROR_INTERNO` | 500 | Falló la IA por completo. El detalle queda en el registro del contenedor `ia` |
 
@@ -227,7 +232,6 @@ Los dos usan el mismo formato y **nunca repiten los datos recibidos** (S7).
 
 | Qué | Dónde se resuelve |
 |---|---|
-| Clave entre Java y la IA (S2) | T04 |
 | Posts de LinkedIn y casos de éxito (Agente-Mod) | Fase 4 |
 | FAQ semanal | Fase 4 |
 | Sacar a `/procesar` | Cuando el bot pase por Java (C2) |

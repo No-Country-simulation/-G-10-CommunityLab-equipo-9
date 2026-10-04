@@ -278,6 +278,7 @@
       "codigo": {
         "enum": [
           "CONTRATO_INVALIDO",
+          "NO_AUTORIZADO",
           "ERROR_INTERNO"
         ],
         "title": "Codigo",

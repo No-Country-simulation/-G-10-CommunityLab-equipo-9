@@ -59,7 +59,8 @@ public class LoteService {
         this.transaccion = transaccion;
     }
 
-    public ReciboLote recibir(LoteEntrada lote) {
+    public ReciboLote recibir(LoteEntrada recibido) {
+        LoteEntrada lote = sinCaracterNul(recibido);
         List<DatosMensaje> mensajes = validar(lote);
 
         Optional<LoteRecibido> anterior = loteRepo.findByLoteId(lote.loteId());
@@ -104,6 +105,41 @@ public class LoteService {
         return ReciboLote.de(fila, false);
     }
 
+    /**
+     * Quita el carácter NUL (\u0000) de todos los textos del lote, incluida la caja completa.
+     * PostgreSQL no lo acepta en text ni en jsonb: un solo mensaje así hacía fallar el lote entero
+     * con 500 (observación de T03; Harrison eligió quitarlo en vez de rechazar el lote).
+     */
+    private LoteEntrada sinCaracterNul(LoteEntrada lote) {
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> mensajes = (List<Map<String, Object>>) quitarNul(lote.mensajes());
+        LoteEntrada limpio = new LoteEntrada(
+                (String) quitarNul(lote.versionContrato()), (String) quitarNul(lote.loteId()),
+                (String) quitarNul(lote.fuente()), (String) quitarNul(lote.modo()),
+                (String) quitarNul(lote.servidorId()), (String) quitarNul(lote.generadoEn()), mensajes);
+        if (!limpio.equals(lote)) {
+            log.warn("Lote {}: se quitaron caracteres NUL de sus textos", limpio.loteId());
+        }
+        return limpio;
+    }
+
+    private static Object quitarNul(Object valor) {
+        if (valor instanceof String texto) {
+            return texto.indexOf('\u0000') < 0 ? texto : texto.replace("\u0000", "");
+        }
+        if (valor instanceof Map<?, ?> mapa) {
+            Map<Object, Object> limpio = new java.util.LinkedHashMap<>();
+            mapa.forEach((k, v) -> limpio.put(quitarNul(k), quitarNul(v)));
+            return limpio;
+        }
+        if (valor instanceof List<?> lista) {
+            List<Object> limpia = new ArrayList<>(lista.size());
+            lista.forEach(v -> limpia.add(quitarNul(v)));
+            return limpia;
+        }
+        return valor;  // números, booleanos y null quedan igual
+    }
+
     /** Todo el lote, de una vez: o pasa entero o se responde 422 con todos los errores juntos. */
     private List<DatosMensaje> validar(LoteEntrada lote) {
         List<ErrorCampo> errores = new ArrayList<>(violaciones("", validator.validate(lote)));
@@ -143,7 +179,7 @@ public class LoteService {
                     m.id(), m.canal().id(), m.autor().id(),
                     AutorTipo.valueOf(m.autor().tipo()), AutorRol.valueOf(m.autor().rol()),
                     m.esSimulado(), fecha, m.respondeA(), m.textoOriginal(),
-                    caja, lote.versionContrato()));
+                    caja, lote.versionContrato(), lote.servidorId()));
         }
         if (!errores.isEmpty()) {
             throw new ContratoInvalidoException(errores);

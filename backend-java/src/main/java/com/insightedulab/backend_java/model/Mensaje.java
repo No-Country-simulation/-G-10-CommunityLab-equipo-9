@@ -4,6 +4,7 @@ import com.insightedulab.backend_java.model.enums.AutorRol;
 import com.insightedulab.backend_java.model.enums.AutorTipo;
 import com.insightedulab.backend_java.model.enums.EstadoClasificacion;
 import com.insightedulab.backend_java.model.enums.Intencion;
+import com.insightedulab.backend_java.model.enums.MetodoClasificacion;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -85,9 +86,9 @@ public class Mensaje {
 
     private Double confianza;              // 0 a 1
 
-    private String sentimiento;            // sin lista cerrada hasta la fase 3
+    private String sentimiento;            // lista cerrada con CHECK en V2 (JAVA_IA_v1.md §4.2)
 
-    private String tema;
+    private String tema;                   // lista cerrada con CHECK en V2 (JAVA_IA_v1.md §4.3)
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
@@ -95,4 +96,17 @@ public class Mensaje {
     private EstadoClasificacion estadoClasificacion = EstadoClasificacion.PENDIENTE;
 
     private Instant clasificadoEn;
+
+    // ── Clasificación en segundo plano (V2, T04) ──
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Integer intentosClasificacion = 0;
+
+    @Enumerated(EnumType.STRING)
+    private MetodoClasificacion metodoClasificacion;
+
+    private String servidorId;             // servidorId del lote; vacío en mensajes anteriores a V2
+
+    private Instant reservadoHasta;        // una tanda lo reservó mientras espera a la IA
 }
