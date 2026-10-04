@@ -11,6 +11,7 @@ Cada tarea tiene una **ficha** (la orden de trabajo, que escribe el chat princip
 | [T05](T05-bot-en-vivo.md) | El bot pasa por Java: puerta en vivo, respuesta guardada, tope total en la IA, bot en Docker (C2, F5, S8, S10) | T03, T04 | Opus 5.5 | ✅ Aprobada el 2026-10-04 (`c815546`, con los cambios de la auditoría) · [informe](T05-informe.md) · [contrato bot ↔ Java](../contratos/BOT_JAVA_v1.md) |
 | [T06](T06-agente-mod.md) | Agente-Mod: borradores de post de LinkedIn y caso de éxito con la voz de CommunityLab; puerta `/v1/generar`; generación automática en Java (OE3) | T04, T05 | Opus 5.5 | ✅ Aprobada el 2026-10-04 (`158ff7f`) · [informe](T06-informe.md) · [guía de voz](../../agents/agent_mod/guia_de_voz.md) |
 | [T06b](T06b-faq-semanal.md) | FAQ semanal: Java junta las dudas de la semana; la IA agrupa las repetidas, responde solo con respaldo en los PDF y lista aparte lo que no tiene respuesta; puerta `/v1/faq` (OE4) | T05, T06 | Opus 5.5 | ✅ Aprobada el 2026-10-04 (`b860789`) · [informe](T06b-informe.md) |
+| [T07](T07-panel.md) | Panel de curaduría: inicio de sesión por persona, editar, aprobar o rechazar borradores con consentimiento (D6), reintentar los `ERROR`; contrato `PANEL_JAVA_v1` (OE6) | T05, T06, T06b | Opus 5.5 | 📝 Ficha lista (decisiones validadas el 2026-10-04) |
 
 Estados: 📝 ficha lista · 🔨 en curso · 🔍 en auditoría · ✅ aprobada o fusionada · ⏳ ficha pendiente
 
