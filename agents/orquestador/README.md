@@ -1,5 +1,13 @@
 # 🤖 Orquestador — InsightEdu Lab
 
+> ⚠️ **Nota de T05 (2026-10-04): este README describe el diseño anterior.**
+> La puerta `POST /procesar` (formato viejo, la usaba el bot directo) **ya no existe**: el bot pasa por la API Java (C2).
+> Hoy la IA expone solo `POST /v1/procesar` y `GET /health`. Su contrato está en [docs/contratos/JAVA_IA_v1.md](../../docs/contratos/JAVA_IA_v1.md).
+>
+> | Lo que **sí** se usa | Lo que **ya no** se usa (se borra más adelante, mejora 🟡, DEC-69) |
+> |---|---|
+> | `api.py`, `grafo_v1.py`, `contrato_ia.py`, `config.py`, `config_http.py` (solo sus constantes de rutas y puerto), `clasificadores/etiquetador.py`, `clasificadores/keyword_fallback.py` (con su `base.py`), `clasificadores/llm_models.py`, `nodos/invocador_faq.py` (solo la carga compartida del Agente FAQ) y `contratos.py` (lo importan `keyword_fallback.py` e `invocador_faq.py`) | `orquestador.py`, `adaptador.py`, `test_orquestador.py`, `aristas/`, el resto de `nodos/` y de `clasificadores/`, y `storage/` |
+
 Motor de triaje y enrutamiento del sistema **InsightEdu Lab**. Recibe mensajes
 crudos de Discord, los filtra, clasifica y delega a los sub-agentes
 especializados.

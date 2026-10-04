@@ -2,6 +2,7 @@
 
 > **Estado:** v1.0 · **Fecha:** 2026-10-03 · **Tarea:** T02 · **Lo implementa del lado Java:** T04
 > **Cambio de T04 (2026-10-04, validado por Harrison):** `/v1/procesar` exige `X-Api-Key` (S2) y hay un código de error más, `NO_AUTORIZADO` (401). Es un cambio que solo agrega: nada de lo anterior cambió.
+> **Cambio de T05 (2026-10-04, DEC-54):** en `tiempoReal`, todo el pedido tiene un **tope de 25 s** (`TIEMPO_REAL_TOPE_S`, §6). Si se agota, la duda llega con sus etiquetas y `respuesta.encontrada = false`. Solo agrega: ningún campo cambió. Además se quitó la puerta vieja `POST /procesar`.
 
 ## 0. Sobre este documento
 
@@ -39,7 +40,7 @@ Una prueba falla si el archivo publicado y los modelos no coinciden.
 | Respuesta | `200` con los resultados, `401` sin clave válida, `422` si el lote no cumple el contrato, `500` si falló la IA por completo |
 | Tiempos | Cada llamada al LLM tiene un tope de **20 s** (`LLM_TIMEOUT_S`). Ver la sección 6 |
 
-⚠️ `POST /procesar`, **sin** `/v1`, es la puerta vieja del bot y tiene otro formato. Se quita cuando el bot pase por Java (C2).
+`POST /procesar`, **sin** `/v1`, era la puerta vieja del bot. **Se quitó en T05** (responde `404`): ahora el bot pasa por Java (C2, [BOT_JAVA_v1.md](BOT_JAVA_v1.md)).
 
 ## 2. Qué hace la IA con cada mensaje
 
@@ -50,7 +51,7 @@ Una prueba falla si el archivo publicado y los modelos no coinciden.
 | `tipo = avisoSistema` | No llama al LLM | Igual que el anterior |
 | `textoOriginal` vacío (por ejemplo, solo una imagen) | No llama al LLM | Igual que el anterior |
 | El LLM falla o no responde a tiempo | 1 reintento, salvo que se haya agotado el tiempo | `estado = ERROR`, **sin etiquetas** (F4) |
-| `PREGUNTA_FAQ` en modo `tiempoReal` | Además, le pregunta al Agente FAQ | Trae `respuesta` |
+| `PREGUNTA_FAQ` en modo `tiempoReal` | Además, le pregunta al Agente FAQ, con el tiempo que queda del tope (§6) | Trae `respuesta` |
 | `PREGUNTA_FAQ` en modo `historial` | Nada más: no se gasta en respuestas | `respuesta = null` |
 | `TESTIMONIO` | Solo se etiqueta. El Agente-Mod llega en la fase 4 | — |
 
@@ -188,8 +189,8 @@ Validada por Harrison el 2026-10-03. Está pensada para que el dashboard pueda c
 | `estado = OK` | Guarda `intencion`, `confianza`, `sentimiento` y `tema`. Pone `estado_clasificacion = 'OK'` y `clasificado_en = now()` |
 | `estado = OK` y `metodo = regla` | Lo mismo: `sentimiento` y `tema` quedan en `null`. 🔎 El dashboard puede filtrar con `autor_tipo = 'persona'` |
 | `estado = ERROR` | **No toca** las etiquetas. Suma un intento (`intentos_clasificacion`) y registra `razon`. Sigue `PENDIENTE` hasta el máximo (3); ahí pasa a `ERROR` y lo verá el panel (F4) |
-| Trae `respuesta` con `encontrada = true` | En `tiempoReal`, se la devuelve al bot para publicar. Opcional: guardarla como borrador `RESPUESTA_BOT` |
-| Trae `respuesta` con `encontrada = false` | El bot avisa que un mentor revisará la duda. 🔎 Aparece en "dudas sin responder" (N5) |
+| Trae `respuesta` con `encontrada = true` | En `tiempoReal`, la guarda en la fila del mensaje (`respuesta_estado = RESPONDIDA`, DEC-66) y le ordena al bot publicarla ([BOT_JAVA_v1.md](BOT_JAVA_v1.md)) |
+| Trae `respuesta` con `encontrada = false` | Guarda `respuesta_estado = DERIVADA` y el bot avisa que un mentor revisará la duda. 🔎 Aparece en "dudas sin responder" (N5) |
 | Error `422` | El lote está mal armado: es un error de programación y se registra. Solo los mensajes que señala `errores[].campo` (`mensajes.<i>.…`) suman un intento, y al máximo pasan a `ERROR`: no se reintenta sin fin. Si no se puede saber cuál es, suman todos |
 | Error `401`, `500`, o la IA no responde | Los mensajes quedan `PENDIENTE`, suman un intento y se reintentan en la siguiente vuelta (F9) |
 
@@ -201,10 +202,18 @@ Así lo hace Java desde T04 (`ClasificacionService`): cada 30 s toma hasta 5 men
 |---|---|
 | Cada llamada al LLM, del clasificador y del Agente FAQ | **20 s** (`LLM_TIMEOUT_S`). Si se agota, no se reintenta |
 | Reintentos del clasificador por otros errores | **1** (`LLM_REINTENTOS`) |
+| **Todo el pedido en `tiempoReal`** | **25 s** (`TIEMPO_REAL_TOPE_S`, DEC-54, T05). En `historial` no hay tope |
 | Java → IA | 30 s de lectura y 5 s de conexión (`RestClientConfig`, T04) |
 | Bot → Java | 40 s |
 
-⚠️ **Riesgo para T04.** En `tiempoReal`, una duda encadena hasta 3 llamadas al LLM: clasificar, generar la respuesta y el control anti-alucinación. Si las tres llegan a su tope, la suma supera los 30 s de Java. En la práctica, cada llamada tarda pocos segundos. Si Java corta a los 30 s, el mensaje queda `PENDIENTE` y se reintenta.
+**El tope de `tiempoReal` (agregado en T05).** Una duda encadena hasta 3 llamadas al LLM: clasificar, generar la respuesta y el control anti-alucinación. Sin tope, la suma podía superar los 30 s de Java. Ahora clasificar y responder comparten 25 s:
+
+| Si se agota… | Resultado |
+|---|---|
+| Mientras responde el Agente FAQ | Las etiquetas de la duda llegan bien, con `respuesta = {"texto": "", "encontrada": false, "fuentes": [], "motivo": "Se agotó el tope de 25 s del pedido en tiempo real."}`. El bot deriva al mentor |
+| Mientras clasifica | `estado = ERROR`, sin etiquetas (F4), como cualquier otro error del LLM |
+
+Así la respuesta llega antes de los 30 s de Java. 🔎 Python no puede detener un hilo: el Agente FAQ cortado termina su trabajo en segundo plano y su respuesta se descarta (sí gasta esa llamada a Gemini).
 
 ## 7. Errores
 
@@ -234,4 +243,4 @@ Todos usan el mismo formato y **nunca repiten los datos recibidos** (S7).
 |---|---|
 | Posts de LinkedIn y casos de éxito (Agente-Mod) | Fase 4 |
 | FAQ semanal | Fase 4 |
-| Sacar a `/procesar` | Cuando el bot pase por Java (C2) |
+| Sacar a `/procesar` | ✅ Hecho en T05 |

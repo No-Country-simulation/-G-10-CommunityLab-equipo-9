@@ -7,16 +7,21 @@ Grafo LangGraph de POST /v1/procesar (contrato Java ↔ IA v1).
 - preparar: los mensajes de bots, avisos del sistema o sin texto no van al LLM.
 - clasificar: una llamada al LLM por mensaje; si falla, estado ERROR (F4).
 - responder_faq: el Agente FAQ responde las dudas solo en tiempoReal (en historial no se gasta).
+En tiempoReal todo el pedido tiene un tope (DEC-54, TIEMPO_REAL_TOPE_S): clasificar y responder comparten
+ese tiempo. Si se agota, la duda llega con sus etiquetas y respuesta.encontrada = false.
 No invoca al Agente-Mod (fase 4) ni sube nada a OCI (D2: los activos los sube Java).
 """
 from __future__ import annotations
 
+import concurrent.futures
 import logging
+import re
 import time
 from typing import Callable, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+from .config import TIEMPO_REAL_TOPE_S
 from .contrato_ia import (
     VERSION_CONTRATO_IA,
     Lote,
@@ -31,11 +36,16 @@ log = logging.getLogger(__name__)
 
 ResponderFaq = Callable[[MensajeContrato], RespuestaFaq]
 
+# Hilos para cortar al Agente FAQ cuando se agota el tope. Python no puede detener un hilo: el Agente FAQ
+# termina su trabajo en segundo plano, pero su respuesta llega tarde y se descarta.
+_ejecutor_faq = concurrent.futures.ThreadPoolExecutor(max_workers=4, thread_name_prefix="faq")
+
 
 class EstadoV1(TypedDict, total=False):
     lote: Lote
     pendientes: list[MensajeContrato]          # los que van al LLM
     resultados: dict[str, ResultadoMensaje]     # por discord_id
+    plazo: float | None                         # hora límite (time.perf_counter) en tiempoReal; None = sin tope
     tokens_in: int
     tokens_out: int
 
@@ -49,6 +59,13 @@ def motivo_para_no_clasificar(mensaje: MensajeContrato) -> str | None:
     if not mensaje.texto_original.strip():
         return "No se clasifica: el mensaje no tiene texto."
     return None
+
+
+def sin_carpetas(fuente: str) -> str:
+    """Solo el nombre del archivo y la página, aunque la ruta use "/" o "\\" (T05).
+    Ejemplo: una ruta de Windows que termina en ...\\pdfs\\Manual.pdf (Pág. 1) → 'Manual.pdf (Pág. 1)'.
+    Nunca se publica ni se guarda la ruta de la PC donde se armó el índice."""
+    return re.split(r"[\\/]", fuente)[-1].strip()
 
 
 def responder_con_agente_faq(mensaje: MensajeContrato) -> RespuestaFaq:
@@ -71,7 +88,7 @@ def responder_con_agente_faq(mensaje: MensajeContrato) -> RespuestaFaq:
         texto=buscador.get("respuesta", "") or "",
         # D3: con fidelidad media no se publica; lo ve un mentor
         encontrada=bool(buscador.get("encontrado")) and not revision,
-        fuentes=[fuente] if fuente else [],
+        fuentes=[sin_carpetas(fuente)] if fuente else [],
         motivo=buscador.get("motivo_fallo"),
     )
 
@@ -79,9 +96,11 @@ def responder_con_agente_faq(mensaje: MensajeContrato) -> RespuestaFaq:
 class ProcesadorV1:
     """Arma el grafo una sola vez; procesar() se puede llamar desde varios hilos a la vez."""
 
-    def __init__(self, etiquetador, responder_faq: ResponderFaq = responder_con_agente_faq):
+    def __init__(self, etiquetador, responder_faq: ResponderFaq = responder_con_agente_faq,
+                 tope_tiempo_real_s: float = TIEMPO_REAL_TOPE_S):
         self.etiquetador = etiquetador
         self.responder_faq = responder_faq
+        self.tope_tiempo_real_s = tope_tiempo_real_s
         self.grafo = self._construir()
 
     # ── Nodos ──
@@ -104,7 +123,7 @@ class ProcesadorV1:
         resultados = dict(estado["resultados"])
         tokens_in, tokens_out = estado["tokens_in"], estado["tokens_out"]
         for m in estado["pendientes"]:
-            etiquetado = self.etiquetador.etiquetar(m)
+            etiquetado = self.etiquetador.etiquetar(m, plazo=estado.get("plazo"))
             tokens_in += etiquetado.tokens_in
             tokens_out += etiquetado.tokens_out
             if etiquetado.etiquetas is None:
@@ -124,8 +143,24 @@ class ProcesadorV1:
         for m in estado["lote"].mensajes:
             r = resultados[m.id]
             if _es_duda(r):
-                resultados[m.id] = r.model_copy(update={"respuesta": self.responder_faq(m)})
+                resultados[m.id] = r.model_copy(update={"respuesta": self._responder_a_tiempo(m, estado.get("plazo"))})
         return {"resultados": resultados}
+
+    def _responder_a_tiempo(self, mensaje: MensajeContrato, plazo: float | None) -> RespuestaFaq:
+        """El Agente FAQ, con lo que queda del tope. Si no alcanza, encontrada = false: el bot deriva (D3)."""
+        if plazo is None:
+            return self.responder_faq(mensaje)
+        restante = plazo - time.perf_counter()
+        if restante > 0:
+            futuro = _ejecutor_faq.submit(self.responder_faq, mensaje)
+            try:
+                return futuro.result(timeout=restante)
+            except concurrent.futures.TimeoutError:
+                futuro.cancel()
+        log.warning("Mensaje %s: se agotó el tope de %g s antes de la respuesta del Agente FAQ",
+                    mensaje.id, self.tope_tiempo_real_s)
+        return RespuestaFaq(texto="", encontrada=False, fuentes=[],
+                            motivo=f"Se agotó el tope de {self.tope_tiempo_real_s:g} s del pedido en tiempo real.")
 
     # ── Arista condicional ──
 
@@ -147,7 +182,8 @@ class ProcesadorV1:
 
     def procesar(self, lote: Lote) -> RespuestaLote:
         t0 = time.perf_counter()
-        final = self.grafo.invoke({"lote": lote})
+        con_tope = lote.modo == "tiempoReal" and self.tope_tiempo_real_s > 0
+        final = self.grafo.invoke({"lote": lote, "plazo": t0 + self.tope_tiempo_real_s if con_tope else None})
         return RespuestaLote(
             version_contrato_ia=VERSION_CONTRATO_IA,
             lote_id=lote.lote_id,

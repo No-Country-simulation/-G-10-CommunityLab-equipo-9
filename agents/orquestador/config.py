@@ -24,6 +24,9 @@ CLASIFICADOR_TEMPERATURE: float = 0.0
 LLM_TIMEOUT_S: float = float(os.getenv("LLM_TIMEOUT_S", "20"))
 # Reintentos propios de /v1/procesar si el LLM falla (no se reintenta si se agotó el tiempo)
 LLM_REINTENTOS: int = int(os.getenv("LLM_REINTENTOS", "1"))
+# DEC-54: tope total de un pedido en tiempoReal (clasificar + Agente FAQ). Si se agota, la duda llega con
+# respuesta.encontrada = false y el bot deriva al mentor, antes de los 30 s que espera Java. 0 = sin tope
+TIEMPO_REAL_TOPE_S: float = float(os.getenv("TIEMPO_REAL_TOPE_S", "25"))
 
 # S2: clave que Java envía en X-Api-Key a /v1/procesar. Vacía: /v1/procesar rechaza todo con 401.
 # La genera scripts/generar_api_key.py --cliente ia (sin mostrarla)

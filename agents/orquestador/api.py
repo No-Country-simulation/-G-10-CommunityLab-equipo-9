@@ -1,7 +1,8 @@
 """
-Servicio FastAPI del Orquestador.
+Servicio FastAPI de la IA.
 
-Expone el endpoint POST /procesar que n8n consume.
+Expone POST /v1/procesar (contrato Java ↔ IA v1, docs/contratos/JAVA_IA_v1.md) y GET /health.
+La puerta vieja POST /procesar, que usaba el bot directo, se quitó en T05: ahora el bot pasa por Java (C2).
 """
 from __future__ import annotations
 import hashlib
@@ -11,15 +12,12 @@ import threading
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Header, HTTPException, Request
-from fastapi.concurrency import run_in_threadpool
+from fastapi import FastAPI, Header, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from . import config as config_orq
-from .adaptador import adaptar_webhook
-from .orquestador import Orquestador
-from .config_http import ENDPOINT_PROCESAR, ENDPOINT_PROCESAR_V1, ENDPOINT_HEALTH, HTTP_PORT
+from .config_http import ENDPOINT_PROCESAR_V1, ENDPOINT_HEALTH, HTTP_PORT
 from .contrato_ia import ErrorApi, ErrorCampo, Lote, RespuestaLote
 from .nodos.invocador_faq import precargar_agente_faq, agente_faq_listo
 
@@ -40,20 +38,6 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
-
-# Instancia única del Orquestador (compartida entre requests)
-_orquestador: Orquestador | None = None
-
-
-def _get_orquestador() -> Orquestador:
-    """Lazy initialization del Orquestador."""
-    global _orquestador
-    if _orquestador is None:
-        print("[API] Inicializando Orquestador...")
-        _orquestador = Orquestador()
-        print("[API] Orquestador listo.")
-    return _orquestador
-
 
 # Procesador de /v1/procesar: se crea una sola vez, con el primer pedido
 _procesador_v1 = None
@@ -90,7 +74,7 @@ def _clave_valida(recibida: str | None) -> bool:
 async def exigir_api_key(request: Request, call_next):
     """
     S2: toda ruta /v1/… exige X-Api-Key (la que envía Java). Corre antes que todo lo demás,
-    así un pedido sin clave no llega ni a leer el cuerpo. /health y /procesar (el del bot, hasta C2) quedan igual.
+    así un pedido sin clave no llega ni a leer el cuerpo. /health no pide clave (lo usa Docker).
     La clave nunca se escribe en el registro.
     """
     if request.url.path.startswith("/v1/") and not _clave_valida(request.headers.get("X-Api-Key")):
@@ -131,47 +115,6 @@ async def contrato_invalido(request: Request, exc: RequestValidationError):
 async def health():
     """Endpoint de salud."""
     return {"status": "ok", "service": "orquestador", "port": HTTP_PORT, "faq_listo": agente_faq_listo()}
-
-
-@app.post(ENDPOINT_PROCESAR)
-async def procesar(request: Request):
-    """
-    Procesa un lote de mensajes de Discord.
-
-    Recibe el webhook crudo de Discord y devuelve:
-    - respuesta_discord: respuestas listas para enviar a Discord.
-    - paquete_final: auditoría interna.
-    - log_ejecucion: métricas y trazabilidad.
-    """
-    try:
-        payload = await request.json()
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"JSON inválido: {e}")
-
-    if not payload:
-        raise HTTPException(status_code=400, detail="Payload vacío.")
-
-    try:
-        # Adaptar webhook crudo → InputOrquestador
-        input_orq = adaptar_webhook(payload)
-
-        if not input_orq.mensajes:
-            raise HTTPException(
-                status_code=400,
-                detail="No se detectaron mensajes válidos en el payload.",
-            )
-
-        # Procesar en un hilo aparte: procesar_lote espera al LLM y, si corriera
-        # aquí, bloquearía el servidor y ningún otro pedido (ni /health) se atendería.
-        orquestador = _get_orquestador()
-        output = await run_in_threadpool(orquestador.procesar_lote, input_orq)
-
-        return JSONResponse(content=output.model_dump())
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error interno: {e}")
 
 
 @app.post(

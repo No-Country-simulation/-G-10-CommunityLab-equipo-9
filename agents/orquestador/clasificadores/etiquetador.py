@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import logging
+import time
 from dataclasses import dataclass
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -105,20 +106,26 @@ class EtiquetadorLLM:
     def disponible(self) -> bool:
         return self._estructurado is not None
 
-    def etiquetar(self, mensaje: MensajeContrato) -> Etiquetado:
+    def etiquetar(self, mensaje: MensajeContrato, plazo: float | None = None) -> Etiquetado:
+        """plazo: hora límite (time.perf_counter) del tope de tiempo real (DEC-54); None = sin tope."""
         if not self.disponible():
             return Etiquetado(error="El LLM no está configurado (revisar proveedor y clave).")
 
         entrada = [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=construir_entrada(mensaje))]
         error = "Error desconocido."
         for intento in range(self.reintentos + 1):
+            espera = self.timeout_s
+            if plazo is not None:
+                espera = min(espera, plazo - time.perf_counter())
+                if espera <= 0:
+                    return Etiquetado(error="Se agotó el tope del pedido en tiempo real.")
             futuro = _ejecutor.submit(self._estructurado.invoke, entrada)
             try:
-                salida = futuro.result(timeout=self.timeout_s)
+                salida = futuro.result(timeout=espera)
             except concurrent.futures.TimeoutError:
                 # No se reintenta: otra espera igual de larga rompería los tiempos de D4
                 futuro.cancel()
-                return Etiquetado(error=f"El LLM no respondió en {self.timeout_s:g} s.")
+                return Etiquetado(error=f"El LLM no respondió en {round(espera, 1):g} s.")
             except Exception as e:  # el proveedor falló (cupo, red, 5xx...)
                 log.warning("Fallo del LLM en el intento %d: %r", intento + 1, e)
                 error = f"El LLM falló: {type(e).__name__}."
@@ -145,7 +152,7 @@ class EtiquetadorPalabrasClave:
     def disponible(self) -> bool:
         return True
 
-    def etiquetar(self, mensaje: MensajeContrato) -> Etiquetado:
+    def etiquetar(self, mensaje: MensajeContrato, plazo: float | None = None) -> Etiquetado:
         texto = mensaje.texto_original.lower()
         clasificacion = self._intencion.clasificar({"mensaje_id": mensaje.id, "contenido": texto})
         if any(kw in texto for kw in KEYWORDS_COMENTARIO_NEGATIVO):

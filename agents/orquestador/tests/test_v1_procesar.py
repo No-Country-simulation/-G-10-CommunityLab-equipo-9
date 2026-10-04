@@ -317,6 +317,21 @@ def test_faq_con_fidelidad_media_no_cuenta_como_encontrada(monkeypatch):
     assert respuesta.texto == "Quizás sea el PATH" and "Fidelidad media" in respuesta.motivo
 
 
+@pytest.mark.parametrize("ruta", [
+    r"C:\Users\alguien\Documents\G10\agents\agent_faq\data\pdfs\06_Manual_del_Estudiante_V3.pdf (Pág. 1)",
+    "/app/agents/agent_faq/data/pdfs/06_Manual_del_Estudiante_V3.pdf (Pág. 1)",
+    "06_Manual_del_Estudiante_V3.pdf (Pág. 1)",
+], ids=["windows", "linux", "solo-nombre"])
+def test_la_fuente_nunca_lleva_la_ruta_de_una_pc(monkeypatch, ruta):
+    monkeypatch.setattr(invocador_faq, "_agente_faq", AgenteFaqFalso({
+        "respuesta": "Del 1 de noviembre al 31 de diciembre.", "encontrado": True, "fuente": ruta,
+    }))
+
+    respuesta = responder_con_agente_faq(_mensaje_contrato())
+
+    assert respuesta.fuentes == ["06_Manual_del_Estudiante_V3.pdf (Pág. 1)"]
+
+
 def test_faq_que_falla_no_rompe_el_lote(monkeypatch):
     monkeypatch.setattr(invocador_faq, "_agente_faq", AgenteFaqFalso(error=RuntimeError("sin cupo")))
 
@@ -343,25 +358,89 @@ def test_la_lista_de_temas_es_la_acordada():
     )
 
 
-# ── /procesar (el del bot) sigue igual ────────────────────────────────────────
+# ── T05: la puerta vieja /procesar ya no existe (el bot pasa por Java) ──────
 
-def test_procesar_viejo_sigue_respondiendo_con_su_formato(monkeypatch):
-    from agents.orquestador.nodos import clasificador
-
-    monkeypatch.setattr(clasificador, "CLASIFICADOR_PROVIDER", "keyword")
-    monkeypatch.setattr(invocador_faq, "_agente_faq", AgenteFaqFalso({"respuesta": "eco", "encontrado": True}))
-    monkeypatch.setattr(api, "_orquestador", None)
-    webhook = {"mensajes": [{
-        "id": "1", "channel_id": "2", "content": "¿Cuándo empiezan las inscripciones?",
-        "timestamp": "2026-09-27T03:45:19.913000+00:00", "author": {"id": "3", "username": "gabriel", "bot": False},
-    }]}
+def test_la_puerta_vieja_procesar_ya_no_existe():
+    webhook = {"mensajes": [{"id": "1", "channel_id": "2", "content": "¿Cuándo empiezan las inscripciones?"}]}
 
     r = TestClient(api.app).post("/procesar", json=webhook)
 
+    assert r.status_code == 404
+
+
+# ── T05: tope total de un pedido en tiempoReal (DEC-54) ───────────────────────
+
+class FaqLento:
+    """Un Agente FAQ que tarda más que el tope."""
+
+    def __init__(self, demora_s: float):
+        self.demora_s = demora_s
+        self.preguntas = []
+
+    def __call__(self, mensaje):
+        self.preguntas.append(mensaje.id)
+        time.sleep(self.demora_s)
+        return RespuestaFaq(texto="tarde", encontrada=True, fuentes=["x.pdf"])
+
+
+def _cliente_con(procesador) -> TestClient:
+    api._procesador_v1 = procesador
+    return TestClient(api.app, headers={"X-Api-Key": CLAVE_IA})
+
+
+@pytest.fixture
+def restaurar_procesador(monkeypatch):
+    monkeypatch.setattr(api, "_procesador_v1", None)
+
+
+def test_si_el_faq_supera_el_tope_responde_a_tiempo_con_encontrada_false(restaurar_procesador):
+    faq = FaqLento(demora_s=1.0)
+    cliente = _cliente_con(ProcesadorV1(EtiquetadorLLM(LLMFalso()), faq, tope_tiempo_real_s=0.3))
+    inicio = time.perf_counter()
+
+    r = cliente.post("/v1/procesar", json=_lote([_duda(), _logro()], modo="tiempoReal"))
+
+    assert time.perf_counter() - inicio < 0.9  # no esperó al Agente FAQ
     assert r.status_code == 200
-    cuerpo = r.json()
-    assert set(cuerpo) == {"lote_id", "respuesta_discord", "paquete_final", "log_ejecucion"}
-    assert cuerpo["respuesta_discord"]["respuestas"][0]["texto_respuesta"] == "eco"
+    duda = _por_id(r)["1554205178671009863"]
+    assert (duda["estado"], duda["intencion"], duda["tema"]) == ("OK", "PREGUNTA_FAQ", "herramientas_entorno")
+    assert duda["respuesta"] == {"texto": "", "encontrada": False, "fuentes": [],
+                                 "motivo": "Se agotó el tope de 0.3 s del pedido en tiempo real."}
+    assert _por_id(r)["1554205393054466139"]["estado"] == "OK"  # el logro conserva sus etiquetas
+    assert faq.preguntas == ["1554205178671009863"]
+    contrato_ia.RespuestaLote.model_validate(r.json())  # el agregado no cambia el formato
+
+
+def test_el_tope_tambien_corta_al_clasificador(restaurar_procesador):
+    faq = FaqLento(demora_s=0.0)
+    llm = LLMFalso(demora_s=1.0)
+    cliente = _cliente_con(ProcesadorV1(EtiquetadorLLM(llm, timeout_s=5), faq, tope_tiempo_real_s=0.2))
+    inicio = time.perf_counter()
+
+    r = cliente.post("/v1/procesar", json=_lote([_duda()], modo="tiempoReal"))
+
+    assert time.perf_counter() - inicio < 0.8
+    res = r.json()["resultados"][0]
+    assert res["estado"] == "ERROR" and res["intencion"] is None  # F4: sin etiquetas inventadas
+    assert faq.preguntas == []
+
+
+def test_con_tiempo_de_sobra_el_tope_no_cambia_nada(restaurar_procesador):
+    faq = FaqLento(demora_s=0.0)
+    cliente = _cliente_con(ProcesadorV1(EtiquetadorLLM(LLMFalso()), faq, tope_tiempo_real_s=5))
+
+    r = cliente.post("/v1/procesar", json=_lote([_duda()], modo="tiempoReal"))
+
+    assert r.json()["resultados"][0]["respuesta"]["encontrada"] is True
+
+
+def test_en_historial_no_hay_tope(restaurar_procesador):
+    llm = LLMFalso(demora_s=0.3)
+    cliente = _cliente_con(ProcesadorV1(EtiquetadorLLM(llm, timeout_s=5), FaqLento(0.0), tope_tiempo_real_s=0.1))
+
+    r = cliente.post("/v1/procesar", json=_lote([_logro()], modo="historial"))
+
+    assert r.json()["resultados"][0]["estado"] == "OK"
 
 
 # ── S2 (T04): /v1/procesar exige la API key de Java ───────────────────────────

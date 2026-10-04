@@ -59,6 +59,16 @@ public class LoteService {
         this.transaccion = transaccion;
     }
 
+    /**
+     * Quita el carácter NUL y valida el lote entero, sin escribir nada.
+     * Lo usa también la puerta en vivo (T05): un mensaje en vivo se valida igual que uno del lote de la hora.
+     *
+     * @throws ContratoInvalidoException con cada campo que falla (422)
+     */
+    public List<DatosMensaje> validarYLimpiar(LoteEntrada recibido) {
+        return validar(sinCaracterNul(recibido));
+    }
+
     public ReciboLote recibir(LoteEntrada recibido) {
         LoteEntrada lote = sinCaracterNul(recibido);
         List<DatosMensaje> mensajes = validar(lote);

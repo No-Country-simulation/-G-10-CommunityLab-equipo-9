@@ -27,6 +27,8 @@ import java.util.Map;
  *   <li>Se comparan huellas SHA-256 con MessageDigest.isEqual, que tarda lo mismo acierte o no:
  *       así no se puede adivinar la clave midiendo tiempos.</li>
  *   <li>La clave nunca se escribe en el registro; solo el nombre del cliente.</li>
+ *   <li>DEC-70: cada clave abre solo su puerta. Una ruta de {@link #CLIENTE_POR_RUTA} con la clave de otro
+ *       cliente recibe 403, antes de leer el cuerpo. Si se filtra una clave, el daño queda en su puerta.</li>
  * </ul>
  */
 @Component
@@ -36,6 +38,11 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     public static final String CABECERA = "X-Api-Key";
     public static final String ATRIBUTO_CLIENTE = "clienteApi";
     private static final Logger log = LoggerFactory.getLogger(ApiKeyFilter.class);
+
+    /** Las rutas que solo puede usar un cliente. Las demás las puede usar cualquier cliente conocido. */
+    static final Map<String, String> CLIENTE_POR_RUTA = Map.of(
+            "/api/v1/lotes", "ingesta",
+            "/api/v1/mensajes/en-vivo", "bot");
 
     private final Map<String, byte[]> huellasPorCliente = new LinkedHashMap<>();
     private final RespuestaError respuestaError;
@@ -48,7 +55,7 @@ public class ApiKeyFilter extends OncePerRequestFilter {
             }
         });
         if (huellasPorCliente.isEmpty()) {
-            log.warn("No hay ninguna API key configurada (API_KEY_INGESTA): se rechaza todo salvo /actuator/health.");
+            log.warn("No hay ninguna API key configurada (API_KEY_INGESTA, API_KEY_BOT): se rechaza todo salvo /actuator/health.");
         } else {
             log.info("API keys configuradas para: {}", huellasPorCliente.keySet());
         }
@@ -68,6 +75,14 @@ public class ApiKeyFilter extends OncePerRequestFilter {
             log.warn("Pedido rechazado sin API key válida: {} {}", request.getMethod(), request.getRequestURI());
             respuestaError.escribir(request, response, HttpServletResponse.SC_UNAUTHORIZED,
                     "NO_AUTORIZADO", "Falta la cabecera X-Api-Key o la clave no es válida.");
+            return;
+        }
+        String ruta = request.getRequestURI().substring(request.getContextPath().length());
+        String duenio = CLIENTE_POR_RUTA.get(ruta);
+        if (duenio != null && !duenio.equals(cliente)) {
+            log.warn("Pedido rechazado: el cliente {} no puede usar {} {}", cliente, request.getMethod(), ruta);
+            respuestaError.escribir(request, response, HttpServletResponse.SC_FORBIDDEN,
+                    "PROHIBIDO", "Esta clave no puede usar esta ruta.");
             return;
         }
         request.setAttribute(ATRIBUTO_CLIENTE, cliente);

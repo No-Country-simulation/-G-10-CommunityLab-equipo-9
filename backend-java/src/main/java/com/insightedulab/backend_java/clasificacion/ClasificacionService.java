@@ -1,7 +1,5 @@
 package com.insightedulab.backend_java.clasificacion;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.insightedulab.backend_java.client.IaNoDisponibleException;
 import com.insightedulab.backend_java.client.IaRechazoException;
 import com.insightedulab.backend_java.client.NlpDataClient;
@@ -13,11 +11,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -46,7 +39,6 @@ import java.util.stream.Collectors;
 public class ClasificacionService {
 
     private static final Logger log = LoggerFactory.getLogger(ClasificacionService.class);
-    private static final DateTimeFormatter FECHA_UTC = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
     // "mensajes.2.autor.tipo" → 2: la IA dice qué mensaje del lote no cumple el contrato
     private static final Pattern INDICE_MENSAJE = Pattern.compile("^mensajes\\.(\\d+)(\\.|$)");
 
@@ -59,14 +51,14 @@ public class ClasificacionService {
 
     private final ClasificacionRepository repo;
     private final NlpDataClient ia;
-    private final ObjectMapper objectMapper;
+    private final LoteParaIa loteParaIa;
     private final ClasificacionProperties propiedades;
 
-    public ClasificacionService(ClasificacionRepository repo, NlpDataClient ia, ObjectMapper objectMapper,
+    public ClasificacionService(ClasificacionRepository repo, NlpDataClient ia, LoteParaIa loteParaIa,
                                 ClasificacionProperties propiedades) {
         this.repo = repo;
         this.ia = ia;
-        this.objectMapper = objectMapper;
+        this.loteParaIa = loteParaIa;
         this.propiedades = propiedades;
     }
 
@@ -96,7 +88,8 @@ public class ClasificacionService {
 
         RespuestaIa respuesta;
         try {
-            respuesta = ia.procesar(armarLote(loteId, servidorId, ordenados), loteId);
+            // En historial la IA no gasta en respuestas del FAQ
+            respuesta = ia.procesar(loteParaIa.armar(loteId, servidorId, "historial", ordenados), loteId);
         } catch (IaRechazoException e) {
             rechazado(loteId, ordenados, e, c);
             return;
@@ -175,30 +168,6 @@ public class ClasificacionService {
         // El lote de la hora lo actualizó mientras la IA lo procesaba: se descarta el resultado viejo
         repo.liberar(m);
         c.cambiaron++;
-    }
-
-    private Map<String, Object> armarLote(String loteId, String servidorId, List<Pendiente> mensajes) {
-        Map<String, Object> lote = new LinkedHashMap<>();
-        lote.put("versionContrato", mensajes.get(0).versionContrato());
-        lote.put("loteId", loteId);
-        lote.put("fuente", "discord");
-        lote.put("modo", "historial");  // en historial la IA no gasta en respuestas del FAQ
-        lote.put("servidorId", servidorId);
-        lote.put("generadoEn", FECHA_UTC.format(Instant.now().truncatedTo(ChronoUnit.MILLIS).atOffset(ZoneOffset.UTC)));
-        List<Map<String, Object>> cajas = new ArrayList<>(mensajes.size());
-        for (Pendiente m : mensajes) {
-            cajas.add(caja(m));
-        }
-        lote.put("mensajes", cajas);
-        return lote;
-    }
-
-    private Map<String, Object> caja(Pendiente m) {
-        try {
-            return objectMapper.readValue(m.contratoJson(), new TypeReference<>() {});
-        } catch (IOException e) {
-            throw new IllegalStateException("La caja del mensaje " + m.discordId() + " no es JSON válido", e);
-        }
     }
 
     private static final class Contador {

@@ -7,7 +7,7 @@ import java.util.Map;
 /**
  * Propiedades "seguridad.*" de application.properties.
  *
- * @param apiKeys        cliente → clave (ingesta; después bot y panel). Las vacías no cuentan
+ * @param apiKeys        cliente → clave (ingesta y bot; después el panel). Las vacías no cuentan
  * @param maxBytesCuerpo tope del cuerpo de cada pedido
  */
 @ConfigurationProperties(prefix = "seguridad")
