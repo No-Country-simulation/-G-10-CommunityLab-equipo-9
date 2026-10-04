@@ -33,10 +33,10 @@ El chat principal sí puede editar la documentación de seguimiento: índice, re
 | Qué | Estado |
 |---|---|
 | Rama de integración | `feature/integracion-arquitectura-3`. Harrison desarrolla todo aquí; base congelada (D1) |
-| Tareas | T01 ✅ · T02 ✅ · T03 ✅ · T04 ✅ (auditada el 2026-10-04, fusión `--no-ff`) · **T05 📝 ficha lista** · T06 a T10 sin ficha |
-| Docker local | `postgres` (sin puerto), `api-java` (`127.0.0.1:8008`), `ia` (`127.0.0.1:8000`). Faltan el bot, el panel y la ingesta programada |
+| Tareas | T01 ✅ · T02 ✅ · T03 ✅ · T04 ✅ (fusión `--no-ff`) · T05 ✅ (auditada el 2026-10-04 con un cambio pedido y corregido) · **T06 a T10 sin ficha** |
+| Docker local | `postgres` (sin puerto), `api-java` (`127.0.0.1:8008`), `ia` (`127.0.0.1:8000`) y `bot` (sin puerto). Faltan el panel y la ingesta programada (cron, O3) |
 | Datos | 39 mensajes reales del servidor de pruebas en `mensajes`, **todos clasificados** por T04 (🧪 39 en `OK`, migración V2 aplicada) |
-| Decisiones | D1 a D8 en el análisis §0 y DEC-01 a DEC-70 en [DECISIONES.md](DECISIONES.md). **D3:** el bot responde sin aprobación, solo con respaldo en los PDFs |
+| Decisiones | D1 a D8 en el análisis §0 y DEC-01 a DEC-79 en [DECISIONES.md](DECISIONES.md). **D3:** el bot responde sin aprobación, solo con respaldo en los PDFs |
 | Plan de 2 días | ✅ Cumplido (T01 a T03) |
 | Entrega final | **2026-10-26** |
 
@@ -104,6 +104,9 @@ Copia la estructura de [T03](tareas/T03-puerta-lotes.md) o [T04](tareas/T04-clas
 | Secretos | Nunca leer un `.env`, aunque esté abierto en el editor de Harrison. Para revisarlo, solo nombres de variables y "con valor" o "vacía". Las claves se generan con scripts que no las muestran (`scripts/generar_api_key.py`) |
 | `psql` desde Git Bash | Las comillas dentro de `sh -c` fallan con textos entre comillas simples. Usa consultas sin literales, o `-F` |
 | Puertos | En la PC hay otro proyecto (`cesium`) que usa 5432, 8080, 80, 5000 y 5173. No tocarlo; los nuestros son 8008 y 8000 en `127.0.0.1` |
+| Secretos pegados en un chat | En T05, Harrison pegó el contenido de un `.env` en el chat de tarea. 🧪 Quedó en la conversación guardada en la PC (`~/.claude/projects/…/*.jsonl`) y en Anthropic, no en git. Él decidió no cambiar las claves (DEC-71). Si vuelve a pasar: avisar sin repetir la clave, explicar el riesgo real (no es público) y ofrecer el comando que muestra solo los nombres de las variables |
+| Rutas y permisos en Java | 🧪 Comparar la ruta cruda (`getRequestURI`) se esquiva con `;x=1` o con letras codificadas (`%73`). Toda regla por ruta tiene que usar la ruta normalizada (`UrlPathHelper`) y una segunda revisión en el controlador. Probarlo con la clave real desde el contenedor `bot`, con cuerpo `{}` (no escribe nada). Aplica al panel (T07) |
+| Fin de línea, de verdad | `grep $'$'` en Git Bash no es fiable para contar CRLF: usa Python (`open(f, 'rb')`). Git guarda LF (`core.autocrlf=true`); en la copia de trabajo conviven archivos con CRLF y con LF, y está bien mientras cada uno no los mezcle |
 | Java | No hay JDK en Windows. Las pruebas corren en un contenedor Maven contra `insightedu_test`, y tienen un freno: solo corren si la base termina en `_test` |
 | IA | Precarga el Agente FAQ (`/health` → `faq_listo`). El modelo `gemini-3.5-flash-lite` ignora `temperature` |
 | Discord | Nunca `simulate_students.py`. Un solo bot encendido a la vez |
