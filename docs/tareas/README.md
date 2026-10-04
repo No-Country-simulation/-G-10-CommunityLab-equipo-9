@@ -8,6 +8,7 @@ Cada tarea tiene una **ficha** (la orden de trabajo, que escribe el chat princip
 | [T02](T02-formato-java-ia.md) | Formato Java ↔ IA: la IA acepta el contrato v1 y devuelve intención, sentimiento y tema (Python) · [informe](T02-informe.md) · [contrato](../contratos/JAVA_IA_v1.md) | — | Opus 5.5 | ✅ Aprobada el 2026-10-03 (`5b7c63e`) |
 | [T03](T03-puerta-lotes.md) | Puerta de lotes en Java: contrato v1 (D8), upsert, idempotencia y API key; `send_batch.py` al Java real | T01 | Sonnet 5.5 (se usó Opus 5.5) | ✅ Aprobada el 2026-10-04 (`c895af3`) · [informe](T03-informe.md) |
 | [T04](T04-clasificacion-java-ia.md) | Java clasifica en segundo plano los mensajes `PENDIENTE` con la IA y guarda las etiquetas; API key entre Java y la IA (S2); carácter NUL | T01, T02, T03 | Opus 5.5 | ✅ Aprobada el 2026-10-04 (`3ea907b`) · [informe](T04-informe.md) |
+| [T05](T05-bot-en-vivo.md) | El bot pasa por Java: puerta en vivo, respuesta guardada, tope total en la IA, bot en Docker (C2, F5, S8, S10) | T03, T04 | Opus 5.5 | 📝 Ficha lista (decisiones validadas el 2026-10-04) |
 
 Estados: 📝 ficha lista · 🔨 en curso · 🔍 en auditoría · ✅ aprobada o fusionada · ⏳ ficha pendiente
 
@@ -39,3 +40,5 @@ Estados: 📝 ficha lista · 🔨 en curso · 🔍 en auditoría · ✅ aprobada
 | T04 | 🔎 Si la IA devolviera algo que Java no puede leer (un error del cliente que no es de conexión), la tanda falla sin sumar intentos y se reintenta cada 2 min sin fin. Muy improbable, porque la respuesta está tipada por el contrato | 🟡 |
 | T04 | PowerShell no encuentra `Select-String "Clasificación"` en los registros por la tilde; sirve `"Clasificaci"`. Anotarlo en [OPERACION.md](../OPERACION.md) (no se edita ahora porque T04 tocó ese archivo) | Próximo commit de documentación |
 | T04 | El `curl` de la prueba real de [T02-informe.md](T02-informe.md) ahora necesita `-H "X-Api-Key: …"` | — (solo si alguien lo repite) |
+| Chat principal (2026-10-04) | 🧪 **"Dudas sin responder" sale inflado si solo se cuenta `respondeA`:** de los 39 mensajes, solo 1 usa el botón "Responder" de Discord, así que las 16 dudas aparecen sin respuesta. El flujo en vivo tiene que **guardar si el bot respondió** (`respuesta.encontrada`), y el dashboard tiene que contar una duda como atendida si la respondió el bot o una persona | T05 (guardar) y T08 (contar) |
+| Chat principal (2026-10-04) | 🔎 **Alerta de deserción en la demo:** los mensajes de prueba abarcan solo 5 días (del 2026-09-28 al 2026-10-02), así que la regla "no escribe hace 14 días" no marcaría a nadie hasta mediados de octubre. El umbral tiene que ser configurable, o la demo necesita datos más largos | T08 y T10 |

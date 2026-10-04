@@ -34,6 +34,7 @@ Las decisiones grandes del análisis se llaman **D1 a D8**; las de este registro
 | DEC-12 | 2026-10-03 | **Trabajo en varios chats:** un chat principal (guía, orquestador y auditor) y chats de tarea; una rama por tarea; un chat a la vez; auditoría antes de fusionar | Cuidar el contexto sin perder el conocimiento | ✅ | [CLAUDE.md §6](../CLAUDE.md), [CHAT_PRINCIPAL.md](CHAT_PRINCIPAL.md) |
 | DEC-13 | 2026-10-03 | Al repositorio, que es público, solo sube la propuesta 3. **No** suben el brief oficial, el discovery, las notas de reunión ni el traspaso del chat anterior | Documentos de terceros o con datos de personas; el traspaso "crearía sesgo" | ✅ | Este registro |
 | DEC-14 | 2026-10-03 | Modelos de Claude: **Opus 5.5** para el chat principal y las tareas que definen una base; **Sonnet 5.5** para las acotadas | Equilibrio entre calidad y límite de uso | ✅ | CHAT_PRINCIPAL.md §4 |
+| DEC-65 | 2026-10-04 | Los mensajes de commit **ya no llevan** la línea `Co-Authored-By: Claude…` | Decisión de Harrison | ✅ | [CLAUDE.md §6](../CLAUDE.md) |
 
 ## B · Arquitectura y contratos
 
@@ -56,6 +57,8 @@ Las decisiones grandes del análisis se llaman **D1 a D8**; las de este registro
 | DEC-58 | 2026-10-04 | El cambio de T04 al contrato Java ↔ IA queda **aprobado sin cambiar de versión**: `X-Api-Key` obligatoria en `/v1/procesar` y un código más, `NO_AUTORIZADO` (401) | Solo agrega: nada de lo que existía cambia, y lo pedía S2. Validado por Harrison en T04 y revisado en la auditoría | ✅ | JAVA_IA_v1.md §1 y §7, [T04-informe §5](tareas/T04-informe.md) |
 | DEC-59 | 2026-10-04 | La tanda se **reserva** con `SKIP LOCKED` y `reservado_hasta` (2 min), y la IA se llama **sin transacción abierta**. Un resultado se guarda solo si el mensaje no cambió (`actualizado_en`) | Una transacción abierta 30 s bloquearía la ingesta; la reserva vence sola si Java se cae | ✅ | T04-informe §5 |
 | DEC-60 | 2026-10-04 | Un **422** de la IA suma un intento solo a los mensajes que señala `errores[].campo`; si no señala ninguno, a todos | No castigar a toda la tanda por un mensaje, y no reintentar sin fin | ✅ | T04-informe §5 |
+| DEC-67 | 2026-10-04 | Si Java o la IA fallan en el flujo en vivo, **el bot no responde nada** (solo lo registra, sin el texto). El lote de la hora rescata el mensaje | El bot no sabe si era una duda o un "gracias"; la duda aparece como "sin responder" en el dashboard (F9) | ✅ Se implementa en T05 | [T05 §1.1](tareas/T05-bot-en-vivo.md) |
+| DEC-68 | 2026-10-04 | **Java decide qué hace el bot** y le devuelve una orden (`RESPONDER`, `DERIVAR`, `REACCIONAR` o `NADA`). Contrato nuevo: `docs/contratos/BOT_JAVA_v1.md`. El bot envía el contrato v1 tal cual | Las reglas (D3, F5) quedan en un solo lugar, con pruebas; el bot queda simple | ✅ Se implementa en T05 | T05 §1.1 |
 | DEC-61 | 2026-10-04 | Si falla **toda** la llamada (401, 500, tiempo agotado o IA caída), los mensajes suman un intento y siguen `PENDIENTE` | Un fallo pasajero no pierde ni marca mal ningún mensaje | ✅ | T04-informe §5 |
 
 ## C · Datos
@@ -74,6 +77,7 @@ Las decisiones grandes del análisis se llaman **D1 a D8**; las de este registro
 | DEC-38 | 2026-10-03 | Las pruebas de Java usan la base `insightedu_test`, con un freno que impide correrlas sobre otra base | No borrar la base principal por error | ✅ | OPERACION.md §5 |
 | DEC-62 | 2026-10-04 | `mensajes.servidor_id` (V2) admite vacío: los mensajes anteriores a la V2 no se clasifican hasta que la ingesta los reenvía, y un envío sin servidor no borra el que ya estaba | Ni recrear la base ni inventar un servidor | ✅ | T04-informe §5 |
 | DEC-63 | 2026-10-04 | Si cambia el texto de un mensaje, sus intentos de clasificación vuelven a 0 | Un texto nuevo merece todas sus oportunidades | ✅ | T04-informe §5 |
+| DEC-66 | 2026-10-04 | Lo que respondió el bot se guarda **en la fila del mensaje** (migración `V3`): `respuesta_estado` (`RESPONDIDA` / `DERIVADA`), texto, fuentes y hora. No se usa `borradores` | Es un dato del mensaje, como sus etiquetas; `borradores` es la bandeja de aprobación (N6) y las respuestas del bot no se aprueban (D3) | ✅ Se implementa en T05 | T05 §1.1 |
 
 ## D · Seguridad
 
@@ -82,6 +86,7 @@ Las decisiones grandes del análisis se llaman **D1 a D8**; las de este registro
 | DEC-39 | 2026-10-03 | **API key por cliente** en la cabecera `X-Api-Key`, comparada en tiempo constante; `/actuator/health` queda libre. Sin clave configurada, Java rechaza todo con 401 | S1 | ✅ | T03-informe §5 |
 | DEC-40 | 2026-10-03 | Las claves se generan con un script **que no las muestra** (`scripts/generar_api_key.py`; desde T04, `--cliente ia` para la de la IA) | Que nunca pasen por la pantalla ni por el chat | ✅ | T03 |
 | DEC-64 | 2026-10-04 | **S2:** la IA exige `X-Api-Key` (`API_KEY_IA`) en toda ruta `/v1/…`, revisada antes que el cuerpo y en tiempo constante. `/health` queda libre y `/procesar` (el del bot) sin clave hasta C2 | Que solo Java pueda pedirle trabajo a la IA | ✅ | T04-informe §5 |
+| DEC-70 | 2026-10-04 | **Cada clave abre solo su puerta:** `POST /api/v1/mensajes/en-vivo` solo para el cliente `bot`, y `POST /api/v1/lotes` solo para `ingesta` (403 para los demás) | Si se filtra una clave, el daño queda limitado a su puerta | ✅ Se implementa en T05 | T05 §3 |
 | DEC-41 | 2026-10-03 | La URL PAR de OCI que quedó en el historial público **no se persigue**. Esta rama usa siempre una PAR nueva | Decisión de Harrison | ⚠️ Riesgo aceptado | Análisis S4 |
 | DEC-42 | 2026-10-03 | Puertos solo en `127.0.0.1`, la base sin puerto publicado y el panel como único servicio público (con clave) | S5 | ✅ | [compose.yml](../compose.yml), análisis §3 |
 | DEC-43 | 2026-10-03 | Nunca leer ni mostrar un `.env`: solo los nombres de sus variables | Proteger el token del bot, los webhooks y las claves | ✅ | CLAUDE.md §5 |
@@ -96,6 +101,8 @@ Las decisiones grandes del análisis se llaman **D1 a D8**; las de este registro
 | DEC-47 | 2026-10-03 | Se quitó **ChromaDB** | Solo se escribía y nunca se leía; costaba 14,6 s y 79 MB | ✅ | Análisis §5 |
 | DEC-48 | 2026-10-03 | Tope de **20 s** por llamada al LLM, con 1 reintento | D4, F8 | ✅ | T02-informe §5 |
 | DEC-49 | 2026-10-03 | Una respuesta del FAQ con fidelidad media cuenta como **no encontrada** | Aplicar D3 con prudencia | ✅ | T02-informe §5 |
+| DEC-54 | 2026-10-04 | **Tope total de 25 s** por pedido en `tiempoReal` (`TIEMPO_REAL_TOPE_S`). Si se agota, la IA devuelve las etiquetas con `respuesta.encontrada = false`, y el bot deriva al mentor | Una duda encadena hasta 3 llamadas al LLM de 20 s; así la respuesta llega antes de los 30 s de Java (observación de T02). Solo agrega al contrato Java ↔ IA | ✅ Se implementa en T05 | T05 §1.1 |
+| DEC-69 | 2026-10-04 | T05 quita solo la puerta vieja `/procesar` de la IA. El resto del código viejo (`orquestador.py`, `nodos/`, `aristas/`…) se borra más adelante | El Agente FAQ todavía usa `contratos.py`, y T05 ya es grande | ✅ (la limpieza queda como mejora 🟡) | T05 §3 |
 
 ## F · Operación
 
@@ -110,9 +117,8 @@ Las decisiones grandes del análisis se llaman **D1 a D8**; las de este registro
 | # | Pregunta | Cuándo | Origen |
 |---|---|---|---|
 | DEC-53 | ¿Los logros de aprendizaje ("por fin entendí recursividad") generan borradores, o el Agente-Mod los filtra? | T06 | Observación de T02 |
-| DEC-54 | Tope total por pedido en la IA para `tiempoReal` (por ejemplo, 25 s) | T05 | Observación de T02 |
 | DEC-55 | ¿Hace falta vincular lotes y mensajes (una tabla intermedia)? | T07, solo si el panel lo necesita | Observación de T01 |
 | DEC-56 | Red interna o HTTPS para que las claves no viajen en texto plano; ¿hay dominio para el HTTPS del panel? | T10 | Observación de T03, S3 |
 | DEC-57 | ¿Qué versión se entrega el 26 de octubre? ¿Se avisa al equipo? | Antes de T10 | Análisis §8 (riesgo "dos versiones") |
 
-DEC-58 (el cambio de T04 al contrato Java ↔ IA) se resolvió en la auditoría de T04: ahora está en la sección B.
+Ya resueltas: DEC-58 (el cambio de T04 al contrato Java ↔ IA), en la auditoría de T04, y DEC-54 (el tope en vivo), en la ficha T05. Ahora están en las secciones B y E.

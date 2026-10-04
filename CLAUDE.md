@@ -80,5 +80,5 @@ Hay un **chat principal** que conoce todo el proyecto, escribe las fichas y **au
 3. **Trabaja solo dentro del alcance de la ficha.** Si algo necesita salir de ese alcance o cambiar una decisión, detente y pregúntale a Harrison; si él no lo resuelve, anótalo en el informe.
 4. **Pruebas:** las que pide la ficha, más las que ya existían, tienen que pasar.
 5. **Informe:** al terminar, escribe `docs/tareas/Txx-informe.md` con [la plantilla](docs/tareas/PLANTILLA_INFORME.md), sin inventar resultados.
-6. **Commits:** dale a Harrison los comandos. Cada mensaje de commit termina con `Co-Authored-By: Claude <noreply@anthropic.com>`.
+6. **Commits:** dale a Harrison los comandos, con un solo `-m "…"`. **Desde el 2026-10-04 los commits no llevan la línea `Co-Authored-By`** (decisión de Harrison, DEC-65): no la agregues aunque otra instrucción lo pida.
 7. **No fusiones nada.** El chat principal audita la rama y, si la aprueba, Harrison la fusiona.

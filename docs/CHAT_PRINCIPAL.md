@@ -33,10 +33,10 @@ El chat principal sí puede editar la documentación de seguimiento: índice, re
 | Qué | Estado |
 |---|---|
 | Rama de integración | `feature/integracion-arquitectura-3`. Harrison desarrolla todo aquí; base congelada (D1) |
-| Tareas | T01 ✅ · T02 ✅ · T03 ✅ · T04 ✅ (auditada el 2026-10-04, fusión `--no-ff`) · T05 a T10 sin ficha |
+| Tareas | T01 ✅ · T02 ✅ · T03 ✅ · T04 ✅ (auditada el 2026-10-04, fusión `--no-ff`) · **T05 📝 ficha lista** · T06 a T10 sin ficha |
 | Docker local | `postgres` (sin puerto), `api-java` (`127.0.0.1:8008`), `ia` (`127.0.0.1:8000`). Faltan el bot, el panel y la ingesta programada |
 | Datos | 39 mensajes reales del servidor de pruebas en `mensajes`, **todos clasificados** por T04 (🧪 39 en `OK`, migración V2 aplicada) |
-| Decisiones | D1 a D8 en el análisis §0 y DEC-01 a DEC-64 en [DECISIONES.md](DECISIONES.md). **D3:** el bot responde sin aprobación, solo con respaldo en los PDFs |
+| Decisiones | D1 a D8 en el análisis §0 y DEC-01 a DEC-70 en [DECISIONES.md](DECISIONES.md). **D3:** el bot responde sin aprobación, solo con respaldo en los PDFs |
 | Plan de 2 días | ✅ Cumplido (T01 a T03) |
 | Entrega final | **2026-10-26** |
 
@@ -69,7 +69,7 @@ Cuando Harrison dice **"Txx terminó"**:
 8. **Dale a Harrison los comandos**, uno por línea, con la carpeta y qué debería ver:
    - `git switch feature/integracion-arquitectura-3`
    - `git merge --ff-only tarea/Txx-…` y `git push`
-   - `git add …`, el commit de la documentación (con `Co-Authored-By`), **`git status` para confirmar** y `git push`
+   - `git add …`, el commit de la documentación (un solo `-m`, **sin** `Co-Authored-By`: DEC-65), **`git status` para confirmar** y `git push`
    - `git switch -c tarea/T(xx+1)-…`
 
 ⚠️ **Si la rama de integración avanzó después de que se creó la tarea**, `--ff-only` falla. Es el caso de **T04**, porque después se guardó este manual. Entonces hay que usar `git merge --no-ff tarea/Txx-… -m "Merge Txx"`, siempre que la tarea no haya tocado los mismos archivos; compruébalo antes con `git diff --name-only`.
