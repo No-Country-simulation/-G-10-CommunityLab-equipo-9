@@ -26,6 +26,7 @@
 | [ingestion/discord/docs/PROJECT_BRIEF.md](ingestion/discord/docs/PROJECT_BRIEF.md) | Brief del cliente y alcance del MVP (ojo: ahí "N1 a N5" es otra numeración) | Qué se pide |
 | [ingestion/discord/docs/CONTRACT.md](ingestion/discord/docs/CONTRACT.md) y [schema/contract_v1.schema.json](ingestion/discord/schema/contract_v1.schema.json) | **Contrato v1**: el formato de cada mensaje. Código: [ingestion/discord/contract.py](ingestion/discord/contract.py) | **Fuente única de verdad del formato** |
 | [docs/contratos/JAVA_IA_v1.md](docs/contratos/JAVA_IA_v1.md) y su JSON Schema | **Contrato Java ↔ IA v1**: lo que Java envía a `POST /v1/procesar` (clasificar) y a `POST /v1/generar` (redactar borradores) y a `POST /v1/faq` (FAQ semanal), y lo que la IA devuelve | **Fuente única de verdad entre Java y la IA** |
+| [docs/contratos/PANEL_JAVA_v1.md](docs/contratos/PANEL_JAVA_v1.md) | **Contrato panel ↔ Java v1**: listar, ver, editar, aprobar, rechazar y reintentar, con la clave `panel` | **Fuente única de verdad entre el panel y Java** |
 | [docs/contratos/BOT_JAVA_v1.md](docs/contratos/BOT_JAVA_v1.md) | **Contrato bot ↔ Java v1**: el bot envía el contrato v1 a `POST /api/v1/mensajes/en-vivo` y Java le devuelve una orden (`RESPONDER`, `DERIVAR`, `REACCIONAR` o `NADA`) | **Fuente única de verdad entre el bot y Java** |
 | [ingestion/discord/docs/INGESTION_GUIDE.md](ingestion/discord/docs/INGESTION_GUIDE.md) §11 | "Opción C": cómo recibía Java el contrato antes | **Histórica**: la reemplazó la decisión **D8** (2026-10-03). Java recibe el contrato v1 tal cual |
 | [docs/OPERACION.md](docs/OPERACION.md) | Cómo levantar, revisar y detener todo con Docker | Operación |
@@ -46,7 +47,7 @@ Discord ⇄ Bot ──► API Java ⇄ IA (privada)        Ingesta (cada hora) �
 | — | PostgreSQL 17 | ✅ `postgres`, sin puerto publicado |
 | `agents/orquestador/`, `agents/agent_faq/` | IA (FastAPI + LangGraph; Agente FAQ con RAG) | ✅ `ia`, en `127.0.0.1:8000` |
 | `agents/bot_discord/` | Bot de Discord (pasa por Java, T05) | ✅ `bot`, sin puertos publicados. **Un solo bot encendido** |
-| `panel/` | Panel Streamlit | ❌ Pendiente |
+| `panel/` | Panel de curaduría Streamlit (T07), con usuario y contraseña por persona | ✅ `panel`, en `127.0.0.1:8501` (en el servidor, el único público) |
 | `ingestion/discord/` | Ingesta por lotes (36 pruebas) | ❌ Pendiente |
 | `agents/agent_mod/` | Agente-Mod: posts de LinkedIn y casos de éxito, con `guia_de_voz.md` (T06) | ✅ dentro de `ia` (`POST /v1/generar` y, con la FAQ semanal de T06b, `POST /v1/faq`) |
 
@@ -58,6 +59,7 @@ Hay **dos `.env`**: el de la raíz es para `docker compose` y `ingestion/discord
 - Pruebas de la IA (sin gastar llamadas al LLM): `python -m pytest agents/orquestador/tests -q`, con el entorno `%USERPROFILE%\.venvs\insightedu-discord`. A ese entorno se le instalaron `fastapi`, `langgraph` y `langchain-core` (las mismas versiones que la imagen `ia`) para poder correr estas pruebas.
 - Pruebas de la ingesta: desde `ingestion/discord`, `python -m pytest -q`, con el mismo entorno.
 - Pruebas del bot (sin conectarse a Discord): `python -m pytest agents/bot_discord/tests -q`, con el mismo entorno, al que se le instaló `discord.py`.
+- Pruebas del panel (sin Java real): `python -m pytest panel/tests -q`, con el mismo entorno, al que se le instaló `streamlit` 1.65.0.
 - Java: **no hay JDK instalado en Windows**. Se compila y se prueba dentro de Docker, contra la base `insightedu_test` ([docs/OPERACION.md §5](docs/OPERACION.md)). Las tablas las crea **Flyway**: una migración aplicada nunca se edita; los cambios van en `V2__…`.
 
 ## 5. Reglas que no se rompen
