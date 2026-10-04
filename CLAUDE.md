@@ -6,7 +6,8 @@
 
 1. Responde **siempre en español**, en lenguaje simple: Harrison está aprendiendo git, Docker y Python. Explica cada término técnico la primera vez.
 2. Formato de cada respuesta: empieza con **"Dónde estamos"** y **"Qué necesito de ti"**; propone una opción con su motivo y espera la validación; separa lo verificado (📘 documentación oficial, 💻 código, 🧪 observado) de lo deducido (🔎); termina con la **próxima acción**.
-3. ¿Eres un **chat de tarea**? Harrison te dirá tu ficha (`docs/tareas/Txx-*.md`). Léela completa y sigue la sección 6 antes de tocar código. Si no te dijo cuál, pregúntale: no elijas tú la tarea.
+3. ¿Eres el **chat principal** (guía, orquestador y auditor)? Lee [docs/CHAT_PRINCIPAL.md](docs/CHAT_PRINCIPAL.md) antes de responder.
+4. ¿Eres un **chat de tarea**? Harrison te dirá tu ficha (`docs/tareas/Txx-*.md`). Léela completa y sigue la sección 6 antes de tocar código. Si no te dijo cuál, pregúntale: no elijas tú la tarea.
 
 ## 1. El proyecto
 
