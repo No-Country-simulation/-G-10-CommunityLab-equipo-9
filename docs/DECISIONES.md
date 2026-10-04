@@ -46,13 +46,17 @@ Las decisiones grandes del análisis se llaman **D1 a D8**; las de este registro
 | DEC-19 | 2026-10-03 | **D3:** el bot responde **sin aprobación humana**, pero solo si encontró respaldo en los PDFs; si no, deriva a un mentor | N6 protege lo que se publica fuera de Discord; en vivo no se puede esperar una aprobación | ✅ | Análisis §0 |
 | DEC-20 | 2026-10-03 | **D4:** el flujo en vivo **espera** la respuesta, con tiempos máximos de 20 s (LLM) < 30 s (Java → IA) < 40 s (bot → Java), y muestra "escribiendo…" | Simple de construir y suficiente para la demo | ✅ | Análisis §0 y F8 |
 | DEC-21 | 2026-10-03 | **D2:** en OCI se guardan los activos `generados/` y los `aprobados/` | Cumple la letra del brief y la intención de la propuesta 3 | ✅ Se implementa en T09 | Análisis §0 |
-| DEC-22 | 2026-10-03 | **Contrato Java ↔ IA v1:** `POST /v1/procesar`, camelCase, un resultado por mensaje | Que Java implemente sin adivinar | ✅ (⚠️ T04 lo modificó: se revisa en su auditoría) | [JAVA_IA_v1.md](contratos/JAVA_IA_v1.md) |
+| DEC-22 | 2026-10-03 | **Contrato Java ↔ IA v1:** `POST /v1/procesar`, camelCase, un resultado por mensaje | Que Java implemente sin adivinar | ✅ Con el agregado de T04 (DEC-58) | [JAVA_IA_v1.md](contratos/JAVA_IA_v1.md) |
 | DEC-23 | 2026-10-03 | La IA **importa** `contract.py`: no lo copia | Una sola definición del contrato | ✅ | [T02-informe §3](tareas/T02-informe.md) |
 | DEC-24 | 2026-10-03 | **`ERROR` ≠ `OTRO`** (F4). Sin LLM configurado, el resultado es `ERROR`; las palabras clave se usan solo si se eligen | Un fallo no se disfraza de ruido | ✅ | T02-informe §5 |
 | DEC-25 | 2026-10-03 | Los mensajes de bots, los avisos del sistema y los que no tienen texto salen como `OTRO` por regla, sin LLM, con sentimiento y tema vacíos y el campo `metodo` | No gastar el LLM y no ensuciar el dashboard | ✅ | T02-informe §5 |
 | DEC-26 | 2026-10-03 | La IA genera la respuesta del FAQ **solo en `tiempoReal`**, nunca en `historial` | No gastar respondiendo dudas viejas | ✅ | [T02](tareas/T02-formato-java-ia.md) |
-| DEC-27 | 2026-10-03 | Java clasifica **en segundo plano y en tandas chicas**; un fallo de la IA no cambia estados y se reintenta hasta un máximo | Un lote de historial no entra en 30 s (observación de T02) | ✅ En T04, pendiente de auditoría | [T04](tareas/T04-clasificacion-java-ia.md) |
+| DEC-27 | 2026-10-03 | Java clasifica **en segundo plano y en tandas chicas**; un fallo de la IA no cambia estados y se reintenta hasta un máximo | Un lote de historial no entra en 30 s (observación de T02) | ✅ Hecho en T04: cada 30 s, tandas de 5, máximo 3 intentos (configurable) | [T04-informe](tareas/T04-informe.md) |
 | DEC-28 | 2026-10-03 | Formato común de error en Java y en la IA: `{codigo, mensaje, errores, idCorrelacion}`, sin repetir los datos recibidos | Errores claros y sin fugas (S7) | ✅ | Análisis §2, T02 y T03 |
+| DEC-58 | 2026-10-04 | El cambio de T04 al contrato Java ↔ IA queda **aprobado sin cambiar de versión**: `X-Api-Key` obligatoria en `/v1/procesar` y un código más, `NO_AUTORIZADO` (401) | Solo agrega: nada de lo que existía cambia, y lo pedía S2. Validado por Harrison en T04 y revisado en la auditoría | ✅ | JAVA_IA_v1.md §1 y §7, [T04-informe §5](tareas/T04-informe.md) |
+| DEC-59 | 2026-10-04 | La tanda se **reserva** con `SKIP LOCKED` y `reservado_hasta` (2 min), y la IA se llama **sin transacción abierta**. Un resultado se guarda solo si el mensaje no cambió (`actualizado_en`) | Una transacción abierta 30 s bloquearía la ingesta; la reserva vence sola si Java se cae | ✅ | T04-informe §5 |
+| DEC-60 | 2026-10-04 | Un **422** de la IA suma un intento solo a los mensajes que señala `errores[].campo`; si no señala ninguno, a todos | No castigar a toda la tanda por un mensaje, y no reintentar sin fin | ✅ | T04-informe §5 |
+| DEC-61 | 2026-10-04 | Si falla **toda** la llamada (401, 500, tiempo agotado o IA caída), los mensajes suman un intento y siguen `PENDIENTE` | Un fallo pasajero no pierde ni marca mal ningún mensaje | ✅ | T04-informe §5 |
 
 ## C · Datos
 
@@ -63,18 +67,21 @@ Las decisiones grandes del análisis se llaman **D1 a D8**; las de este registro
 | DEC-31 | 2026-10-03 | Upsert por `discord_id` con `ON CONFLICT`: no duplica, **no pisa las etiquetas de la IA**, vuelve a `PENDIENTE` si cambió el texto y da `SIN_CAMBIOS` si llega idéntico | F1, F2 y F3 | ✅ | [T01-informe §5](tareas/T01-informe.md) |
 | DEC-32 | 2026-10-03 | Los valores cerrados se guardan **tal cual los define el contrato** (`persona`, `botPropio`, `historial`…) | Fidelidad al contrato | ✅ | T01-informe §5 |
 | DEC-33 | 2026-10-03 | `borradores.mensaje_id` es obligatorio salvo en el tipo `FAQ` | La FAQ semanal junta varias preguntas | ✅ | T01-informe §5 |
-| DEC-34 | 2026-10-03 | Listas cerradas: **sentimiento** (5 valores) y **tema** (11 temas, incluidos `calendario_clases` y `herramientas_entorno`) | Que el dashboard pueda contar | ✅ (`CHECK` en T04) | JAVA_IA_v1.md §4.3 |
+| DEC-34 | 2026-10-03 | Listas cerradas: **sentimiento** (5 valores) y **tema** (11 temas, incluidos `calendario_clases` y `herramientas_entorno`) | Que el dashboard pueda contar | ✅ `CHECK` en la V2 (T04) | JAVA_IA_v1.md §4.3 |
 | DEC-35 | 2026-10-03 | Los lotes son **idempotentes** por `loteId`: un reenvío recibe el mismo recibo | La ingesta reintenta si se corta la red | ✅ | [T03-informe §5](tareas/T03-informe.md) |
-| DEC-36 | 2026-10-04 | El carácter invisible **NUL** se **quita al recibir**, en lugar de rechazar el lote | PostgreSQL no lo acepta (📘) y un solo mensaje trabaría toda la ingesta | ✅ En T04 | T04, observaciones de T03 |
+| DEC-36 | 2026-10-04 | El carácter invisible **NUL** se **quita al recibir**, en lugar de rechazar el lote | PostgreSQL no lo acepta (📘) y un solo mensaje trabaría toda la ingesta | ✅ Hecho en T04: se quita de todos los textos del lote, también de la caja | T04-informe §5 |
 | DEC-37 | 2026-10-04 | Las URL de los adjuntos que cambian e inflan los "actualizados" **se dejan así** | Solo afectan un contador; no reinician la clasificación | ✅ | T03-informe §6 |
 | DEC-38 | 2026-10-03 | Las pruebas de Java usan la base `insightedu_test`, con un freno que impide correrlas sobre otra base | No borrar la base principal por error | ✅ | OPERACION.md §5 |
+| DEC-62 | 2026-10-04 | `mensajes.servidor_id` (V2) admite vacío: los mensajes anteriores a la V2 no se clasifican hasta que la ingesta los reenvía, y un envío sin servidor no borra el que ya estaba | Ni recrear la base ni inventar un servidor | ✅ | T04-informe §5 |
+| DEC-63 | 2026-10-04 | Si cambia el texto de un mensaje, sus intentos de clasificación vuelven a 0 | Un texto nuevo merece todas sus oportunidades | ✅ | T04-informe §5 |
 
 ## D · Seguridad
 
 | # | Fecha | Decisión | Por qué | Estado | Detalle en |
 |---|---|---|---|---|---|
 | DEC-39 | 2026-10-03 | **API key por cliente** en la cabecera `X-Api-Key`, comparada en tiempo constante; `/actuator/health` queda libre. Sin clave configurada, Java rechaza todo con 401 | S1 | ✅ | T03-informe §5 |
-| DEC-40 | 2026-10-03 | Las claves se generan con un script **que no las muestra** (`scripts/generar_api_key.py`) | Que nunca pasen por la pantalla ni por el chat | ✅ | T03 |
+| DEC-40 | 2026-10-03 | Las claves se generan con un script **que no las muestra** (`scripts/generar_api_key.py`; desde T04, `--cliente ia` para la de la IA) | Que nunca pasen por la pantalla ni por el chat | ✅ | T03 |
+| DEC-64 | 2026-10-04 | **S2:** la IA exige `X-Api-Key` (`API_KEY_IA`) en toda ruta `/v1/…`, revisada antes que el cuerpo y en tiempo constante. `/health` queda libre y `/procesar` (el del bot) sin clave hasta C2 | Que solo Java pueda pedirle trabajo a la IA | ✅ | T04-informe §5 |
 | DEC-41 | 2026-10-03 | La URL PAR de OCI que quedó en el historial público **no se persigue**. Esta rama usa siempre una PAR nueva | Decisión de Harrison | ⚠️ Riesgo aceptado | Análisis S4 |
 | DEC-42 | 2026-10-03 | Puertos solo en `127.0.0.1`, la base sin puerto publicado y el panel como único servicio público (con clave) | S5 | ✅ | [compose.yml](../compose.yml), análisis §3 |
 | DEC-43 | 2026-10-03 | Nunca leer ni mostrar un `.env`: solo los nombres de sus variables | Proteger el token del bot, los webhooks y las claves | ✅ | CLAUDE.md §5 |
@@ -107,4 +114,5 @@ Las decisiones grandes del análisis se llaman **D1 a D8**; las de este registro
 | DEC-55 | ¿Hace falta vincular lotes y mensajes (una tabla intermedia)? | T07, solo si el panel lo necesita | Observación de T01 |
 | DEC-56 | Red interna o HTTPS para que las claves no viajen en texto plano; ¿hay dominio para el HTTPS del panel? | T10 | Observación de T03, S3 |
 | DEC-57 | ¿Qué versión se entrega el 26 de octubre? ¿Se avisa al equipo? | Antes de T10 | Análisis §8 (riesgo "dos versiones") |
-| DEC-58 | ¿El cambio de T04 en el contrato Java ↔ IA queda aprobado? | Auditoría de T04 | DEC-22 |
+
+DEC-58 (el cambio de T04 al contrato Java ↔ IA) se resolvió en la auditoría de T04: ahora está en la sección B.

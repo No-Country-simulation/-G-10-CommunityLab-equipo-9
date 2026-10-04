@@ -33,10 +33,10 @@ El chat principal sí puede editar la documentación de seguimiento: índice, re
 | Qué | Estado |
 |---|---|
 | Rama de integración | `feature/integracion-arquitectura-3`. Harrison desarrolla todo aquí; base congelada (D1) |
-| Tareas | T01 ✅ · T02 ✅ · T03 ✅ · **T04 terminada, sin auditar** (`tarea/T04-clasificacion-java-ia`, `3ea907b`, 32 archivos) · T05 a T10 sin ficha |
+| Tareas | T01 ✅ · T02 ✅ · T03 ✅ · T04 ✅ (auditada el 2026-10-04, fusión `--no-ff`) · T05 a T10 sin ficha |
 | Docker local | `postgres` (sin puerto), `api-java` (`127.0.0.1:8008`), `ia` (`127.0.0.1:8000`). Faltan el bot, el panel y la ingesta programada |
-| Datos | 39 mensajes reales del servidor de pruebas en `mensajes`. Antes de T04 estaban todos `PENDIENTE`; T04 debería haberlos clasificado (verificar) |
-| Decisiones | D1 a D8 en el análisis §0. **NUL:** se quita al recibir (pedido en T04). **D3:** el bot responde sin aprobación, solo con respaldo en los PDFs |
+| Datos | 39 mensajes reales del servidor de pruebas en `mensajes`, **todos clasificados** por T04 (🧪 39 en `OK`, migración V2 aplicada) |
+| Decisiones | D1 a D8 en el análisis §0 y DEC-01 a DEC-64 en [DECISIONES.md](DECISIONES.md). **D3:** el bot responde sin aprobación, solo con respaldo en los PDFs |
 | Plan de 2 días | ✅ Cumplido (T01 a T03) |
 | Entrega final | **2026-10-26** |
 

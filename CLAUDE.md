@@ -46,7 +46,7 @@ Discord ⇄ Bot ──► API Java ⇄ IA (privada)        Ingesta (cada hora) �
 | `agents/orquestador/`, `agents/agent_faq/` | IA (FastAPI + LangGraph; Agente FAQ con RAG) | ✅ `ia`, en `127.0.0.1:8000` |
 | `agents/bot_discord/` | Bot de Discord | ❌ Pendiente |
 | `panel/` | Panel Streamlit | ❌ Pendiente |
-| `ingestion/discord/` | Ingesta por lotes (34 pruebas) | ❌ Pendiente |
+| `ingestion/discord/` | Ingesta por lotes (36 pruebas) | ❌ Pendiente |
 | `agents/agent_mod/` | Agente-Mod (posts de LinkedIn) | ❌ **No existe todavía** |
 
 Hay **dos `.env`**: el de la raíz es para `docker compose` y `ingestion/discord/.env` es el de la ingesta. Plantillas: `.env.example` en cada lugar.

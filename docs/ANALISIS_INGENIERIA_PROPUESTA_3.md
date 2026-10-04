@@ -71,13 +71,13 @@ Si falta tiempo, lo último que se recorta es OE1, OE3 y OE6.
 | # | Objetivo específico | Necesidad | Fase (sección 9) | Estado al 2026-10-03 |
 |---|---|---|---|---|
 | OE1 | Capturar los mensajes de Discord **en vivo** (bot) y **por lotes** (cada hora), y guardarlos en PostgreSQL a través de la API Java, **sin duplicados** | N1 | 2 | 🟡 **La captura por lotes funciona de punta a punta** (T01 y T03): Discord → ingesta → Java → PostgreSQL, sin duplicados. Falta el flujo en vivo: que el bot pase por Java (C2) |
-| OE2 | Que la IA etiquete cada mensaje con **intención, sentimiento y tema**, sin perder mensajes si falla | N2 | 3 | 🟡 La IA ya devuelve intención, sentimiento y tema con el contrato v1 (T02). Falta que Java la llame y guarde las etiquetas (T04) |
+| OE2 | Que la IA etiquete cada mensaje con **intención, sentimiento y tema**, sin perder mensajes si falla | N2 | 3 | ✅ **Hecho** (T02 y T04): Java clasifica solo, en segundo plano, los mensajes `PENDIENTE` y guarda intención, sentimiento, tema y método, con reintentos y sin perder mensajes. 🧪 Prueba real: 39 de 39 en `OK` al primer intento |
 | OE3 | Generar, para cada logro, un **borrador de post de LinkedIn** y un **caso de éxito** con la voz de la marca | N3 | 4 | 🔴 El Agente-Mod no existe |
 | OE4 | **Responder dudas en vivo** con los PDFs de la institución, y convertir las preguntas repetidas en borradores de FAQ | N4 | 3 · 4 | 🟡 El Agente FAQ responde (🧪 probado). El bot no pasa por Java y la FAQ semanal falta |
 | OE5 | Un **dashboard** con sentimiento, temas en tendencia y alertas (deserción, frustración, dudas sin responder) | N5 | 5 | 🔴 No existe |
 | OE6 | Un **panel con inicio de sesión** para revisar, editar, aprobar o rechazar, con la casilla de consentimiento | N6 | 5 | 🔴 El panel solo usa datos de ejemplo |
 | OE7 | Guardar en **OCI** los activos generados y los aprobados | N7 | 6 | 🟡 Java sube a OCI, pero con el error del JSON (F10) y sin una URL PAR válida |
-| OE8 | Que todo **corra con un comando**, sea **seguro** (claves, puertos cerrados) y tenga **pruebas** del flujo completo | Transversal | 1 a 6 | 🟡 3 de 6 servicios en Docker; F6 y F7 resueltos |
+| OE8 | Que todo **corra con un comando**, sea **seguro** (claves, puertos cerrados) y tenga **pruebas** del flujo completo | Transversal | 1 a 6 | 🟡 3 de 6 servicios en Docker; F6 y F7 resueltos; API key en Java (S1, T03) y entre Java y la IA (S2, T04) |
 | OE9 | **Desplegarlo y ensayar la demo** | Transversal | 6 | ⏸️ La revisión del servidor (O4) quedó pospuesta por Harrison el 2026-10-03; se retoma en la fase 6 |
 
 ### Registro de avance
@@ -86,6 +86,7 @@ Si falta tiempo, lo último que se recorta es OE1, OE3 y OE6.
 |---|---|---|---|
 | 2026-10-03 | `1fb58e2` | La IA atiende pedidos en paralelo y crea el Agente FAQ una sola vez | F6, F7 |
 | 2026-10-03 | `220273f` | `docker compose` con base de datos (`postgres:17`, volumen, sin puerto publicado), API Java e IA, con healthchecks; `.env.example` unificado; guía [OPERACION.md](OPERACION.md) | O1 (3 de 6 servicios), O2, O5, S5, M2, parte de O8 |
+| 2026-10-04 | `3ea907b` | **T04:** Java clasifica en segundo plano los mensajes `PENDIENTE` (cada 30 s, tandas de 5, `SKIP LOCKED` y reserva, máximo 3 intentos, sin guardar resultados viejos). Migración `V2` con `CHECK` de sentimiento y tema. La IA exige `X-Api-Key` en `/v1/…` (S2). El carácter NUL se quita al recibir. 🧪 Prueba real: 39 de 39 en `OK`. 51 pruebas de Java, 29 de la IA y 36 de la ingesta | C3 en Java, S2, F4 en Java, F8 en Java |
 | 2026-10-04 | `c895af3` | **T03:** `POST /api/v1/lotes` recibe el contrato v1 tal cual (D8), en una sola transacción, idempotente por `loteId`, con API key (`X-Api-Key`) y manejo global de errores. `send_batch.py` envía al Java real. 🧪 Prueba real: 39 mensajes del servidor, 3 envíos, 39 filas distintas. 28 pruebas de Java y 36 de Python | C1, S1, F13, S7 en Java, prueba real de `send_batch.py` |
 | 2026-10-03 | `5b7c63e` | **T02:** la IA tiene la puerta `POST /v1/procesar`, que recibe el contrato v1 (importado, sin copiarlo) y devuelve intención, confianza, sentimiento, tema y estado `OK`/`ERROR` por mensaje (una llamada al LLM, con tope de 20 s). En `tiempoReal` agrega la respuesta del FAQ. Contrato documentado en [docs/contratos/JAVA_IA_v1.md](contratos/JAVA_IA_v1.md). 23 pruebas y una prueba real con Gemini | C3, C4, F4, parte de F8, S7 en la IA |
 | 2026-10-03 | `6034d64` | **T01:** modelo de datos nuevo (`lotes_recibidos`, `mensajes`, `borradores`) con Flyway y `validate`; upsert por `discord_id` que no duplica ni pisa las etiquetas; 11 pruebas con PostgreSQL real. Se quitó el modelo viejo y su puerta `/process`, que vuelve en T03 | F1, F2, F3, migraciones e índices de §5 |
