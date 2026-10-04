@@ -9,12 +9,17 @@ Genera una API key y la escribe, SIN MOSTRARLA, en los .env que la necesitan.
         .env (raíz)              API_KEY_IA=...        docker compose se la pasa a la IA (que la exige)
                                                        y a la API Java (que la envía)
 
+    --cliente bot (T05)
+        .env (raíz)              API_KEY_BOT=...       docker compose se la pasa a la API Java (que la exige
+                                                       en /api/v1/mensajes/en-vivo) y al bot (que la envía)
+
 Solo cambia esas líneas; el resto de cada .env queda igual.
 Si ya hay una clave, no la pisa salvo con --reemplazar.
 
 Uso, desde la raíz del repositorio:
     python scripts/generar_api_key.py
     python scripts/generar_api_key.py --cliente ia
+    python scripts/generar_api_key.py --cliente bot
     python scripts/generar_api_key.py --cliente ia --reemplazar
 Después: docker compose up -d   (para que los servicios tomen la clave nueva)
 """
@@ -32,6 +37,9 @@ CLIENTES = {
     ),
     "ia": (
         (RAIZ / ".env", "API_KEY_IA"),
+    ),
+    "bot": (
+        (RAIZ / ".env", "API_KEY_BOT"),
     ),
 }
 DESTINOS = CLIENTES["ingesta"]
@@ -85,7 +93,7 @@ def generar(destinos=DESTINOS, reemplazar: bool = False) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Genera una API key y la escribe en los .env, sin mostrarla.")
     parser.add_argument("--cliente", choices=sorted(CLIENTES), default="ingesta",
-                        help="ingesta (S1, por defecto) o ia (S2)")
+                        help="ingesta (S1, por defecto), ia (S2) o bot (T05)")
     parser.add_argument("--reemplazar", action="store_true", help="crear una clave nueva aunque ya haya una")
     args = parser.parse_args()
     return generar(CLIENTES[args.cliente], reemplazar=args.reemplazar)

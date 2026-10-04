@@ -40,6 +40,8 @@ services:
       OCI_PAR_URL: ${OCI_PAR_URL:-}
       # S1: clave de la ingesta para POST /api/v1/lotes. Vacía = la API rechaza todo salvo /actuator/health
       API_KEY_INGESTA: ${API_KEY_INGESTA:-}
+      # T05: clave del bot para POST /api/v1/mensajes/en-vivo (cada clave abre solo su puerta, DEC-70)
+      API_KEY_BOT: ${API_KEY_BOT:-}
       # S2: clave que Java envía a la IA en X-Api-Key (la misma que recibe el servicio ia)
       API_KEY_IA: ${API_KEY_IA:-}
       # Dentro de Docker la IA se encuentra por el nombre de su servicio, no por localhost.
@@ -70,6 +72,8 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       # S2: /v1/procesar exige esta clave en X-Api-Key. Vacía = /v1/procesar rechaza todo con 401
       API_KEY_IA: ${API_KEY_IA:-}
+      # DEC-54: tope total de un pedido en tiempoReal, para responder antes de los 30 s de Java
+      TIEMPO_REAL_TOPE_S: ${TIEMPO_REAL_TOPE_S:-25}
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
@@ -81,6 +85,31 @@ services:
       timeout: 5s
       retries: 6
       start_period: 30s
+    restart: unless-stopped
+
+  # ⚠️ Un solo bot encendido con el mismo token, o cada mensaje se responde dos veces (docs/OPERACION.md §7)
+  bot:
+    build:
+      context: .
+      dockerfile: agents/bot_discord/Dockerfile
+    environment:
+      # Los mismos nombres que la ingesta (M3): el bot reutiliza ingestion/discord/config.py
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      DISCORD_CHANNEL_DUDAS_ID: ${DISCORD_CHANNEL_DUDAS_ID:-}
+      DISCORD_CHANNEL_LOGROS_ID: ${DISCORD_CHANNEL_LOGROS_ID:-}
+      # Para reconocer a los alumnos simulados y a los mentores igual que el lote de la hora (C2)
+      DISCORD_WEBHOOK_DUDAS_URL: ${DISCORD_WEBHOOK_DUDAS_URL:-}
+      DISCORD_WEBHOOK_LOGROS_URL: ${DISCORD_WEBHOOK_LOGROS_URL:-}
+      DISCORD_MENTOR_ROLE_IDS: ${DISCORD_MENTOR_ROLE_IDS:-}
+      DISCORD_STAFF_ROLE_IDS: ${DISCORD_STAFF_ROLE_IDS:-}
+      SIMULATED_MENTORS: ${SIMULATED_MENTORS:-sim-andres-mentor}
+      API_KEY_BOT: ${API_KEY_BOT:-}
+      # Dentro de Docker, Java se encuentra por el nombre de su servicio
+      BOT_JAVA_URL: http://api-java:8080
+    # Sin puertos publicados: el bot solo sale hacia Discord y hacia la API Java
+    depends_on:
+      api-java:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

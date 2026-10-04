@@ -1,268 +1,245 @@
+"""
+Bot de Discord de InsightEdu Lab (T05): responde en vivo pasando por la API Java.
+
+    Discord ─► bot ─► Java (POST /api/v1/mensajes/en-vivo) ─► IA ─► Java ─► bot ─► Discord
+
+- Escucha solo #dudas y #logros (S10). Ignora sus propios mensajes y los de otros bots,
+  pero no los de nuestros webhooks: son los alumnos simulados (esSimulado = true).
+- Arma el contrato v1 con transform.py de la ingesta, a partir del JSON crudo que entrega
+  GET /channels/{canal}/messages/{id}: el mensaje en vivo y el del lote de la hora salen iguales (C2).
+- No decide nada: cumple la orden de Java (DEC-68, docs/contratos/BOT_JAVA_v1.md).
+  RESPONDER y DERIVAR responden al mensaje, con las menciones desactivadas (S8); REACCIONAR pone 🎉 (F5).
+- Si Java o la IA fallan, no responde nada (DEC-67): el lote de la hora rescata el mensaje.
+- En los registros, solo IDs, la orden y los tiempos: nunca el texto de un alumno (S11).
+
+Uso (dentro de Docker lo arranca compose.yml):  python agents/bot_discord/bot_communitylab.py
+"""
+from __future__ import annotations
+
+import asyncio
+import logging
 import os
-import json
-import discord
-from datetime import datetime
+import sys
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
 
 import aiohttp
-from dotenv import load_dotenv
+import discord
 
-load_dotenv()
+# Los módulos de la ingesta se importan como sueltos ("from contract import …"): se usa su carpeta.
+# En Docker se copian a la misma ruta relativa (agents/bot_discord/Dockerfile), sin duplicarlos en git.
+RAIZ = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(RAIZ / "ingestion" / "discord"))
 
-# =====================================================
-# 1. CONFIGURACIÓN
-# =====================================================
+from config import ConfigError, cargar_config  # noqa: E402
+from discord_api import DiscordAPI  # noqa: E402
+from transform import Contexto, a_contrato, armar_lote  # noqa: E402
 
-# Token del bot guardado en una variable de entorno.
-BOT_DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+log = logging.getLogger("bot")
 
-# ID del canal que quieres escuchar.
-# Déjalo como "" para escuchar todos los canales accesibles.
-BOT_CANAL_PERMITIDO = ""
-
-# Se agrega URL del Orquestador para implementar FastAPI).
-BOT_ORQUESTADOR_URL = os.getenv(
-    "BOT_ORQUESTADOR_URL", "http://localhost:8000/procesar"
-)
-
-# =====================================================
-# 2. AGENTE EVALUADOR DE SENTIMIENTO
-# =====================================================
-
-# La función original `evaluar_sentimiento` corresponde al agente que evalua comentairo, 
-# se tomo la caracterticas de clasifiacion hardcodeada keyword como fallback
-# Además no medía intensidad (score) y no diferenciaba entre comentarios neutrales y frustración.
-# Ahora esta lógica vive en el Orquestador (clasificador Cohere) y
-# en el Agente de testimonio (análisis de sentimiento).
+RUTA_EN_VIVO = "/api/v1/mensajes/en-vivo"
+# D4 y F8: modelo 20 s < Java → IA 30 s < bot → Java 40 s
+TIEMPO_JAVA_S = 40
+ORDENES = frozenset({"RESPONDER", "DERIVAR", "REACCIONAR", "NADA"})
+MAX_CARACTERES_DISCORD = 2000
+SIN_MENCIONES = discord.AllowedMentions.none()  # ni @everyone, ni roles, ni usuarios, ni al autor (S8)
 
 
-# =====================================================
-# 3. AGENTE EXTRACTOR DE TESTIMONIOS
-# =====================================================
-
-# La función original `extraer_testimonio` simulaba la extracción de datos de un testimonio.
-# Estas son funciones que corresponden al Agente-Testimonio
-
-# =====================================================
-# 4. AGENTE GENERADOR DE PUBLICACIONES
-# =====================================================
-
-# La función original `generar_publicacion` tambien correspondea funciones del 
-# agente testnimonio que genera plbicaciones a partir de los datos extraidos del testimonio.
-# el orquestador solo recibe la respuesta del testimonio para devolver la publicacion generada 
-# al bot de discord para que este la publique en linkedin.
+class AjustesError(Exception):
+    """Falta una variable obligatoria del bot."""
 
 
-# =====================================================
-# 5. FLUJO DE SOPORTE
-# =====================================================
+@dataclass(frozen=True)
+class Ajustes:
+    # repr=False: que un secreto no aparezca si alguien imprime los ajustes
+    token: str = field(repr=False)
+    api_key: str = field(repr=False)
+    url_java: str
+    # ID del canal → nombre en el contrato ("dudas" o "logros", igual que build_batch.py)
+    canales: dict[str, str]
+    webhooks_propios: frozenset[str] = frozenset()
+    roles_mentor: frozenset[str] = frozenset()
+    roles_staff: frozenset[str] = frozenset()
+    mentores_simulados: frozenset[str] = frozenset()
 
-# La funcion `gestionar_soporte` simula la gestión de un mensaje que no es un testimonio.
-# no hay un agente de soporte, solo se devuelve un dict con la información del mensaje y la acción a tomar.
 
-# =====================================================
-# 6. ORQUESTADOR PRINCIPAL
-# =====================================================
+def cargar_ajustes() -> Ajustes:
+    """Las variables de la ingesta (mismos nombres, M3) más API_KEY_BOT y BOT_JAVA_URL."""
+    try:
+        config = cargar_config()
+    except ConfigError as e:
+        raise AjustesError(str(e)) from e
+    faltan = [nombre for nombre, valor in (("DISCORD_CHANNEL_DUDAS_ID", config.canal_dudas_id),
+                                           ("DISCORD_CHANNEL_LOGROS_ID", config.canal_logros_id),
+                                           ("API_KEY_BOT", os.getenv("API_KEY_BOT", "").strip())) if not valor]
+    if faltan:
+        raise AjustesError(f"Faltan variables: {', '.join(faltan)}. Ver .env.example de la raíz.")
+    return Ajustes(
+        token=config.bot_token,
+        api_key=os.getenv("API_KEY_BOT", "").strip(),
+        url_java=os.getenv("BOT_JAVA_URL", "http://127.0.0.1:8008").strip().rstrip("/"),
+        canales={config.canal_dudas_id: "dudas", config.canal_logros_id: "logros"},
+        webhooks_propios=config.webhooks_propios,
+        roles_mentor=config.roles_mentor,
+        roles_staff=config.roles_staff,
+        mentores_simulados=config.mentores_simulados,
+    )
 
-# La funcion `procesar_mensaje` es el orquestador principal que recibe un mensaje de Discord,
-# lo evalua, decide el flujo a seguir (testimonio o soporte), y devuelve la respuesta correspondiente.
-# pero no hay una logica de langgraph que gestione la orquestacion de los agentes, solo se simula la logica de orquestacion con funciones hardcodeadas.
 
-# =====================================================
-# 7. NUEVA CAPA DE COMUNICACIÓN HTTP
-# =====================================================
+# ── Qué mensajes se procesan ────────────────────────────────────────────────
 
-# Reemplaza toda la lógica de `procesar_mensaje` del bot original.
-# El Orquestador se encarga de clasificar, invocar sub-agentes
-# y devolver la respuesta lista para Discord.
 
-async def enviar_al_orquestador(payload: dict) -> dict:
+def debe_procesar(message, bot_user_id: int, ajustes: Ajustes) -> bool:
+    """Solo #dudas y #logros. Fuera los propios y los de otros bots; dentro los de nuestros webhooks.
+    Los mensajes sin texto sí se envían: Java los registra y la IA les pone OTRO por regla."""
+    if message.guild is None or str(message.channel.id) not in ajustes.canales:
+        return False
+    if message.author.id == bot_user_id:
+        return False
+    if message.webhook_id is not None:
+        return str(message.webhook_id) in ajustes.webhooks_propios
+    return not message.author.bot
+
+
+# ── El contrato v1, igual que la ingesta ────────────────────────────────────
+
+
+def contexto_para(message, bot_user_id: int, ajustes: Ajustes) -> Contexto:
+    """El mismo Contexto que arma build_batch.py, con lo que discord.py ya sabe del mensaje.
+
+    📘 Por REST un mensaje no trae los roles del autor; discord.py sí los trae en message.author
+    (un Member). Se quita @everyone, que la ingesta tampoco tiene (GET /guilds/{id}/members/{id}).
     """
-    Envía el mensaje crudo de Discord al Orquestador vía HTTP.
-
-    Args:
-        payload: dict con la estructura {origen, servidor, mensajes[]}.
-
-    Returns:
-        dict con {lote_id, respuesta_discord, paquete_final, log_ejecucion}
-        o {"error": "..."} si hay fallo.
-    """
-    async with aiohttp.ClientSession() as session:
-        try:
-            async with session.post(BOT_ORQUESTADOR_URL, json=payload, timeout=60) as resp:
-                if resp.status == 200:
-                    return await resp.json()
-                else:
-                    error_text = await resp.text()
-                    print(f"[Bot] Error HTTP {resp.status}: {error_text[:200]}")
-                    return {"error": f"HTTP {resp.status}"}
-        except aiohttp.ClientConnectorError:
-            print(f"[Bot] No se pudo conectar al Orquestador en {BOT_ORQUESTADOR_URL}")
-            return {"error": "conexion_rechazada"}
-        except Exception as e:
-            print(f"[Bot] Error inesperado: {e}")
-            return {"error": str(e)}
+    autor = message.author
+    roles = [str(r.id) for r in getattr(autor, "roles", []) if not r.is_default()]
+    rol_bot = message.guild.self_role  # el rol que Discord crea para el bot
+    return Contexto(
+        webhooks_propios=ajustes.webhooks_propios,
+        bot_id=str(bot_user_id),
+        rol_bot_id=str(rol_bot.id) if rol_bot else None,
+        roles_por_autor={} if message.webhook_id is not None else {str(autor.id): roles},
+        roles_mentor=ajustes.roles_mentor,
+        roles_staff=ajustes.roles_staff,
+        mentores_simulados=ajustes.mentores_simulados,
+    )
 
 
-# Mantiene los campos originales de Discord (author con id, username,
-#  bot, channel_id, content, timestamp) para que el adaptador del Orquestador los filtre.
-
-def construir_payload_discord(message: discord.Message) -> dict:
-    """
-    Construye el payload crudo estilo Discord para el Orquestador.
-    """
-    return {
-        "origen": "discord",
-        "servidor": message.guild.name if message.guild else "DM",
-        "mensajes": [
-            {
-                "id": str(message.id),
-                "channel_id": str(message.channel.id),
-                "author": {
-                    "id": str(message.author.id),
-                    "username": message.author.display_name,
-                    "bot": message.author.bot,
-                    # Campos crudos que el adaptador descartará:
-                    "avatar": str(message.author.avatar) if message.author.avatar else None,
-                    "discriminator": message.author.discriminator,
-                },
-                "content": message.content.strip(),
-                "timestamp": message.created_at.isoformat(),
-                "type": 0,
-            }
-        ],
-    }
-
-# =====================================================
-# 8. CONEXIÓN CON DISCORD
-# =====================================================
-
-intents = discord.Intents.default()
-
-# Necesario para recibir el contenido de los mensajes.
-intents.message_content = True
+def armar_lote_en_vivo(crudo: dict, canal_nombre: str, ctx: Contexto, servidor_id: str) -> dict:
+    """Un lote del contrato v1, modo tiempoReal, con un solo mensaje. Igual que send_batch.py lo envía."""
+    mensaje = a_contrato(crudo, canal_nombre, ctx)
+    return armar_lote([mensaje], "tiempoReal", servidor_id).model_dump(mode="json")
 
 
-# Cambios:
-# - `on_ready`: añade log de la URL del Orquestador.
-# - `on_message`: delega al Orquestador vía HTTP en lugar de llamar a `procesar_mensaje` localmente.
+def leer_crudo(token: str, canal_id: str, mensaje_id: str) -> dict:
+    """📘 GET /channels/{canal}/messages/{id}: el mismo JSON que lee extract.py. Bloquea: correr en otro hilo."""
+    with DiscordAPI(token) as api:
+        return api.get(f"/channels/{canal_id}/messages/{mensaje_id}")
+
+
+# ── Java ────────────────────────────────────────────────────────────────────
+
+
+async def pedir_orden(sesion: aiohttp.ClientSession, ajustes: Ajustes, lote: dict) -> dict | None:
+    """La orden de Java, o None si Java no respondió bien (DEC-67: entonces el bot no hace nada)."""
+    discord_id = lote["mensajes"][0]["id"]
+    try:
+        async with sesion.post(
+            ajustes.url_java + RUTA_EN_VIVO,
+            json=lote,  # con json=, aiohttp envía Content-Length (Java lo exige, observación de T03)
+            headers={"X-Api-Key": ajustes.api_key, "X-Id-Correlacion": lote["loteId"]},
+            timeout=aiohttp.ClientTimeout(total=TIEMPO_JAVA_S),
+        ) as respuesta:
+            if respuesta.status != 200:
+                log.warning("Mensaje %s: Java respondió HTTP %d (lote %s)", discord_id, respuesta.status, lote["loteId"])
+                return None
+            orden = await respuesta.json()
+    except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as e:
+        log.warning("Mensaje %s: no se pudo hablar con Java (%s)", discord_id, type(e).__name__)
+        return None
+    if not isinstance(orden, dict) or orden.get("orden") not in ORDENES:
+        log.warning("Mensaje %s: Java devolvió una orden desconocida", discord_id)
+        return None
+    return orden
+
+
+async def cumplir(message, orden: dict) -> None:
+    """Cumple la orden de Java. Responder al mensaje lo enlaza: en el contrato queda con respondeA."""
+    tipo = orden["orden"]
+    if tipo in ("RESPONDER", "DERIVAR") and orden.get("texto"):
+        await message.reply(orden["texto"][:MAX_CARACTERES_DISCORD], allowed_mentions=SIN_MENCIONES,
+                            mention_author=False)
+    elif tipo == "REACCIONAR":
+        await message.add_reaction(orden.get("reaccion") or "🎉")
+
+
+async def atender(message, ajustes: Ajustes, bot_user_id: int, sesion: aiohttp.ClientSession,
+                  leer=leer_crudo) -> str:
+    """Todo el recorrido de un mensaje. Devuelve la orden que se cumplió ("NADA" si algo falló)."""
+    inicio = time.perf_counter()
+    canal_id = str(message.channel.id)
+    # "Escribiendo…" mientras se espera a Java (F8)
+    async with message.channel.typing():
+        crudo = await asyncio.to_thread(leer, ajustes.token, canal_id, str(message.id))
+        lote = armar_lote_en_vivo(crudo, ajustes.canales[canal_id], contexto_para(message, bot_user_id, ajustes),
+                                  str(message.guild.id))
+        orden = await pedir_orden(sesion, ajustes, lote)
+    tipo = "NADA" if orden is None else orden["orden"]
+    if orden is not None:
+        await cumplir(message, orden)
+    log.info("Mensaje %s (#%s, lote %s): orden %s%s · %d ms", message.id, ajustes.canales[canal_id], lote["loteId"],
+             tipo, "" if orden is not None else " (falló Java; lo rescata el lote de la hora)",
+             (time.perf_counter() - inicio) * 1000)
+    return tipo
+
+
+# ── El cliente de Discord ───────────────────────────────────────────────────
+
 
 class BotCommunityLab(discord.Client):
 
-    async def on_ready(self):
+    def __init__(self, ajustes: Ajustes):
+        intents = discord.Intents.default()
+        intents.message_content = True  # privilegiado: sin él, content llega vacío
+        # Las menciones también se desactivan por defecto para todo lo que envíe el bot (S8)
+        super().__init__(intents=intents, allowed_mentions=SIN_MENCIONES)
+        self.ajustes = ajustes
+        self.sesion: aiohttp.ClientSession | None = None
 
-        print("\n" + "=" * 50)
-        print("BOT DE COMMUNITYLAB CONECTADO")
-        print("=" * 50)
-        print(f"Bot: {self.user}")
-        print(f"ID del bot: {self.user.id}")
+    async def setup_hook(self) -> None:
+        self.sesion = aiohttp.ClientSession()
 
-        if BOT_CANAL_PERMITIDO:
-            print(f"Canal configurado: {BOT_CANAL_PERMITIDO}")
-        else:
-            print("Escuchando todos los canales accesibles.")
+    async def close(self) -> None:
+        if self.sesion is not None:
+            await self.sesion.close()
+        await super().close()
 
-        # Log de la URL del Orquestador
-        print(f"Orquestador URL: {BOT_ORQUESTADOR_URL}")
-        print("Esperando mensajes...\n")
+    async def on_ready(self) -> None:
+        log.info("Bot conectado (id %s). Escucha %s; Java en %s", self.user.id,
+                 sorted(f"#{n}" for n in self.ajustes.canales.values()), self.ajustes.url_java)
 
-    async def on_message(self, message):
-
-        # Ignorar mensajes enviados por bots.
-        if message.author.bot:
+    async def on_message(self, message: discord.Message) -> None:
+        if not debe_procesar(message, self.user.id, self.ajustes):
             return
-
-        # Solo procesar mensajes de servidores.
-        if not message.guild:
-            return
-
-        # Filtrar por canal si se configuró un ID.
-        if BOT_CANAL_PERMITIDO:
-            if str(message.channel.id) != BOT_CANAL_PERMITIDO:
-                return
-
-        texto = message.content.strip()
-
-        # Ignorar mensajes sin texto.
-        if not texto:
-            return
+        try:
+            await atender(message, self.ajustes, self.user.id, self.sesion)
+        except Exception as e:  # noqa: BLE001
+            # Solo el tipo de error: el detalle (por ejemplo, de pydantic) podría incluir el texto (S11)
+            log.error("Mensaje %s: no se pudo atender (%s). Lo rescata el lote de la hora",
+                      message.id, type(e).__name__)
 
 
-        usuario = message.author.display_name
-        canal = getattr(message.channel, "name", "desconocido")
+def main() -> int:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    try:
+        ajustes = cargar_ajustes()
+    except AjustesError as e:
+        log.error("%s", e)
+        return 1
+    # log_handler=None: discord.py usa la configuración de logging de arriba
+    BotCommunityLab(ajustes).run(ajustes.token, log_handler=None)
+    return 0
 
-        # Registrar la recepción del mensaje.
-        print("\nMensaje recibido desde Discord.")
-
-        print(f"\n[Bot] Mensaje recibido de {usuario} en canal {canal} (ID: {message.channel.id})")
-        print(f"[Bot] Contenido: {texto[:80]}...")
-
-        # [NUEVO] Construir payload estilo Discord
-        payload = construir_payload_discord(message)
-
-        # [NUEVO] Enviar al Orquestador
-        print(f"[Bot] Enviando al Orquestador ({BOT_ORQUESTADOR_URL})...")
-        respuesta = await enviar_al_orquestador(payload)
-
-        if "error" in respuesta:
-            print(f"[Bot] Error del Orquestador: {respuesta['error']}")
-            return
-
-
-        # --- PROCESAR RESPUESTA Y RESPONDER EN DISCORD ---
-
-        respuesta_discord = respuesta.get("respuesta_discord", {})
-        respuestas = respuesta_discord.get("respuestas", [])
-
-        if not respuestas:
-            print("[Bot] El Orquestador no devolvió respuestas.")
-            return
-
-        for r in respuestas:
-            mensaje_id = r.get("mensaje_id", "")
-            texto_respuesta = r.get("texto_respuesta", "")
-            requiere_humano = r.get("requiere_humano", False)
-            intencion = r.get("intencion", "DESCONOCIDO")
-
-            print(f"[Bot] Intención: {intencion}")
-            print(f"[Bot] Requiere humano: {requiere_humano}")
-
-            # [NUEVO] Responder al usuario en Discord
-            if texto_respuesta:
-                try:
-                    await message.reply(texto_respuesta)
-                    print(f"[Bot] ✅ Respuesta enviada a Discord.")
-                except discord.Forbidden:
-                    print(f"[Bot] ❌ Sin permisos para responder.")
-                except Exception as e:
-                    print(f"[Bot] ❌ Error enviando respuesta: {e}")
-            elif requiere_humano:
-                # [NUEVO] Mensaje para casos derivados a humano
-                await message.reply(
-                    "Tu consulta fue registrada y será revisada por un mentor. "
-                    "Te responderemos lo antes posible. 🙏"
-                )
-
-            # [NUEVO] Log del reporte interno
-            resumen = respuesta.get("paquete_final", {}).get("resumen_lote", {})
-            if resumen:
-                print(
-                    f"[Bot] Resumen del lote: "
-                    f"{resumen.get('procesados', 0)} procesados, "
-                    f"{resumen.get('requieren_humano', 0)} requieren humano."
-                )
-
-
-# =====================================================
-# 8. INICIAR EL BOT
-# =====================================================
 
 if __name__ == "__main__":
-
-    if not BOT_DISCORD_TOKEN:
-        raise RuntimeError(
-            "No se encontró BOT_DISCORD_TOKEN. "
-            "Configura la variable de entorno antes de ejecutar."
-        )
-
-    bot = BotCommunityLab(intents=intents)
-    bot.run(BOT_DISCORD_TOKEN)
+    sys.exit(main())

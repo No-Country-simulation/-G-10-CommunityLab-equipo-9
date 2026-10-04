@@ -1,4 +1,4 @@
-# Se aplica a las imágenes que se construyen desde la raíz del repositorio (la IA).
+# Se aplica a las imágenes que se construyen desde la raíz del repositorio (la IA y el bot).
 # backend-java se construye desde su propia carpeta y solo copia pom.xml, .mvn y src.
 
 # Secretos: ningún .env entra a una imagen, en ninguna carpeta (S8 del análisis)
