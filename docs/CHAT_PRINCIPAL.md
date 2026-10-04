@@ -5,9 +5,18 @@
 
 ## 0. Primeros pasos, en orden
 
-1. Lee `CLAUDE.md`, este archivo, [docs/tareas/README.md](tareas/README.md) (estado de las tareas y observaciones) y, del [análisis](ANALISIS_INGENIERIA_PROPUESTA_3.md), las secciones **Objetivos**, **0 · Decisiones** y **9 · Prioridades**.
+1. Lee `CLAUDE.md`, este archivo, [docs/DECISIONES.md](DECISIONES.md) (todas las decisiones en un solo lugar), [docs/tareas/README.md](tareas/README.md) (estado de las tareas y observaciones) y, del [análisis](ANALISIS_INGENIERIA_PROPUESTA_3.md), las secciones **Objetivos**, **0 · Decisiones** y **9 · Prioridades**.
 2. Comprueba el estado real con comandos de solo lectura: `git fetch`, `git status -sb`, `git log --oneline -5 feature/integracion-arquitectura-3` y `docker compose ps`.
 3. **Primera tarea: auditar T04** (procedimiento en la sección 3). Ojo: T04 **modificó `docs/contratos/JAVA_IA_v1.md` y su JSON Schema**. Verifica qué cambió y si cambia el contrato Java ↔ IA v1 sin aprobación de Harrison.
+4. **Después de T04, el ciclo se repite hasta la entrega**, una tarea a la vez y en el orden de la sección 6 (**T05 → T06 → T07 → T08 → T09 → T10**):
+
+   ```
+   escribir la ficha → plantear a Harrison sus decisiones previas → Harrison abre el chat de tarea
+        ↑                                                                  ↓
+   fusionar y actualizar la documentación  ←  auditar  ←  "Txx terminó"
+   ```
+
+   Si el plazo aprieta, recorta los 🟡 y avisa a Harrison. Lo último que se recorta es OE1, OE3 y OE6 (análisis § Objetivos).
 
 ## 1. El rol
 
@@ -54,6 +63,7 @@ Cuando Harrison dice **"Txx terminó"**:
 6. **Veredicto** en una tabla: ✅ aprobada o ❌ con cambios pedidos. Las observaciones que no frenan la tarea van a la tabla de [docs/tareas/README.md](tareas/README.md), indicando a qué tarea pasan.
 7. **Actualiza la documentación:**
    - estado en `docs/tareas/README.md`;
+   - **[docs/DECISIONES.md](DECISIONES.md): una fila por cada decisión nueva** (del informe §5 o de Harrison), y cierra las ❓ que se resolvieron;
    - el análisis: fila del **registro de avance** y columna **"Estado"** de los OE;
    - `CLAUDE.md`, si cambió el mapa o se agregó una pieza.
 8. **Dale a Harrison los comandos**, uno por línea, con la carpeta y qué debería ver:

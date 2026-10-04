@@ -21,6 +21,7 @@
 | Documento | Qué tiene | Autoridad |
 |---|---|---|
 | [docs/ANALISIS_INGENIERIA_PROPUESTA_3.md](docs/ANALISIS_INGENIERIA_PROPUESTA_3.md) | Objetivos, hallazgos (S*, F*, C*, Q*, O*), decisiones D1 a D7, plan por fases y registro de avance | Plan de trabajo |
+| [docs/DECISIONES.md](docs/DECISIONES.md) | **Registro único de decisiones** (DEC-01…): qué se decidió, por qué, su estado y dónde está el detalle | Índice de decisiones |
 | [docs/referencias/Propuesta_3_Arquitectura_InsightEdu.pdf](docs/referencias/Propuesta_3_Arquitectura_InsightEdu.pdf) | Arquitectura: piezas, flujos y necesidades **N1 a N7** | Arquitectura |
 | [ingestion/discord/docs/PROJECT_BRIEF.md](ingestion/discord/docs/PROJECT_BRIEF.md) | Brief del cliente y alcance del MVP (ojo: ahí "N1 a N5" es otra numeración) | Qué se pide |
 | [ingestion/discord/docs/CONTRACT.md](ingestion/discord/docs/CONTRACT.md) y [schema/contract_v1.schema.json](ingestion/discord/schema/contract_v1.schema.json) | **Contrato v1**: el formato de cada mensaje. Código: [ingestion/discord/contract.py](ingestion/discord/contract.py) | **Fuente única de verdad del formato** |
