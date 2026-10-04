@@ -32,6 +32,7 @@ Las decisiones grandes del análisis se llaman **D1 a D8**; las de este registro
 | DEC-10 | 2026-10-03 | **Plan de 2 días** para fijar la base: modelo de datos, formato Java ↔ IA y puerta de lotes | Que los demás no hagan cambios fuertes en paralelo | ✅ Cumplido el 2026-10-04 | Análisis, registro de avance |
 | DEC-11 | 2026-10-03 | Objetivo principal y OE1 a OE9. Si falta tiempo, lo último que se recorta es OE1, OE3 y OE6 | Un solo lugar para decidir "¿esto sirve?" | ✅ | Análisis § Objetivos |
 | DEC-12 | 2026-10-03 | **Trabajo en varios chats:** un chat principal (guía, orquestador y auditor) y chats de tarea; una rama por tarea; un chat a la vez; auditoría antes de fusionar | Cuidar el contexto sin perder el conocimiento | ✅ | [CLAUDE.md §6](../CLAUDE.md), [CHAT_PRINCIPAL.md](CHAT_PRINCIPAL.md) |
+| DEC-83 | 2026-10-04 | La **FAQ semanal** va en una ficha aparte (**T06b**), después de T06, y se arma con los datos de Java, no con el historial que el Agente FAQ guarda dentro de la IA | Que T06 se concentre en OE3, que es crítico. Regla 3 de la propuesta: la IA no guarda la verdad del sistema | ✅ | [T06 §1.1](tareas/T06-agente-mod.md) |
 | DEC-13 | 2026-10-03 | Al repositorio, que es público, solo sube la propuesta 3. **No** suben el brief oficial, el discovery, las notas de reunión ni el traspaso del chat anterior | Documentos de terceros o con datos de personas; el traspaso "crearía sesgo" | ✅ | Este registro |
 | DEC-14 | 2026-10-03 | Modelos de Claude: **Opus 5.5** para el chat principal y las tareas que definen una base; **Sonnet 5.5** para las acotadas | Equilibrio entre calidad y límite de uso | ✅ | CHAT_PRINCIPAL.md §4 |
 | DEC-65 | 2026-10-04 | Los mensajes de commit **ya no llevan** la línea `Co-Authored-By: Claude…` | Decisión de Harrison | ✅ | [CLAUDE.md §6](../CLAUDE.md) |
@@ -62,6 +63,8 @@ Las decisiones grandes del análisis se llaman **D1 a D8**; las de este registro
 | DEC-75 | 2026-10-04 | El bot pide el JSON crudo del mensaje con `GET /channels/{canal}/messages/{id}` y lo convierte con `transform.py` de la ingesta | Una sola implementación del contrato (C2). 🧪 El mensaje en vivo y el del lote de la hora salen idénticos | ✅ | [T05-informe §5](tareas/T05-informe.md) |
 | DEC-77 | 2026-10-04 | En `RESPONDER`, Java publica el texto del Agente FAQ **tal cual**, sin agregar un pie de fuentes. `respuesta_fuentes` se guarda igual | El texto ya cita el documento que usó; el pie lo repetía y a veces nombraba otro documento | ✅ | T05-informe §5, [BOT_JAVA_v1.md](contratos/BOT_JAVA_v1.md) |
 | DEC-79 | 2026-10-04 | `RESPONDIDA` se guarda cuando Java decide, **antes** de que el bot publique | Confirmar la publicación obligaría a cambiar el contrato bot ↔ Java por un caso raro (Discord rechaza la respuesta). Decisión del chat principal | ⚠️ Riesgo aceptado | T05-informe §6 |
+| DEC-80 | 2026-10-04 | Los borradores de los logros se generan **solos**: una tarea programada en Java busca los `TESTIMONIO` sin generación y se los pide a la IA | Marketing encuentra los borradores listos; mismo patrón que la clasificación de T04 | ✅ Se implementa en T06 | T06 §1.1 |
+| DEC-82 | 2026-10-04 | Java pide los borradores en una **puerta nueva de la IA, `POST /v1/generar`**, separada de `/v1/procesar`. Solo agrega al contrato Java ↔ IA | Etiquetar y redactar son trabajos distintos; redactar es más lento y se puede repetir | ✅ Se implementa en T06 | T06 §1.1 |
 | DEC-61 | 2026-10-04 | Si falla **toda** la llamada (401, 500, tiempo agotado o IA caída), los mensajes suman un intento y siguen `PENDIENTE` | Un fallo pasajero no pierde ni marca mal ningún mensaje | ✅ | T04-informe §5 |
 
 ## C · Datos
@@ -81,6 +84,7 @@ Las decisiones grandes del análisis se llaman **D1 a D8**; las de este registro
 | DEC-62 | 2026-10-04 | `mensajes.servidor_id` (V2) admite vacío: los mensajes anteriores a la V2 no se clasifican hasta que la ingesta los reenvía, y un envío sin servidor no borra el que ya estaba | Ni recrear la base ni inventar un servidor | ✅ | T04-informe §5 |
 | DEC-63 | 2026-10-04 | Si cambia el texto de un mensaje, sus intentos de clasificación vuelven a 0 | Un texto nuevo merece todas sus oportunidades | ✅ | T04-informe §5 |
 | DEC-66 | 2026-10-04 | Lo que respondió el bot se guarda **en la fila del mensaje** (migración `V3`): `respuesta_estado` (`RESPONDIDA` / `DERIVADA`), texto, fuentes y hora. No se usa `borradores` | Es un dato del mensaje, como sus etiquetas; `borradores` es la bandeja de aprobación (N6) y las respuestas del bot no se aprueban (D3) | ✅ Hecho en T05 | T05 §1.1 |
+| DEC-81 | 2026-10-04 | Los borradores nombran al alumno **solo por su primer nombre**, y al LLM le llega solo ese dato (ni el nombre completo, ni el usuario, ni los IDs) | El `Reglamento de Comunicaciones` de CommunityLab prohíbe publicar nombres completos sin consentimiento; el panel pedirá el consentimiento (D6) | ✅ Se implementa en T06 | T06 §1.1 |
 | DEC-72 | 2026-10-04 | La primera respuesta del bot, que mostraba la ruta de la PC de un compañero, **se deja** publicada en el servidor de pruebas y guardada en la base (fila 165) | Decisión de Harrison: es el servidor de pruebas | ⚠️ Riesgo aceptado | T05-informe §4.5 |
 
 ## D · Seguridad
@@ -112,6 +116,9 @@ Las decisiones grandes del análisis se llaman **D1 a D8**; las de este registro
 | DEC-73 | 2026-10-04 | Una pregunta que **no es del curso** se clasifica como `PREGUNTA_FAQ` con tema `otro`, y el bot la **deriva al mentor** | Decisión de Harrison: ningún alumno que pregunta se queda sin respuesta. A cambio, los mentores y el dashboard ven también esas preguntas | ✅ Hecho en T05 (auditoría) | T05-informe §8.2 |
 | DEC-76 | 2026-10-04 | Las fuentes llevan **solo el nombre del PDF y la página**, nunca la ruta de una PC | 🧪 En la prueba real apareció la ruta de la PC de un compañero. Se corrigió en el origen (`reranker.py`) y en `grafo_v1.py` | ✅ | T05-informe §5 |
 | DEC-78 | 2026-10-04 | El tope de 25 s también corta la **clasificación**. Si la agota, el resultado es `ERROR` y el bot no responde | Con un reintento del LLM, el pedido podía pasar de los 30 s de Java | ✅ | T05-informe §5 |
+| DEC-53 | 2026-10-04 | Antes de redactar, **la IA decide si un logro es publicable** y deja escrito el motivo; si no lo es, no hay borrador (por ejemplo, "por fin entendí recursividad") | El problema del cliente es el tiempo que pierde Marketing (brief §2.3) | ✅ Se implementa en T06 | T06 §1.1 |
+| DEC-84 | 2026-10-04 | La **guía de voz de CommunityLab** la redacta el chat de T06 y la aprueba Harrison. Vive en un archivo del Agente-Mod que la IA lee al arrancar | No existe una guía; una institución real solo tendría que cambiar el archivo | ✅ Se implementa en T06 | T06 §3 |
+| DEC-85 | 2026-10-04 | El modelo de Gemini del Agente-Mod se configura con `MOD_MODEL_NAME` (por defecto, el mismo que clasifica) | Redactar posts puede necesitar un modelo más potente; sigue siendo un solo proveedor (D5) | ✅ Se implementa en T06 | T06 §3 |
 
 ## F · Operación
 
@@ -125,9 +132,8 @@ Las decisiones grandes del análisis se llaman **D1 a D8**; las de este registro
 
 | # | Pregunta | Cuándo | Origen |
 |---|---|---|---|
-| DEC-53 | ¿Los logros de aprendizaje ("por fin entendí recursividad") generan borradores, o el Agente-Mod los filtra? | T06 | Observación de T02 |
 | DEC-55 | ¿Hace falta vincular lotes y mensajes (una tabla intermedia)? | T07, solo si el panel lo necesita | Observación de T01 |
 | DEC-56 | Red interna o HTTPS para que las claves no viajen en texto plano; ¿hay dominio para el HTTPS del panel? | T10 | Observación de T03, S3 |
 | DEC-57 | ¿Qué versión se entrega el 26 de octubre? ¿Se avisa al equipo? | Antes de T10 | Análisis §8 (riesgo "dos versiones") |
 
-Ya resueltas: DEC-58 (el cambio de T04 al contrato Java ↔ IA), en la auditoría de T04, y DEC-54 (el tope en vivo), en la ficha T05. Ahora están en las secciones B y E.
+Ya resueltas: DEC-58 (el cambio de T04 al contrato Java ↔ IA), en la auditoría de T04; DEC-54 (el tope en vivo), en la ficha T05, y DEC-53 (los logros de aprendizaje), en la ficha T06. Ahora están en las secciones B y E.

@@ -9,6 +9,8 @@ Cada tarea tiene una **ficha** (la orden de trabajo, que escribe el chat princip
 | [T03](T03-puerta-lotes.md) | Puerta de lotes en Java: contrato v1 (D8), upsert, idempotencia y API key; `send_batch.py` al Java real | T01 | Sonnet 5.5 (se usó Opus 5.5) | ✅ Aprobada el 2026-10-04 (`c895af3`) · [informe](T03-informe.md) |
 | [T04](T04-clasificacion-java-ia.md) | Java clasifica en segundo plano los mensajes `PENDIENTE` con la IA y guarda las etiquetas; API key entre Java y la IA (S2); carácter NUL | T01, T02, T03 | Opus 5.5 | ✅ Aprobada el 2026-10-04 (`3ea907b`) · [informe](T04-informe.md) |
 | [T05](T05-bot-en-vivo.md) | El bot pasa por Java: puerta en vivo, respuesta guardada, tope total en la IA, bot en Docker (C2, F5, S8, S10) | T03, T04 | Opus 5.5 | ✅ Aprobada el 2026-10-04 (`c815546`, con los cambios de la auditoría) · [informe](T05-informe.md) · [contrato bot ↔ Java](../contratos/BOT_JAVA_v1.md) |
+| [T06](T06-agente-mod.md) | Agente-Mod: borradores de post de LinkedIn y caso de éxito con la voz de CommunityLab; puerta `/v1/generar`; generación automática en Java (OE3) | T04, T05 | Opus 5.5 | 📝 Ficha lista (decisiones validadas el 2026-10-04) |
+| T06b | FAQ semanal: Java junta las dudas de la semana y la IA escribe un borrador de FAQ (OE4) | T05, T06 | Por definir | ⏳ Ficha pendiente (DEC-83) |
 
 Estados: 📝 ficha lista · 🔨 en curso · 🔍 en auditoría · ✅ aprobada o fusionada · ⏳ ficha pendiente
 

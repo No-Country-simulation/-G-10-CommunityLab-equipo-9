@@ -8,7 +8,7 @@
 1. Lee `CLAUDE.md`, este archivo, [docs/DECISIONES.md](DECISIONES.md) (todas las decisiones en un solo lugar), [docs/tareas/README.md](tareas/README.md) (estado de las tareas y observaciones) y, del [análisis](ANALISIS_INGENIERIA_PROPUESTA_3.md), las secciones **Objetivos**, **0 · Decisiones** y **9 · Prioridades**.
 2. Comprueba el estado real con comandos de solo lectura: `git fetch`, `git status -sb`, `git log --oneline -5 feature/integracion-arquitectura-3` y `docker compose ps`.
 3. **Primera tarea: auditar T04** (procedimiento en la sección 3). Ojo: T04 **modificó `docs/contratos/JAVA_IA_v1.md` y su JSON Schema**. Verifica qué cambió y si cambia el contrato Java ↔ IA v1 sin aprobación de Harrison.
-4. **Después de T04, el ciclo se repite hasta la entrega**, una tarea a la vez y en el orden de la sección 6 (**T05 → T06 → T07 → T08 → T09 → T10**):
+4. **Después de T04, el ciclo se repite hasta la entrega**, una tarea a la vez y en el orden de la sección 6 (**T05 → T06 → T06b → T07 → T08 → T09 → T10**):
 
    ```
    escribir la ficha → plantear a Harrison sus decisiones previas → Harrison abre el chat de tarea
@@ -33,10 +33,10 @@ El chat principal sí puede editar la documentación de seguimiento: índice, re
 | Qué | Estado |
 |---|---|
 | Rama de integración | `feature/integracion-arquitectura-3`. Harrison desarrolla todo aquí; base congelada (D1) |
-| Tareas | T01 ✅ · T02 ✅ · T03 ✅ · T04 ✅ (fusión `--no-ff`) · T05 ✅ (auditada el 2026-10-04 con un cambio pedido y corregido) · **T06 a T10 sin ficha** |
+| Tareas | T01 ✅ · T02 ✅ · T03 ✅ · T04 ✅ (fusión `--no-ff`) · T05 ✅ (auditada el 2026-10-04 con un cambio pedido y corregido) · **T06 📝 ficha lista** · T06b y T07 a T10 sin ficha |
 | Docker local | `postgres` (sin puerto), `api-java` (`127.0.0.1:8008`), `ia` (`127.0.0.1:8000`) y `bot` (sin puerto). Faltan el panel y la ingesta programada (cron, O3) |
 | Datos | 39 mensajes reales del servidor de pruebas en `mensajes`, **todos clasificados** por T04 (🧪 39 en `OK`, migración V2 aplicada) |
-| Decisiones | D1 a D8 en el análisis §0 y DEC-01 a DEC-79 en [DECISIONES.md](DECISIONES.md). **D3:** el bot responde sin aprobación, solo con respaldo en los PDFs |
+| Decisiones | D1 a D8 en el análisis §0 y DEC-01 a DEC-85 en [DECISIONES.md](DECISIONES.md). **D3:** el bot responde sin aprobación, solo con respaldo en los PDFs |
 | Plan de 2 días | ✅ Cumplido (T01 a T03) |
 | Entrega final | **2026-10-26** |
 
@@ -120,6 +120,7 @@ Antes de escribir cada una, revisa sus observaciones en [docs/tareas/README.md](
 |---|---|---|---|
 | **T05** | El bot pasa por Java (flujo en vivo) | OE1, OE4 | C2, F5 (responde solo dudas), S8 (menciones desactivadas), S10 (solo `#dudas` y `#logros`), D3, D4 (20 / 30 / 40 s) y un **tope total por pedido en la IA** en `tiempoReal` (observación de T02). La puerta Java en vivo con `seguridad.api-keys.bot`; quitar `/procesar` de la IA; unificar el nombre del token (M3); Dockerfile y servicio `bot` en compose |
 | **T06** | Agente-Mod: post de LinkedIn y caso de éxito con la voz de la marca | OE3 | Usa la tabla `borradores`. Decidir si los "logros de aprendizaje" generan borradores (observación de T02). Un solo proveedor (D5). Guía de voz de la marca |
+| **T06b** | FAQ semanal (DEC-83) | OE4 | Java junta las `PREGUNTA_FAQ` de la semana (con `respuesta_estado` y `respuesta_texto`, V3) y la IA agrupa las repetidas y escribe un borrador `FAQ` (`mensaje_id` vacío, DEC-33). No usar el historial interno del Agente FAQ (regla 3). Lo primero que se recorta si falta tiempo |
 | **T07** | Panel con inicio de sesión: listar, editar, aprobar o rechazar | OE6 | S3, C5, D6 (casilla de consentimiento), clave `panel`, servicio Streamlit en compose: es el **único puerto público** |
 | **T08** | Dashboard: las 5 consultas y sus gráficos | OE5 | **Contar solo `estado_clasificacion = OK`** (observación de T01). Consultas en Java con los índices de V1 |
 | **T09** | OCI | OE7 | D2 (`generados/` y `aprobados/`), F10 (JSON con Jackson), F11 (solo lo aprobado va a `aprobados/`), una PAR nueva (S4), logs de la IA |
