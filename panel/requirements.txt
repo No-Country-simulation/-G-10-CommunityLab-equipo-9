@@ -1,0 +1,5 @@
+# Dependencias del panel de curaduría (panel/Dockerfile).
+streamlit==1.65.0
+httpx>=0.28,<1
+# Zonas horarias para mostrar las fechas en hora de Bogotá (la imagen slim no trae la base de zonas)
+tzdata>=2024.1

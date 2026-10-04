@@ -42,6 +42,8 @@ services:
       API_KEY_INGESTA: ${API_KEY_INGESTA:-}
       # T05: clave del bot para POST /api/v1/mensajes/en-vivo (cada clave abre solo su puerta, DEC-70)
       API_KEY_BOT: ${API_KEY_BOT:-}
+      # T07: clave del panel para /api/v1/borradores y /api/v1/errores (solo esas puertas)
+      API_KEY_PANEL: ${API_KEY_PANEL:-}
       # S2: clave que Java envía a la IA en X-Api-Key (la misma que recibe el servicio ia)
       API_KEY_IA: ${API_KEY_IA:-}
       # Dentro de Docker la IA se encuentra por el nombre de su servicio, no por localhost.
@@ -121,6 +123,23 @@ services:
       # Dentro de Docker, Java se encuentra por el nombre de su servicio
       BOT_JAVA_URL: http://api-java:8080
     # Sin puertos publicados: el bot solo sale hacia Discord y hacia la API Java
+    depends_on:
+      api-java:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Panel de curaduría (T07). En el servidor será la única pieza abierta a internet (DEC-42, T10)
+  panel:
+    build: ./panel
+    environment:
+      # La clave que envía a Java (python scripts/generar_api_key.py --cliente panel)
+      API_KEY_PANEL: ${API_KEY_PANEL:-}
+      # Usuarios y hashes de sus contraseñas (python scripts/crear_usuario_panel.py). Vacía = nadie entra
+      PANEL_USUARIOS: ${PANEL_USUARIOS:-}
+      # Dentro de Docker, Java se encuentra por el nombre de su servicio. El panel nunca habla con la base ni con la IA
+      PANEL_JAVA_URL: http://api-java:8080
+    ports:
+      - "127.0.0.1:8501:8501"
     depends_on:
       api-java:
         condition: service_healthy
