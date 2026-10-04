@@ -120,7 +120,7 @@ Todos usan el formato común de error de Java, con `codigo`, `mensaje`, `errores
 | `codigo` | HTTP | Cuándo |
 |---|---|---|
 | `NO_AUTORIZADO` | 401 | Falta `X-Api-Key` o la clave no es de ningún cliente |
-| `PROHIBIDO` | 403 | La clave es de otro cliente (por ejemplo, la de la ingesta). Se revisa antes de leer el cuerpo |
+| `PROHIBIDO` | 403 | La clave es de otro cliente (por ejemplo, la de la ingesta). Se revisa dos veces: en `ApiKeyFilter`, antes de leer el cuerpo y con la ruta normalizada como la resuelve Spring (sin `;…`, decodificada y sin barras dobles), y otra vez en el controlador |
 | `CUERPO_INVALIDO` | 400 | El cuerpo no es JSON |
 | `CONTRATO_INVALIDO` | 422 | No cumple el contrato v1, `modo` no es `tiempoReal` o no trae exactamente un mensaje |
 | `ERROR_INTERNO` | 500 | Falló Java. El detalle queda en su registro |

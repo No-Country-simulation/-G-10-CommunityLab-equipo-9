@@ -6,12 +6,18 @@ import com.insightedulab.backend_java.clasificacion.ClasificacionService;
 import com.insightedulab.backend_java.client.IaNoDisponibleException;
 import com.insightedulab.backend_java.client.NlpDataClient;
 import com.insightedulab.backend_java.client.RespuestaIa;
+import com.insightedulab.backend_java.controller.LoteController;
+import com.insightedulab.backend_java.controller.MensajeEnVivoController;
+import com.insightedulab.backend_java.dto.lote.LoteEntrada;
+import com.insightedulab.backend_java.error.ProhibidoException;
 import com.insightedulab.backend_java.repository.MensajeUpsertRepository;
 import com.insightedulab.backend_java.repository.MensajeUpsertRepository.DatosMensaje;
 import com.insightedulab.backend_java.model.enums.AutorRol;
 import com.insightedulab.backend_java.model.enums.AutorTipo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -22,6 +28,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.net.URI;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -30,6 +37,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -321,6 +329,53 @@ class EnVivoApiTest {
         assertThat(contar("lotes_recibidos")).isZero();
     }
 
+    // ── Auditoría de T05: la regla de DEC-70 no se esquiva escribiendo la ruta de otra forma ──
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/v1/lotes;x=1", "/api/v1/lote%73", "/api//v1/lotes"})
+    void laClaveDelBotNoEntraALotesConUnaRutaDisfrazada(String ruta) throws Exception {
+        MvcResult r = enviarA(ruta, historial("lote-1", mensaje(ID, 1)), CLAVE_BOT);
+
+        assertThat(r.getResponse().getStatus()).as(ruta).isEqualTo(403);
+        assertThat(cuerpo(r).get("codigo").asText()).isEqualTo("PROHIBIDO");
+        assertThat(contar("mensajes")).isZero();
+        assertThat(contar("lotes_recibidos")).isZero();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/v1/mensajes/en-vivo;x=1", "/api/v1/mensajes/en-viv%6F", "/api//v1/mensajes/en-vivo"})
+    void laClaveDeLaIngestaNoEntraALaPuertaEnVivoConUnaRutaDisfrazada(String ruta) throws Exception {
+        MvcResult r = enviarA(ruta, enVivo("vivo-1", mensaje(ID, 1)), CLAVE_INGESTA);
+
+        assertThat(r.getResponse().getStatus()).as(ruta).isEqualTo(403);
+        assertThat(cuerpo(r).get("codigo").asText()).isEqualTo("PROHIBIDO");
+        assertThat(contar("mensajes")).isZero();
+        verifyNoInteractions(ia);
+    }
+
+    @Test
+    void elClienteCorrectoConUnPuntoYComaEnLaRutaSigueFuncionando() throws Exception {
+        iaResponde(id -> comentario(id));
+
+        MvcResult r = enviarA("/api/v1/mensajes/en-vivo;x=1", enVivo("vivo-1", mensaje(ID, 1)), CLAVE_BOT);
+
+        assertThat(r.getResponse().getStatus()).isEqualTo(200);
+        assertThat(cuerpo(r).get("orden").asText()).isEqualTo("NADA");
+    }
+
+    @Test
+    void cadaControladorExigeSuClienteAunqueElFiltroNoLoFrene() {
+        // Segunda capa: se llama al controlador directo, como si una ruta rara hubiera pasado el filtro
+        MensajeEnVivoController enVivo = new MensajeEnVivoController(null);
+        LoteController lotes = new LoteController(null);
+        LoteEntrada lote = json.convertValue(enVivo("vivo-1", mensaje(ID, 1)), LoteEntrada.class);
+
+        assertThatThrownBy(() -> enVivo.recibir("ingesta", lote)).isInstanceOf(ProhibidoException.class);
+        assertThatThrownBy(() -> enVivo.recibir(null, lote)).isInstanceOf(ProhibidoException.class);
+        assertThatThrownBy(() -> lotes.recibir("bot", lote)).isInstanceOf(ProhibidoException.class);
+        assertThatThrownBy(() -> lotes.recibir(null, lote)).isInstanceOf(ProhibidoException.class);
+    }
+
     // ── Caso 9: la puerta en vivo recibe un mensaje en tiempoReal ──
 
     @Test
@@ -377,6 +432,12 @@ class EnVivoApiTest {
 
     private MvcResult enviar(Map<String, Object> lote, String clave) throws Exception {
         return mvc.perform(post(RUTA).header("X-Api-Key", clave).contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsBytes(lote))).andReturn();
+    }
+
+    /** Con la ruta tal cual, sin que MockMvc la codifique (por ejemplo, para enviar %73 o ;x=1). */
+    private MvcResult enviarA(String ruta, Map<String, Object> lote, String clave) throws Exception {
+        return mvc.perform(post(URI.create(ruta)).header("X-Api-Key", clave).contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsBytes(lote))).andReturn();
     }
 

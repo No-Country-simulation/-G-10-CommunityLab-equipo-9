@@ -10,6 +10,7 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.UrlPathHelper;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -28,7 +29,8 @@ import java.util.Map;
  *       así no se puede adivinar la clave midiendo tiempos.</li>
  *   <li>La clave nunca se escribe en el registro; solo el nombre del cliente.</li>
  *   <li>DEC-70: cada clave abre solo su puerta. Una ruta de {@link #CLIENTE_POR_RUTA} con la clave de otro
- *       cliente recibe 403, antes de leer el cuerpo. Si se filtra una clave, el daño queda en su puerta.</li>
+ *       cliente recibe 403, antes de leer el cuerpo. Si se filtra una clave, el daño queda en su puerta.
+ *       La ruta se compara normalizada, y cada controlador vuelve a revisar el cliente (dos capas).</li>
  * </ul>
  */
 @Component
@@ -41,8 +43,8 @@ public class ApiKeyFilter extends OncePerRequestFilter {
 
     /** Las rutas que solo puede usar un cliente. Las demás las puede usar cualquier cliente conocido. */
     static final Map<String, String> CLIENTE_POR_RUTA = Map.of(
-            "/api/v1/lotes", "ingesta",
-            "/api/v1/mensajes/en-vivo", "bot");
+            "/api/v1/lotes", ClientePermitido.INGESTA,
+            "/api/v1/mensajes/en-vivo", ClientePermitido.BOT);
 
     private final Map<String, byte[]> huellasPorCliente = new LinkedHashMap<>();
     private final RespuestaError respuestaError;
@@ -77,7 +79,7 @@ public class ApiKeyFilter extends OncePerRequestFilter {
                     "NO_AUTORIZADO", "Falta la cabecera X-Api-Key o la clave no es válida.");
             return;
         }
-        String ruta = request.getRequestURI().substring(request.getContextPath().length());
+        String ruta = rutaNormalizada(request);
         String duenio = CLIENTE_POR_RUTA.get(ruta);
         if (duenio != null && !duenio.equals(cliente)) {
             log.warn("Pedido rechazado: el cliente {} no puede usar {} {}", cliente, request.getMethod(), ruta);
@@ -87,6 +89,16 @@ public class ApiKeyFilter extends OncePerRequestFilter {
         }
         request.setAttribute(ATRIBUTO_CLIENTE, cliente);
         chain.doFilter(request, response);
+    }
+
+    /**
+     * La ruta como la resuelve Spring para elegir el controlador, no la cruda (auditoría de T05):
+     * sin lo que va después de ";", decodificada (%73 → s) y sin barras dobles. Con la ruta cruda,
+     * "/api/v1/lotes;x=1" o "/api/v1/lote%73" no coincidían con el mapa y llegaban al controlador.
+     * La segunda capa de defensa es que cada controlador exige además su cliente ({@link ClientePermitido}).
+     */
+    static String rutaNormalizada(HttpServletRequest request) {
+        return UrlPathHelper.defaultInstance.getPathWithinApplication(request);
     }
 
     /** El cliente dueño de la clave, o null. Recorre todas las claves para tardar siempre lo mismo. */

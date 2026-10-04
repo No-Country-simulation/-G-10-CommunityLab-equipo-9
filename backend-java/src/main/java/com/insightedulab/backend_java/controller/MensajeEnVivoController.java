@@ -3,7 +3,10 @@ package com.insightedulab.backend_java.controller;
 import com.insightedulab.backend_java.dto.lote.LoteEntrada;
 import com.insightedulab.backend_java.envivo.EnVivoService;
 import com.insightedulab.backend_java.envivo.OrdenBot;
+import com.insightedulab.backend_java.seguridad.ApiKeyFilter;
+import com.insightedulab.backend_java.seguridad.ClientePermitido;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,7 +28,9 @@ public class MensajeEnVivoController {
     }
 
     @PostMapping
-    public OrdenBot recibir(@RequestBody LoteEntrada lote) {
+    public OrdenBot recibir(@RequestAttribute(name = ApiKeyFilter.ATRIBUTO_CLIENTE, required = false) String cliente,
+                            @RequestBody LoteEntrada lote) {
+        ClientePermitido.exigir(ClientePermitido.BOT, cliente);  // segunda capa, además del filtro
         return enVivoService.procesar(lote);
     }
 }

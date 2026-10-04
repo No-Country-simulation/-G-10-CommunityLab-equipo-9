@@ -29,6 +29,13 @@ public class ManejadorErrores {
                 "El lote no cumple el contrato v1.", e.getErrores(), IdCorrelacionFilter.de(req)));
     }
 
+    @ExceptionHandler(ProhibidoException.class)
+    public ResponseEntity<ErrorApi> prohibido(ProhibidoException e, HttpServletRequest req) {
+        log.warn("Pedido rechazado en el controlador: la clave no es del cliente de esta ruta ({} {})",
+                req.getMethod(), req.getRequestURI());
+        return responder(HttpStatus.FORBIDDEN, ErrorApi.de("PROHIBIDO", e.getMessage(), IdCorrelacionFilter.de(req)));
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorApi> cuerpoIlegible(HttpMessageNotReadableException e, HttpServletRequest req) {
         log.warn("Cuerpo ilegible: {}", e.getMostSpecificCause().getClass().getSimpleName());

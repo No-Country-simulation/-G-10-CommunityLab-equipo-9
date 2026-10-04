@@ -194,9 +194,9 @@ INFO bot: Bot conectado (id 1554158872585965578). Escucha ['#dudas', '#logros'];
 | 8 | El aviso del bot cuando falta el token lo escribe `config.py` de la ingesta ("Copia .env.example como .env…"): sirve igual, pero no menciona el `.env` de la raíz | Mejora 🟡 |
 | 9 | 🔎 Se recomienda registrar las decisiones 1, 11 y 12 en `DECISIONES.md` | Chat principal |
 | 10 | `respuesta_fuentes` guarda **el primero** de los 3 fragmentos que encontró la búsqueda (`buscador.py`, `citaciones[0]`), que no siempre es el documento que citó Gemini. La fuente citada queda en `respuesta_texto`. Para guardarla bien habría que cambiar el Agente FAQ (devolver las 3 citas o la que usó) | Mejora 🟡, tarea futura |
-| 11 | La fila `1556321387579449385`, de la primera ronda, quedó guardada **con la ruta de la PC del compañero** en `respuesta_fuentes`, porque se guardó antes de la corrección | Harrison decide (sección de cierre) |
-| 12 | 🔎 El clasificador toma una pregunta fuera del curso ("¿cuál es la mejor pizzería?") como `COMENTARIO`: el bot no responde ni deriva. Es razonable, pero no está escrito en ninguna regla | Chat principal: confirmar el criterio |
-| 13 | 🔎 Pegar en el chat el contenido de `ingestion/discord/.env` expuso el token del bot, los webhooks y la clave de la ingesta. Se recomendó a Harrison cambiarlos (Reset Token, webhooks nuevos y `generar_api_key.py --reemplazar`) | Harrison decide |
+| 11 | La fila `1556321387579449385`, de la primera ronda, quedó guardada **con la ruta de la PC del compañero** en `respuesta_fuentes`, porque se guardó antes de la corrección | ✅ Resuelto: Harrison la limpió con un `UPDATE` de esa sola fila (`UPDATE 1`) |
+| 12 | El clasificador tomaba una pregunta fuera del curso ("¿cuál es la mejor pizzería?") como `COMENTARIO`, y el bot no respondía ni derivaba | ✅ Resuelto en la auditoría (sección 8): ahora es `PREGUNTA_FAQ` con tema `otro` y se deriva |
+| 13 | 🔎 Pegar en el chat el contenido de `ingestion/discord/.env` expuso el token del bot, los webhooks y la clave de la ingesta | ⚠️ **Riesgo aceptado** por Harrison: no se cambian las claves |
 
 ## 7. Comandos que ejecutó Harrison
 
@@ -212,3 +212,79 @@ Desde la raíz, salvo donde se indica:
 8. Desde `ingestion\discord`, con el entorno activado: `python extract.py`, `python build_batch.py` y `python send_batch.py`
 9. `docker compose logs bot --since 30m` y las consultas a la base
 10. Los dos commits y el `git push` (sección 1)
+
+## 8. Cambios después de la auditoría
+
+El chat principal auditó la rama (commits `4a43e16` y `1985b6b`) y pidió dos cambios antes de fusionar.
+
+### 8.1 Seguridad: la regla de DEC-70 se podía esquivar
+
+🧪 **Hallazgo del chat principal:** `ApiKeyFilter` comparaba la ruta **cruda** (`getRequestURI`) con un mapa exacto. Con la clave del bot, `POST /api/v1/lotes;x=1` y `POST /api/v1/lote%73` llegaban al controlador (422) en vez de dar 403. Lo mismo pasaba con la clave de la ingesta en `/api/v1/mensajes/en-vivo`. Spring sí resuelve esas rutas al controlador: quita lo que va después de `;`, decodifica `%73` como `s` y junta las barras dobles.
+
+**Corrección, en dos capas:**
+
+| Capa | Qué hace | Archivo |
+|---|---|---|
+| a · El filtro | Compara la ruta **normalizada** como la resuelve Spring: `UrlPathHelper.defaultInstance.getPathWithinApplication(request)` (sin `;…`, decodificada y sin barras dobles) | `seguridad/ApiKeyFilter.java` (`rutaNormalizada`) |
+| b · Cada controlador | Vuelve a exigir su cliente con el atributo `clienteApi` que deja el filtro. Si no es el suyo (o no hay), lanza `ProhibidoException` → 403 `PROHIBIDO`, con el formato común de error | `seguridad/ClientePermitido.java` (nuevo), `error/ProhibidoException.java` (nuevo), `error/ManejadorErrores.java`, `controller/LoteController.java`, `controller/MensajeEnVivoController.java` |
+
+`/actuator/health` se sigue comparando con la ruta cruda: es más estricto y la salud no pide clave.
+
+**Pruebas nuevas** (`EnVivoApiTest`, 8 más; la ruta se envía tal cual con `post(URI.create(...))`, para que MockMvc no la codifique):
+
+| Prueba | Rutas | Resultado |
+|---|---|---|
+| `laClaveDelBotNoEntraALotesConUnaRutaDisfrazada` | `/api/v1/lotes;x=1`, `/api/v1/lote%73`, `/api//v1/lotes` | 403 `PROHIBIDO`; nada en `mensajes` ni en `lotes_recibidos` |
+| `laClaveDeLaIngestaNoEntraALaPuertaEnVivoConUnaRutaDisfrazada` | `/api/v1/mensajes/en-vivo;x=1`, `/api/v1/mensajes/en-viv%6F`, `/api//v1/mensajes/en-vivo` | 403 `PROHIBIDO`; nada guardado y la IA no recibe nada |
+| `elClienteCorrectoConUnPuntoYComaEnLaRutaSigueFuncionando` | El bot en `/api/v1/mensajes/en-vivo;x=1` | 200: la normalización no rompe al cliente correcto |
+| `cadaControladorExigeSuClienteAunqueElFiltroNoLoFrene` | Llama a los dos controladores directamente, con el cliente equivocado y sin cliente | `ProhibidoException` en los 4 casos (capa b sola) |
+
+🧪 En el registro de esa corrida, las 6 rutas disfrazadas las frenó **el filtro** (capa a), ya normalizadas: `Pedido rechazado: el cliente bot no puede usar POST /api/v1/lotes` y `… el cliente ingesta no puede usar POST /api/v1/mensajes/en-vivo`.
+
+### 8.2 Preguntas que no son del curso: se derivan al mentor
+
+👤 **Decisión de Harrison:** una pregunta fuera del curso (por ejemplo, "¿cuál es la mejor pizzería de Bogotá?") es `PREGUNTA_FAQ` con tema `otro`. El Agente FAQ no le encuentra respaldo y el bot la deriva al mentor (`DERIVAR`). Antes, Gemini la clasificaba como `COMENTARIO` y el bot no hacía nada (sección 4.5, primera ronda).
+
+**Cambio** en `SYSTEM_PROMPT` (`agents/orquestador/clasificadores/etiquetador.py`):
+- `PREGUNTA_FAQ`: "…pide ayuda con una duda concreta, **AUNQUE NO SEA DEL CURSO** (por ejemplo, "¿cuál es la mejor pizzería de Bogotá?")".
+- Reglas: "Si contiene una pregunta real, es PREGUNTA_FAQ, sea o no del curso: una pregunta que no es del curso NUNCA es COMENTARIO ni OTRO, y su tema es otro (así la revisa un mentor)".
+- Tema `otro`: "nada de lo anterior, incluidas las preguntas que no son del curso".
+
+No cambia el contrato Java ↔ IA: los valores son los mismos.
+
+**Pruebas nuevas** (`test_v1_procesar.py`, 2 más):
+- `test_las_reglas_dicen_que_una_pregunta_fuera_del_curso_es_pregunta_faq_con_tema_otro`: el prompt tiene las tres reglas.
+- `test_una_pregunta_fuera_del_curso_va_al_faq_y_vuelve_sin_respaldo`: el LLM recibe ese prompt; la pregunta de la pizzería sale `PREGUNTA_FAQ`/`otro`, pasa por el Agente FAQ y vuelve con `encontrada = false`. Que Java convierta eso en `DERIVAR` ya lo prueba `dudaSinRespuestaDaDerivar`.
+
+🔎 Una prueba sin Gemini solo demuestra que **el prompt** tiene la regla, no que Gemini la siga. Eso lo demuestra la prueba real (8.4).
+
+### 8.3 Pruebas después de la auditoría
+
+| Comando | Resultado (🧪) |
+|---|---|
+| Java, en Docker contra `insightedu_test` | **80 pruebas, 0 fallas**: `EnVivoApiTest` 29 (antes 21), `ClasificacionTest` 15, `LotesApiTest` 19, `ModeloDatosTest` 10, `NlpDataClientTest` 6 y `BackendJavaApplicationTests` 1 |
+| `python -m pytest agents/orquestador/tests -q` | **38 passed** (antes 36) |
+| `python -m pytest agents/bot_discord/tests -q` | **22 passed** (sin cambios en el bot) |
+
+### 8.4 Prueba real después de la auditoría
+
+Después de `docker compose up -d --build ia api-java` (los 4 servicios sanos; el bot no cambió y siguió encendido):
+
+**Pregunta fuera del curso, en `#dudas` (la escribió Harrison):** "Cual es la mejor pizzeria en bogota?"
+
+| Dónde | Resultado (🧪) |
+|---|---|
+| Discord | "¡Gracias por tu pregunta! No encontré una respuesta segura en los documentos del curso, así que un mentor te responderá pronto. 🙏" |
+| Registro del bot | `Mensaje 1556354969073090765 (#dudas, …): orden DERIVAR · 4751 ms` |
+| Base | `PREGUNTA_FAQ`, tema `otro`, método `llm`, `OK`, `respuesta_estado = DERIVADA`, `respondido_en` con fecha |
+
+**Rutas disfrazadas contra el Java real.** Las corrió el chat de tarea desde el contenedor `bot`, con su `API_KEY_BOT` leída del entorno y sin imprimirla, y con cuerpo `{}`, así que nada podía guardarse:
+
+```
+/api/v1/lotes 403 PROHIBIDO
+/api/v1/lotes;x=1 403 PROHIBIDO
+/api/v1/lote%73 403 PROHIBIDO
+/api//v1/lotes 403 PROHIBIDO
+```
+
+Antes de la corrección, las dos del medio llegaban al controlador (hallazgo del chat principal).

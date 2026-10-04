@@ -358,6 +358,52 @@ def test_la_lista_de_temas_es_la_acordada():
     )
 
 
+# ── Auditoría de T05: una pregunta que no es del curso se deriva al mentor ───
+
+class LLMQueSigueLasReglas(LLMFalso):
+    """Guarda el prompt de sistema y etiqueta la pregunta fuera del curso como dice la regla nueva."""
+
+    def invoke(self, entrada):
+        self.sistema = entrada[0].content
+        self.llamadas += 1
+        etiquetas = EtiquetasLLM(intencion="PREGUNTA_FAQ", confianza=0.9, razon="pregunta fuera del curso",
+                                 sentimiento="NEUTRO", tema="otro")
+        return {"raw": UsoFalso(), "parsed": etiquetas, "parsing_error": None}
+
+
+class FaqSinRespaldo:
+    def __init__(self):
+        self.preguntas = []
+
+    def __call__(self, mensaje):
+        self.preguntas.append(mensaje.id)
+        return RespuestaFaq(texto="", encontrada=False, fuentes=[], motivo="Sin documentos relevantes.")
+
+
+def test_las_reglas_dicen_que_una_pregunta_fuera_del_curso_es_pregunta_faq_con_tema_otro():
+    from agents.orquestador.clasificadores.etiquetador import SYSTEM_PROMPT
+
+    assert "AUNQUE NO SEA DEL CURSO" in SYSTEM_PROMPT and "pizzería" in SYSTEM_PROMPT
+    assert "una pregunta que no es del curso NUNCA es COMENTARIO ni OTRO, y su tema es otro" in SYSTEM_PROMPT
+    assert "- otro: nada de lo anterior, incluidas las preguntas que no son del curso." in SYSTEM_PROMPT
+
+
+def test_una_pregunta_fuera_del_curso_va_al_faq_y_vuelve_sin_respaldo(restaurar_procesador):
+    from agents.orquestador.clasificadores.etiquetador import SYSTEM_PROMPT
+
+    llm, faq = LLMQueSigueLasReglas(), FaqSinRespaldo()
+    cliente = _cliente_con(ProcesadorV1(EtiquetadorLLM(llm), faq, tope_tiempo_real_s=5))
+    pizzeria = dp.crudo_real(id="1556321602713419848", content="una pregunta, cual es la mejor pizzeria de bogota?")
+
+    r = cliente.post("/v1/procesar", json=_lote([pizzeria], modo="tiempoReal"))
+
+    assert llm.sistema == SYSTEM_PROMPT  # el LLM recibe las reglas nuevas
+    res = r.json()["resultados"][0]
+    assert (res["estado"], res["intencion"], res["tema"]) == ("OK", "PREGUNTA_FAQ", "otro")
+    assert res["respuesta"]["encontrada"] is False  # Java lo convierte en DERIVAR (EnVivoApiTest)
+    assert faq.preguntas == ["1556321602713419848"]
+
+
 # ── T05: la puerta vieja /procesar ya no existe (el bot pasa por Java) ──────
 
 def test_la_puerta_vieja_procesar_ya_no_existe():
