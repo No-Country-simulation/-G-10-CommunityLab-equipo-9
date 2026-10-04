@@ -1,7 +1,7 @@
 """
 Servicio FastAPI de la IA.
 
-Expone POST /v1/procesar y POST /v1/generar (contrato Java ↔ IA v1, docs/contratos/JAVA_IA_v1.md) y GET /health.
+Expone POST /v1/procesar, POST /v1/generar y POST /v1/faq (contrato Java ↔ IA v1, docs/contratos/JAVA_IA_v1.md) y GET /health.
 La puerta vieja POST /procesar, que usaba el bot directo, se quitó en T05: ahora el bot pasa por Java (C2).
 """
 from __future__ import annotations
@@ -17,9 +17,10 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from . import config as config_orq
-from .config_http import ENDPOINT_GENERAR_V1, ENDPOINT_PROCESAR_V1, ENDPOINT_HEALTH, HTTP_PORT
+from .config_http import ENDPOINT_FAQ_V1, ENDPOINT_GENERAR_V1, ENDPOINT_PROCESAR_V1, ENDPOINT_HEALTH, HTTP_PORT
 from .contrato_ia import (
-    VERSION_CONTRATO_IA, ErrorApi, ErrorCampo, Lote, Metricas, PedidoGenerar, RespuestaGenerar, RespuestaLote,
+    VERSION_CONTRATO_IA, ErrorApi, ErrorCampo, GrupoFaq, Lote, Metricas, PedidoFaq, PedidoGenerar,
+    RespuestaFaqSemanal, RespuestaGenerar, RespuestaLote,
 )
 from .nodos.invocador_faq import precargar_agente_faq, agente_faq_listo
 
@@ -70,6 +71,21 @@ def _get_agente_mod():
                 from agents.agent_mod.agente_mod import construir_agente_mod
                 _agente_mod = construir_agente_mod()
     return _agente_mod
+
+
+# FAQ semanal de /v1/faq (T06b): se crea una sola vez (lee la guía de voz), con el primer pedido
+_faq_semanal = None
+_lock_faq_semanal = threading.Lock()
+
+
+def _get_faq_semanal():
+    global _faq_semanal
+    if _faq_semanal is None:
+        with _lock_faq_semanal:
+            if _faq_semanal is None:
+                from agents.agent_mod.faq_semanal import construir_faq_semanal
+                _faq_semanal = construir_faq_semanal()
+    return _faq_semanal
 
 
 def _respuesta_error(status: int, error: ErrorApi) -> JSONResponse:
@@ -184,6 +200,39 @@ def generar_v1(pedido: PedidoGenerar, x_id_correlacion: str | None = Header(defa
         return _respuesta_error(500, ErrorApi(
             codigo="ERROR_INTERNO",
             mensaje="La IA no pudo generar el borrador. Reintentar más tarde.",
+            id_correlacion=x_id_correlacion or str(uuid.uuid4()),
+        ))
+
+
+@app.post(
+    ENDPOINT_FAQ_V1,
+    response_model=RespuestaFaqSemanal,
+    responses={422: {"model": ErrorApi}, 500: {"model": ErrorApi}},
+)
+def faq_v1(pedido: PedidoFaq, x_id_correlacion: str | None = Header(default=None)):
+    """
+    FAQ semanal (T06b, N4): recibe las dudas de la semana, agrupa las que repitieron al menos 2 personas y arma un
+    borrador con las respuestas que tienen respaldo en los PDF; las demás van aparte (DEC-95 y DEC-96).
+    Tiene su propio tope (FAQ_SEMANAL_TOPE_S). Protegida por X-Api-Key como toda ruta /v1/… (S2).
+    """
+    try:
+        r = _get_faq_semanal().armar(pedido)
+        metricas = Metricas(duracion_ms=r.duracion_ms, tokens_in=r.tokens_in, tokens_out=r.tokens_out)
+        comunes = dict(version_contrato_ia=VERSION_CONTRATO_IA, pedido_id=pedido.pedido_id, semana=pedido.semana,
+                       metricas=metricas)
+        if r.error is not None:
+            log.info("FAQ %s: ERROR (%s)", pedido.semana, r.error)  # sin textos (S11)
+            return RespuestaFaqSemanal(estado="ERROR", motivo=r.error, **comunes)
+        grupos = [GrupoFaq(pregunta=g.pregunta, personas=g.personas, respondida=g.respondida, origen=g.origen,
+                           fuentes=g.fuentes, motivo=g.motivo) for g in r.grupos]
+        log.info("FAQ %s: dudas %d, repetidas %d, con respuesta %d · %d ms", pedido.semana, r.dudas_consideradas,
+                 len(grupos), sum(g.respondida for g in grupos), r.duracion_ms)
+        return RespuestaFaqSemanal(estado="OK", texto=r.texto, motivo=r.motivo, grupos=grupos, **comunes)
+    except Exception:
+        log.exception("Error interno en /v1/faq (pedido %s)", pedido.pedido_id)
+        return _respuesta_error(500, ErrorApi(
+            codigo="ERROR_INTERNO",
+            mensaje="La IA no pudo armar la FAQ. Reintentar más tarde.",
             id_correlacion=x_id_correlacion or str(uuid.uuid4()),
         ))
 

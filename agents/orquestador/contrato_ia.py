@@ -10,6 +10,7 @@ Uso:  python -m agents.orquestador.contrato_ia   → escribe docs/contratos/JAVA
 from __future__ import annotations
 
 import json
+from datetime import date
 from pathlib import Path
 from typing import Literal, get_args
 
@@ -155,6 +156,94 @@ class RespuestaGenerar(ModeloIa):
         return self
 
 
+# ── POST /v1/faq (T06b, DEC-97): la FAQ semanal con las dudas repetidas ──
+
+MAX_DUDAS_FAQ = 200
+MAX_TEXTO_DUDA = 4000  # el tope de Discord para un mensaje
+OrigenRespuesta = Literal["bot", "agenteFaq"]
+
+
+class RespuestaGuardada(ModeloIa):
+    """La respuesta que el bot ya publicó para esa duda (mensajes.respuesta_texto y respuesta_fuentes, T05)."""
+
+    texto: str = Field(min_length=1, max_length=8000, description="El texto que publicó el bot")
+    fuentes: list[str] = Field(default_factory=list, max_length=20, description="Documento y página")
+
+
+class DudaSemana(ModeloIa):
+    """Una duda de la semana. No lleva nombres, usuarios ni IDs: el autor es una clave opaca."""
+
+    autor: str = Field(
+        pattern=r"^a[0-9]{1,6}$",
+        description="Clave opaca del autor dentro de este pedido (a1, a2…). Sirve solo para contar "
+        "personas distintas (DEC-98). Nunca el nombre, el usuario ni el ID de Discord",
+    )
+    texto: str = Field(min_length=1, max_length=MAX_TEXTO_DUDA, description="El texto de la duda")
+    tema: Tema | None = Field(default=None, description="El tema que le puso el clasificador")
+    respuesta: RespuestaGuardada | None = Field(
+        default=None, description="Solo si el bot ya la respondió con respaldo (respuesta_estado = RESPONDIDA)")
+
+
+class PedidoFaq(ModeloIa):
+    """Lo que Java envía a POST /v1/faq: las dudas de los últimos días."""
+
+    pedido_id: str = Field(min_length=1, max_length=100, description="Lo pone Java; vuelve en la respuesta")
+    semana: str = Field(min_length=1, max_length=20, description="La semana de la FAQ, por ejemplo 2026-W40")
+    desde: date = Field(description="Primer día de la ventana de dudas (para el título)")
+    hasta: date = Field(description="Último día de la ventana de dudas (para el título)")
+    dudas: list[DudaSemana] = Field(max_length=MAX_DUDAS_FAQ,
+                                    description=f"Las dudas de la ventana, como máximo {MAX_DUDAS_FAQ}")
+
+    @model_validator(mode="after")
+    def _fechas(self) -> "PedidoFaq":
+        if self.desde > self.hasta:
+            raise ValueError("desde no puede ser posterior a hasta")
+        return self
+
+
+class GrupoFaq(ModeloIa):
+    """Una pregunta repetida por al menos 2 personas."""
+
+    pregunta: str = Field(description="La pregunta del grupo, escrita por la IA, sin nombres")
+    personas: int = Field(ge=2, description="Cuántas personas distintas la hicieron")
+    respondida: bool = Field(description="true si tiene una respuesta con respaldo en los documentos")
+    origen: OrigenRespuesta | None = Field(
+        default=None, description="bot: la respuesta que ya publicó el bot. agenteFaq: la buscó el Agente FAQ. "
+        "null si no tiene respuesta")
+    fuentes: list[str] = Field(default_factory=list, description="Solo el nombre del documento y la página")
+    motivo: str | None = Field(default=None, description="Por qué no tiene respuesta")
+
+    @model_validator(mode="after")
+    def _coherencia(self) -> "GrupoFaq":
+        if self.respondida != (self.origen is not None):
+            raise ValueError("Un grupo respondido lleva su origen, y uno sin respuesta no")
+        return self
+
+
+class RespuestaFaqSemanal(ModeloIa):
+    """Lo que devuelve POST /v1/faq. Un fallo es ERROR, nunca un borrador a medias (F4)."""
+
+    version_contrato_ia: Literal["1.0"] = Field(description="Cambia si cambia este formato")
+    pedido_id: str = Field(description="El pedidoId recibido")
+    semana: str = Field(description="La semana recibida")
+    estado: Estado = Field(description="OK: la IA terminó. ERROR: no se pudieron agrupar las dudas")
+    texto: str | None = Field(
+        default=None, description="El borrador de la FAQ en Markdown. null si no hubo preguntas repetidas o si ERROR")
+    motivo: str = Field(description="Qué pasó: cuántas preguntas repetidas hubo, por qué no hay texto o el error")
+    grupos: list[GrupoFaq] = Field(default_factory=list, description="Las preguntas repetidas, de la más repetida "
+                                   "a la menos repetida")
+    metricas: Metricas
+
+    @model_validator(mode="after")
+    def _coherencia(self) -> "RespuestaFaqSemanal":
+        if self.estado == "ERROR":
+            if self.texto is not None or self.grupos:
+                raise ValueError("Un resultado con estado ERROR no lleva texto ni grupos")
+        elif bool(self.grupos) != bool(self.texto and self.texto.strip()):
+            raise ValueError("Hay texto si y solo si hay preguntas repetidas")
+        return self
+
+
 class ErrorCampo(ModeloIa):
     campo: str = Field(description="Ruta del campo, por ejemplo mensajes.0.autor.tipo")
     problema: str
@@ -182,6 +271,11 @@ def generar_esquema() -> dict:
         "generar": {
             "pedido": PedidoGenerar.model_json_schema(mode="validation"),
             "respuesta": RespuestaGenerar.model_json_schema(mode="serialization"),
+        },
+        # T06b: POST /v1/faq (solo agrega; /v1/procesar y /v1/generar no cambian)
+        "faq": {
+            "pedido": PedidoFaq.model_json_schema(mode="validation"),
+            "respuesta": RespuestaFaqSemanal.model_json_schema(mode="serialization"),
         },
     }
     return esquema

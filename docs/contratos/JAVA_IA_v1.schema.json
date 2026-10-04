@@ -1107,5 +1107,318 @@
       "title": "RespuestaGenerar",
       "type": "object"
     }
+  },
+  "faq": {
+    "pedido": {
+      "$defs": {
+        "DudaSemana": {
+          "additionalProperties": false,
+          "description": "Una duda de la semana. No lleva nombres, usuarios ni IDs: el autor es una clave opaca.",
+          "properties": {
+            "autor": {
+              "description": "Clave opaca del autor dentro de este pedido (a1, a2…). Sirve solo para contar personas distintas (DEC-98). Nunca el nombre, el usuario ni el ID de Discord",
+              "pattern": "^a[0-9]{1,6}$",
+              "title": "Autor",
+              "type": "string"
+            },
+            "texto": {
+              "description": "El texto de la duda",
+              "maxLength": 4000,
+              "minLength": 1,
+              "title": "Texto",
+              "type": "string"
+            },
+            "tema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "inscripciones",
+                    "becas_pagos",
+                    "calendario_clases",
+                    "evaluaciones",
+                    "contenido_curso",
+                    "herramientas_entorno",
+                    "plataforma_acceso",
+                    "proyectos",
+                    "empleo",
+                    "comunidad",
+                    "otro"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "El tema que le puso el clasificador",
+              "title": "Tema"
+            },
+            "respuesta": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/RespuestaGuardada"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Solo si el bot ya la respondió con respaldo (respuesta_estado = RESPONDIDA)"
+            }
+          },
+          "required": [
+            "autor",
+            "texto"
+          ],
+          "title": "DudaSemana",
+          "type": "object"
+        },
+        "RespuestaGuardada": {
+          "additionalProperties": false,
+          "description": "La respuesta que el bot ya publicó para esa duda (mensajes.respuesta_texto y respuesta_fuentes, T05).",
+          "properties": {
+            "texto": {
+              "description": "El texto que publicó el bot",
+              "maxLength": 8000,
+              "minLength": 1,
+              "title": "Texto",
+              "type": "string"
+            },
+            "fuentes": {
+              "description": "Documento y página",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 20,
+              "title": "Fuentes",
+              "type": "array"
+            }
+          },
+          "required": [
+            "texto"
+          ],
+          "title": "RespuestaGuardada",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Lo que Java envía a POST /v1/faq: las dudas de los últimos días.",
+      "properties": {
+        "pedidoId": {
+          "description": "Lo pone Java; vuelve en la respuesta",
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Pedidoid",
+          "type": "string"
+        },
+        "semana": {
+          "description": "La semana de la FAQ, por ejemplo 2026-W40",
+          "maxLength": 20,
+          "minLength": 1,
+          "title": "Semana",
+          "type": "string"
+        },
+        "desde": {
+          "description": "Primer día de la ventana de dudas (para el título)",
+          "format": "date",
+          "title": "Desde",
+          "type": "string"
+        },
+        "hasta": {
+          "description": "Último día de la ventana de dudas (para el título)",
+          "format": "date",
+          "title": "Hasta",
+          "type": "string"
+        },
+        "dudas": {
+          "description": "Las dudas de la ventana, como máximo 200",
+          "items": {
+            "$ref": "#/$defs/DudaSemana"
+          },
+          "maxItems": 200,
+          "title": "Dudas",
+          "type": "array"
+        }
+      },
+      "required": [
+        "pedidoId",
+        "semana",
+        "desde",
+        "hasta",
+        "dudas"
+      ],
+      "title": "PedidoFaq",
+      "type": "object"
+    },
+    "respuesta": {
+      "$defs": {
+        "GrupoFaq": {
+          "additionalProperties": false,
+          "description": "Una pregunta repetida por al menos 2 personas.",
+          "properties": {
+            "pregunta": {
+              "description": "La pregunta del grupo, escrita por la IA, sin nombres",
+              "title": "Pregunta",
+              "type": "string"
+            },
+            "personas": {
+              "description": "Cuántas personas distintas la hicieron",
+              "minimum": 2,
+              "title": "Personas",
+              "type": "integer"
+            },
+            "respondida": {
+              "description": "true si tiene una respuesta con respaldo en los documentos",
+              "title": "Respondida",
+              "type": "boolean"
+            },
+            "origen": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "bot",
+                    "agenteFaq"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "bot: la respuesta que ya publicó el bot. agenteFaq: la buscó el Agente FAQ. null si no tiene respuesta",
+              "title": "Origen"
+            },
+            "fuentes": {
+              "description": "Solo el nombre del documento y la página",
+              "items": {
+                "type": "string"
+              },
+              "title": "Fuentes",
+              "type": "array"
+            },
+            "motivo": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Por qué no tiene respuesta",
+              "title": "Motivo"
+            }
+          },
+          "required": [
+            "pregunta",
+            "personas",
+            "respondida"
+          ],
+          "title": "GrupoFaq",
+          "type": "object"
+        },
+        "Metricas": {
+          "additionalProperties": false,
+          "properties": {
+            "duracionMs": {
+              "description": "Lo que tardó todo el lote dentro de la IA",
+              "minimum": 0,
+              "title": "Duracionms",
+              "type": "integer"
+            },
+            "tokensIn": {
+              "description": "Tokens de entrada del clasificador (no incluye al Agente FAQ)",
+              "minimum": 0,
+              "title": "Tokensin",
+              "type": "integer"
+            },
+            "tokensOut": {
+              "description": "Tokens de salida del clasificador (no incluye al Agente FAQ)",
+              "minimum": 0,
+              "title": "Tokensout",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "duracionMs",
+            "tokensIn",
+            "tokensOut"
+          ],
+          "title": "Metricas",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Lo que devuelve POST /v1/faq. Un fallo es ERROR, nunca un borrador a medias (F4).",
+      "properties": {
+        "versionContratoIa": {
+          "const": "1.0",
+          "description": "Cambia si cambia este formato",
+          "title": "Versioncontratoia",
+          "type": "string"
+        },
+        "pedidoId": {
+          "description": "El pedidoId recibido",
+          "title": "Pedidoid",
+          "type": "string"
+        },
+        "semana": {
+          "description": "La semana recibida",
+          "title": "Semana",
+          "type": "string"
+        },
+        "estado": {
+          "description": "OK: la IA terminó. ERROR: no se pudieron agrupar las dudas",
+          "enum": [
+            "OK",
+            "ERROR"
+          ],
+          "title": "Estado",
+          "type": "string"
+        },
+        "texto": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "El borrador de la FAQ en Markdown. null si no hubo preguntas repetidas o si ERROR",
+          "title": "Texto"
+        },
+        "motivo": {
+          "description": "Qué pasó: cuántas preguntas repetidas hubo, por qué no hay texto o el error",
+          "title": "Motivo",
+          "type": "string"
+        },
+        "grupos": {
+          "description": "Las preguntas repetidas, de la más repetida a la menos repetida",
+          "items": {
+            "$ref": "#/$defs/GrupoFaq"
+          },
+          "title": "Grupos",
+          "type": "array"
+        },
+        "metricas": {
+          "$ref": "#/$defs/Metricas"
+        }
+      },
+      "required": [
+        "versionContratoIa",
+        "pedidoId",
+        "semana",
+        "estado",
+        "motivo",
+        "metricas"
+      ],
+      "title": "RespuestaFaqSemanal",
+      "type": "object"
+    }
   }
 }

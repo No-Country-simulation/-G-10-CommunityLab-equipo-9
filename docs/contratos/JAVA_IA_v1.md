@@ -4,6 +4,7 @@
 > **Cambio de T04 (2026-10-04, validado por Harrison):** `/v1/procesar` exige `X-Api-Key` (S2) y hay un código de error más, `NO_AUTORIZADO` (401). Es un cambio que solo agrega: nada de lo anterior cambió.
 > **Cambio de T05 (2026-10-04, DEC-54):** en `tiempoReal`, todo el pedido tiene un **tope de 25 s** (`TIEMPO_REAL_TOPE_S`, §6). Si se agota, la duda llega con sus etiquetas y `respuesta.encontrada = false`. Solo agrega: ningún campo cambió. Además se quitó la puerta vieja `POST /procesar`.
 > **Cambio de T06 (2026-10-04, DEC-82):** una puerta nueva, **`POST /v1/generar`**: el Agente-Mod redacta un post de LinkedIn y un caso de éxito a partir de un logro (§9). Solo agrega: `/v1/procesar` no cambió.
+> **Cambio de T06b (2026-10-04, DEC-97):** una puerta nueva, **`POST /v1/faq`**: con las dudas de la semana, la IA arma un borrador de preguntas frecuentes (§10). Solo agrega: `/v1/procesar` y `/v1/generar` no cambiaron.
 
 ## 0. Sobre este documento
 
@@ -243,7 +244,7 @@ Todos usan el mismo formato y **nunca repiten los datos recibidos** (S7).
 | Qué | Dónde se resuelve |
 |---|---|
 | Posts de LinkedIn y casos de éxito (Agente-Mod) | ✅ En `POST /v1/generar` (§9, T06) |
-| FAQ semanal | Fase 4 |
+| FAQ semanal | ✅ En `POST /v1/faq` (§10, T06b) |
 | Sacar a `/procesar` | ✅ Hecho en T05 |
 
 ## 9. `POST /v1/generar`: post de LinkedIn y caso de éxito (T06)
@@ -361,3 +362,135 @@ Lo hace la generación en segundo plano (`backend-java/.../generacion/`, T06): c
 | `OK` y `publicable = false` | Ningún borrador. La generación queda `NO_PUBLICABLE`, con el motivo |
 | `ERROR`, `422`, `500`, tiempo agotado o IA caída | Suma un intento y libera la reserva. Al máximo de intentos, `ERROR` |
 
+## 10. `POST /v1/faq`: la FAQ semanal (T06b)
+
+**Qué hace.** Recibe las dudas de los alumnos de los últimos días y arma **un borrador de preguntas frecuentes** con las que repitieron **al menos 2 personas distintas** (DEC-98). Lo hace `agents/agent_mod/faq_semanal.py`:
+
+1. **Agrupa** las dudas que preguntan lo mismo, con **una** llamada al LLM. El LLM devuelve los grupos, una pregunta clara por grupo y una introducción corta con la [guía de voz](../../agents/agent_mod/guia_de_voz.md).
+2. **Cuenta** las personas distintas de cada grupo con las claves opacas del pedido. Las cuenta el código, no el LLM. Descarta los grupos de menos de 2 personas.
+3. **Busca la respuesta** de cada grupo (DEC-95):
+   - si el bot ya respondió alguna duda del grupo, usa esa respuesta;
+   - si no, le hace la pregunta del grupo al **buscador del Agente FAQ** y acepta la respuesta solo con `encontrada = true` (D3; una fidelidad media no cuenta, DEC-49).
+4. **Arma el texto con código**:
+   - las respuestas van tal cual: ningún LLM las reescribe ni les agrega datos (D3);
+   - las preguntas sin respuesta van en una sección aparte (DEC-96).
+
+No usa el historial interno del Agente FAQ (DEC-83): llama directo al buscador, que no guarda las preguntas. Nada se publica: Java guarda el borrador como `PENDIENTE` y Marketing lo aprueba en el panel (N6).
+
+### 10.1 La puerta
+
+| Dato | Valor |
+|---|---|
+| Método y ruta | `POST /v1/faq` (dentro de Docker, `http://ia:8000/v1/faq`) |
+| Cabecera obligatoria | `X-Api-Key` con `API_KEY_IA`, igual que las otras puertas (S2) |
+| Cabecera opcional | `X-Id-Correlacion`: vuelve en los errores |
+| Respuesta | `200` con el resultado (también cuando no hay preguntas repetidas o el LLM falla: entonces `estado = ERROR`), `401`, `422` o `500`, con el formato común de error (§7) |
+| Tiempo | Tope total de **120 s** (`FAQ_SEMANAL_TOPE_S`). La llamada que agrupa tiene **45 s** como máximo (`FAQ_AGRUPAR_TIMEOUT_S`) y no se reintenta. Cada consulta al Agente FAQ usa lo que queda del tope. **Java espera hasta 150 s**: más que el tope |
+| Si se agota el tope | Los grupos que faltan van a la sección "sin respuesta", con el motivo "no se alcanzó a consultar los documentos". **Nunca** se inventa una respuesta ni queda un borrador a medias |
+| Modelo | El del Agente-Mod (`MOD_MODEL_NAME`, DEC-85), con temperatura `FAQ_AGRUPAR_TEMPERATURE` (0,2) |
+| Ahorro | Si las dudas son de menos de 2 personas, no se llama al LLM |
+
+### 10.2 El pedido
+
+| Campo | Tipo | Nota |
+|---|---|---|
+| `pedidoId` | texto, de 1 a 100 caracteres | Lo pone Java; vuelve en la respuesta |
+| `semana` | texto, de 1 a 20 caracteres | La semana de la FAQ, por ejemplo `2026-W40`. Vuelve en la respuesta |
+| `desde`, `hasta` | fecha (`AAAA-MM-DD`) | La ventana de las dudas. Solo se usan para el título. `desde` no puede ser posterior a `hasta` |
+| `dudas` | lista, **como máximo 200** (si son más, `422`) | Puede ir vacía |
+| `dudas[].autor` | texto `a1`, `a2`… (patrón `^a[0-9]{1,6}$`) | **Clave opaca** del autor dentro del pedido, solo para contar personas distintas. Un nombre, un usuario o un ID de Discord da `422` |
+| `dudas[].texto` | texto, de 1 a 4000 caracteres | El texto de la duda |
+| `dudas[].tema` | tema de §4.3 o `null` | Las dudas con tema `otro` no cuentan (DEC-98) |
+| `dudas[].respuesta` | objeto o `null` | Solo si el bot ya la respondió con respaldo: `texto` (hasta 8000 caracteres) y `fuentes` (hasta 20) |
+
+### 10.3 Qué ve el LLM
+
+Solo el **número**, el **tema** y el **texto** de cada duda. No ve las claves de autor ni las respuestas guardadas. Antes de enviar cada texto, el código:
+- cambia las menciones de Discord (`<@123>`) por `@alguien`;
+- impide que una duda cierre su etiqueta `</duda>`.
+
+Las instrucciones le prohíben poner nombres o datos personales en las preguntas y en la introducción, y seguir órdenes que vengan dentro de las dudas.
+
+### 10.4 Ejemplo
+
+**Pedido**
+
+```json
+{
+  "pedidoId": "faq-2b7e0c4a-91d3-4f0e-8a55-6c1f2e9d3b10",
+  "semana": "2026-W40",
+  "desde": "2026-09-27",
+  "hasta": "2026-10-04",
+  "dudas": [
+    { "autor": "a1", "texto": "¿hasta cuándo se puede entregar el challenge?", "tema": "evaluaciones", "respuesta": null },
+    { "autor": "a2", "texto": "cual es la fecha limite de la entrega??", "tema": "evaluaciones", "respuesta": null },
+    { "autor": "a3", "texto": "como instalo python en windows", "tema": "herramientas_entorno",
+      "respuesta": { "texto": "Descarga el instalador desde python.org y marca Add to PATH…", "fuentes": ["Guia_Entorno.pdf (Pág. 2)"] } },
+    { "autor": "a1", "texto": "no me deja instalar python", "tema": "herramientas_entorno", "respuesta": null },
+    { "autor": "a4", "texto": "¿dan certificado al terminar?", "tema": "inscripciones", "respuesta": null },
+    { "autor": "a2", "texto": "al terminar me dan un certificado?", "tema": "inscripciones", "respuesta": null }
+  ]
+}
+```
+
+**Respuesta**
+
+```json
+{
+  "versionContratoIa": "1.0",
+  "pedidoId": "faq-2b7e0c4a-91d3-4f0e-8a55-6c1f2e9d3b10",
+  "semana": "2026-W40",
+  "estado": "OK",
+  "texto": "# Preguntas frecuentes de la semana (27/09 al 04/10/2026)\n\n…introducción…\n\n## 1. ¿Cuál es el plazo para subir las entregas?\n\n…respuesta tal cual…\n\n_La preguntaron 2 personas · Fuente: Reglamento_Academico.pdf (Pág. 4)_\n\n## 2. ¿Cómo se instala Python?\n\n…\n\n## Preguntas frecuentes sin respuesta en los documentos\n\n…\n\n- ¿Se entrega un certificado al terminar? (la preguntaron 2 personas)\n",
+  "motivo": "3 preguntas repetidas, 2 con respuesta en los documentos.",
+  "grupos": [
+    { "pregunta": "¿Cuál es el plazo para subir las entregas?", "personas": 2, "respondida": true,
+      "origen": "agenteFaq", "fuentes": ["Reglamento_Academico.pdf (Pág. 4)"], "motivo": null },
+    { "pregunta": "¿Cómo se instala Python?", "personas": 2, "respondida": true,
+      "origen": "bot", "fuentes": ["Guia_Entorno.pdf (Pág. 2)"], "motivo": null },
+    { "pregunta": "¿Se entrega un certificado al terminar?", "personas": 2, "respondida": false,
+      "origen": null, "fuentes": [], "motivo": "El contexto no cubre la pregunta." }
+  ],
+  "metricas": { "duracionMs": 38250, "tokensIn": 2210, "tokensOut": 240 }
+}
+```
+
+**Sin preguntas repetidas** y **error**
+
+```json
+{ "versionContratoIa": "1.0", "pedidoId": "faq-…", "semana": "2026-W40", "estado": "OK", "texto": null,
+  "motivo": "No hubo preguntas repetidas por al menos 2 personas.", "grupos": [], "metricas": { "…": "…" } }
+
+{ "versionContratoIa": "1.0", "pedidoId": "faq-…", "semana": "2026-W40", "estado": "ERROR", "texto": null,
+  "motivo": "El LLM no agrupó las dudas en 45 s.", "grupos": [], "metricas": { "…": "…" } }
+```
+
+### 10.5 Campos de la respuesta
+
+| Campo | Tipo | Nota |
+|---|---|---|
+| `versionContratoIa` | `"1.0"` | |
+| `pedidoId`, `semana` | texto | Los recibidos |
+| `estado` | `OK` \| `ERROR` | `ERROR`: el LLM que agrupa falló, no respondió a tiempo o devolvió algo sin formato. Nunca trae texto ni grupos (F4) |
+| `texto` | Markdown o `null` | El borrador. Hay texto **si y solo si** hay grupos. Si todos los grupos quedaron sin respuesta, igual hay borrador, con la sección "sin respuesta" |
+| `motivo` | texto | Cuántas preguntas repetidas hubo y cuántas con respuesta, por qué no hay texto, o el error (sin el detalle del proveedor) |
+| `grupos[]` | lista | De la más repetida a la menos repetida |
+| `grupos[].pregunta` | texto | Escrita por el LLM, sin nombres |
+| `grupos[].personas` | entero ≥ 2 | Personas distintas, contadas por el código |
+| `grupos[].respondida` | booleano | `true` solo con respaldo en los documentos |
+| `grupos[].origen` | `bot` \| `agenteFaq` \| `null` | `null` si no tiene respuesta |
+| `grupos[].fuentes` | lista de textos | Solo el nombre del documento y la página (DEC-76), nunca la ruta |
+| `grupos[].motivo` | texto o `null` | Por qué no tiene respuesta |
+| `metricas` | objeto | `duracionMs` de todo el pedido; `tokensIn` y `tokensOut` solo de la llamada que agrupa (no incluye al Agente FAQ, igual que §4.1) |
+
+El JSON Schema está en [JAVA_IA_v1.schema.json](JAVA_IA_v1.schema.json), en la clave `faq` (`pedido` y `respuesta`).
+
+### 10.6 Qué hace Java con cada respuesta
+
+Lo hace la tarea semanal (`backend-java/.../faqsemanal/`, T06b). La semana queda registrada en la tabla `faq_semanas`, que tiene una fila por semana y no permite dos.
+
+| Respuesta | Qué guarda Java |
+|---|---|
+| `OK` con `texto` | Un borrador `FAQ`, `PENDIENTE`, sin `mensaje_id` (DEC-33), con los tokens. La semana queda `GENERADA`, con el id del borrador. Todo en una transacción |
+| `OK` sin `texto` | Ningún borrador. La semana queda `SIN_REPETIDAS` y no se vuelve a intentar |
+| `ERROR`, `422`, `500`, tiempo agotado o IA caída | Suma un intento. Se reintenta cada 30 minutos con la misma ventana de fechas; al tercer fallo, `ERROR` |

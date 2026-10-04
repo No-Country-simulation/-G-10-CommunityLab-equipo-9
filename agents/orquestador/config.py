@@ -36,6 +36,16 @@ MOD_TIMEOUT_S: float = float(os.getenv("MOD_TIMEOUT_S", "25"))
 # Algo de creatividad para redactar (el clasificador usa 0)
 MOD_TEMPERATURE: float = float(os.getenv("MOD_TEMPERATURE", "0.7"))
 
+# FAQ semanal (T06b): POST /v1/faq agrupa las dudas repetidas y busca sus respuestas.
+# Tope total del pedido: una llamada para agrupar más una consulta al Agente FAQ por cada grupo sin respuesta.
+# Tiene que ser menor que el tiempo de lectura de Java para /v1/faq (150 s). Si se agota, los grupos que faltan
+# van a "sin respuesta en los documentos": nunca se inventa una respuesta
+FAQ_SEMANAL_TOPE_S: float = float(os.getenv("FAQ_SEMANAL_TOPE_S", "120"))
+# La llamada que agrupa (una sola, sin reintento; si falla, Java reintenta). Mismo modelo que el Agente-Mod
+FAQ_AGRUPAR_TIMEOUT_S: float = float(os.getenv("FAQ_AGRUPAR_TIMEOUT_S", "45"))
+# Agrupar es casi una clasificación: poca creatividad
+FAQ_AGRUPAR_TEMPERATURE: float = float(os.getenv("FAQ_AGRUPAR_TEMPERATURE", "0.2"))
+
 # S2: clave que Java envía en X-Api-Key a /v1/procesar. Vacía: /v1/procesar rechaza todo con 401.
 # La genera scripts/generar_api_key.py --cliente ia (sin mostrarla)
 API_KEY_IA: str = os.getenv("API_KEY_IA", "").strip()
