@@ -1,17 +1,17 @@
 """
-Paso 6 · Envía un lote a la puerta de backend (la "L" del ETL).
+Paso 6 · Envía un lote a la API Java (la "L" del ETL).
 
-Usa la opción C de docs/INGESTION_GUIDE.md, "etiqueta + caja":
-- la etiqueta: los campos que backend ya recibe, con sus nombres;
-- la caja (mensajeContrato): el mensaje completo del contrato v1.
-Así backend no renombra nada y no se pierde ningún dato. El contrato no cambia:
-esta es solo la forma de entregárselo a backend.
+Envía el lote del contrato v1 tal cual (decisión D8, 2026-10-03), sin convertirlo:
+Java saca de cada mensaje lo que va a columnas y guarda el mensaje completo.
+La puerta exige la cabecera X-Api-Key (BACKEND_API_KEY en el .env).
 
-Si backend confirma que recibió el lote, guarda el marcador (el último mensaje
+Si Java confirma que recibió el lote, guarda el marcador (el último mensaje
 enviado de cada canal) para que la próxima extracción pida solo lo nuevo.
+Reenviar un lote es seguro: si Java ya lo tenía, devuelve el mismo recibo con
+yaRecibido = true y no duplica nada.
 
 Uso:  python send_batch.py               envía el último lote de data/batches/
-      python send_batch.py --prueba      no envía: guarda lo que enviaría en data/batches/
+      python send_batch.py --prueba      no envía: revisa el lote y muestra qué se enviaría
       python send_batch.py <archivo>     envía ese lote
 """
 import argparse
@@ -22,60 +22,34 @@ from pathlib import Path
 import httpx
 
 from config import ConfigError, cargar_config
-from contract import Lote, Mensaje
+from contract import Lote
 
 CARPETA_DATOS = Path(__file__).parent / "data"
 CARPETA_LOTES = CARPETA_DATOS / "batches"
 ARCHIVO_MARCADORES = CARPETA_DATOS / "markers.json"
 TIMEOUT_SEGUNDOS = 30.0
-# autor.tipo del contrato → TipoAutor de backend. BOT es el cambio 3 que se le propone a backend.
-TIPO_AUTOR_BACKEND = {"persona": "HUMANO", "botPropio": "AI", "otroBot": "BOT"}
+CABECERA_API_KEY = "X-Api-Key"
 
 
 class EnvioError(Exception):
-    """Backend no confirmó la recepción del lote."""
+    """Java no confirmó la recepción del lote."""
 
 
-def a_interaccion(mensaje: Mensaje) -> dict:
-    """Un mensaje del contrato → una interacción de backend: etiqueta + caja."""
-    return {
-        # La etiqueta: los campos de InteractionInputDto, con los nombres de backend.
-        "discordId": mensaje.id,
-        "channelId": mensaje.canal.id,
-        "authorId": mensaje.autor.id,
-        "authorUsername": mensaje.autor.nombre_usuario,
-        "autorNombre": mensaje.autor.nombre_visible,
-        "autorRol": mensaje.autor.rol,
-        "textoMensaje": mensaje.texto_original,
-        "tipoAutor": TIPO_AUTOR_BACKEND[mensaje.autor.tipo],
-        "clasificacionSentimiento": None,  # la calcula la IA, no la ingesta
-        "timestampMensaje": mensaje.fecha,
-        # La caja: el mensaje completo, con los nombres del contrato.
-        "mensajeContrato": mensaje.model_dump(mode="json"),
-    }
-
-
-def a_formato_backend(lote: Lote) -> dict:
-    """El lote del contrato → el cuerpo que recibe POST /api/v1/community/process."""
-    return {
-        "loteId": lote.lote_id,
-        "tipoServidor": lote.fuente,
-        "versionContrato": lote.version_contrato,
-        "modo": lote.modo,
-        "servidorId": lote.servidor_id,
-        "generadoEn": lote.generado_en,
-        "interacciones": [a_interaccion(m) for m in lote.mensajes],
-    }
-
-
-def enviar(cuerpo: dict, url: str, http: httpx.Client) -> dict:
-    """Hace el POST y devuelve el recibo de backend. No reintenta solo: un reenvío lo decide la persona."""
-    respuesta = http.post(url, json=cuerpo, timeout=TIMEOUT_SEGUNDOS)
+def enviar(lote: Lote, url: str, api_key: str, http: httpx.Client) -> dict:
+    """Hace el POST del lote tal cual y devuelve el recibo. No reintenta solo: un reenvío lo decide la persona."""
+    respuesta = http.post(
+        url,
+        json=lote.model_dump(mode="json"),
+        headers={CABECERA_API_KEY: api_key},
+        timeout=TIMEOUT_SEGUNDOS,
+    )
+    if respuesta.status_code == 401:
+        raise EnvioError("Java rechazó la clave (HTTP 401): revisa BACKEND_API_KEY en el .env")
     if respuesta.is_error:
-        raise EnvioError(f"backend respondió HTTP {respuesta.status_code}: {respuesta.text[:500]}")
+        raise EnvioError(f"Java respondió HTTP {respuesta.status_code}: {respuesta.text[:500]}")
     recibo = respuesta.json()
-    if recibo.get("status") != "exitoso":
-        raise EnvioError(f"backend no confirmó el lote: {recibo}")
+    if recibo.get("loteId") != lote.lote_id or "total" not in recibo:
+        raise EnvioError(f"Java no confirmó este lote: {recibo}")
     return recibo
 
 
@@ -99,10 +73,20 @@ def ultimo_lote() -> Path | None:
     return lotes[-1] if lotes else None
 
 
+def describir_recibo(recibo: dict) -> str:
+    texto = (
+        f"total {recibo['total']} (nuevos {recibo.get('nuevos')}, "
+        f"actualizados {recibo.get('actualizados')}, sin cambios {recibo.get('sinCambios')})"
+    )
+    if recibo.get("yaRecibido"):
+        texto += ". Java ya lo tenía: no se guardó nada otra vez"
+    return texto
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Envía un lote a backend (opción C: etiqueta + caja).")
+    parser = argparse.ArgumentParser(description="Envía un lote del contrato v1 a la API Java.")
     parser.add_argument("archivo", nargs="?", type=Path, help="lote a enviar; por defecto, el último de data/batches/")
-    parser.add_argument("--prueba", action="store_true", help="no enviar: guardar en un archivo lo que se enviaría")
+    parser.add_argument("--prueba", action="store_true", help="no enviar: solo revisar el lote")
     args = parser.parse_args()
 
     archivo = args.archivo or ultimo_lote()
@@ -110,12 +94,10 @@ def main() -> int:
         print("❌ No hay ningún lote. Corre primero build_batch.py.")
         return 1
     lote = Lote.model_validate_json(archivo.read_text(encoding="utf-8"))
-    cuerpo = a_formato_backend(lote)
 
     if args.prueba:
-        destino = archivo.with_name(archivo.stem.replace("batch_", "request_") + ".json")
-        destino.write_text(json.dumps(cuerpo, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        print(f"🧪 Prueba: no se envió nada. El cuerpo del POST está en data/batches/{destino.name}")
+        print(f"🧪 Prueba: no se envió nada. El lote {lote.lote_id} cumple el contrato v1 "
+              f"({len(lote.mensajes)} mensajes) y se enviaría tal cual: data/batches/{archivo.name}")
         return 0
 
     try:
@@ -124,19 +106,22 @@ def main() -> int:
         print(f"❌ {e}")
         return 1
     if not config.url_backend:
-        print("❌ Falta BACKEND_INGEST_URL en el .env. Para ver lo que se enviaría, usa --prueba.")
+        print("❌ Falta BACKEND_INGEST_URL en el .env. Para revisar el lote sin enviarlo, usa --prueba.")
+        return 1
+    if not config.api_key_backend:
+        print("❌ Falta BACKEND_API_KEY en el .env. Genérala con: python scripts/generar_api_key.py (desde la raíz).")
         return 1
 
     try:
         with httpx.Client() as http:
-            recibo = enviar(cuerpo, config.url_backend, http)
+            recibo = enviar(lote, config.url_backend, config.api_key_backend, http)
     except (EnvioError, httpx.TransportError) as e:
         print(f"❌ No se envió el lote {lote.lote_id}: {e}")
         print("   El marcador no cambió: la próxima extracción volverá a incluir estos mensajes.")
         return 1
 
     guardar_marcadores(lote)
-    print(f"✅ Backend recibió el lote {lote.lote_id}: {recibo.get('totalMensajesRecibidos')} mensajes.")
+    print(f"✅ Java recibió el lote {lote.lote_id}: {describir_recibo(recibo)}.")
     print("   Marcador actualizado: la próxima extracción pedirá desde aquí.")
     return 0
 

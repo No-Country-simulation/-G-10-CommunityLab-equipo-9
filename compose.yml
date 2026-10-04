@@ -38,6 +38,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       OCI_PAR_URL: ${OCI_PAR_URL:-}
+      # S1: clave de la ingesta para POST /api/v1/lotes. Vacía = la API rechaza todo salvo /actuator/health
+      API_KEY_INGESTA: ${API_KEY_INGESTA:-}
       # Dentro de Docker la IA se encuentra por el nombre de su servicio, no por localhost.
       PYTHON_NLP_URL: http://ia:8000
     ports:

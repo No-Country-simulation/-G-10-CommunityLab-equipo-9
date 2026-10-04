@@ -36,6 +36,8 @@ class Config:
     mentores_simulados: frozenset[str] = frozenset()
     # Puerta de backend que recibe los lotes. Sin ella, solo se puede usar send_batch.py --prueba.
     url_backend: str | None = None
+    # Clave para la cabecera X-Api-Key de la API Java (S1). La genera scripts/generar_api_key.py.
+    api_key_backend: str | None = field(default=None, repr=False)
     # Cuántos días hacia atrás se releen en cada extracción, para captar reacciones y ediciones.
     dias_relectura: int = DIAS_RELECTURA_POR_DEFECTO
 
@@ -83,5 +85,6 @@ def cargar_config() -> Config:
         roles_staff=_leer_lista("DISCORD_STAFF_ROLE_IDS"),
         mentores_simulados=_leer_lista("SIMULATED_MENTORS"),
         url_backend=_leer("BACKEND_INGEST_URL"),
+        api_key_backend=_leer("BACKEND_API_KEY"),
         dias_relectura=int(_leer("INGEST_REREAD_DAYS") or DIAS_RELECTURA_POR_DEFECTO),
     )

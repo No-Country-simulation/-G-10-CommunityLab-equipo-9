@@ -30,7 +30,7 @@ ingestion/discord/
 ├── simulate_students.py      ← paso 2: publica conversaciones de alumnos ficticios
 ├── extract.py                ← paso 3: extrae los mensajes y los roles a data/raw/
 ├── build_batch.py            ← paso 4: transforma, valida y arma el lote en data/batches/
-├── send_batch.py             ← paso 5: envía el lote a backend (opción C: etiqueta + caja)
+├── send_batch.py             ← paso 5: envía el lote a la API Java, tal cual (D8), con la API key
 ├── schema/
 │   └── contract_v1.schema.json ← la especificación del contrato para backend (generada)
 ├── tests/                    ← pruebas automáticas (pytest)
@@ -85,7 +85,8 @@ Abre `.env` y completa:
 | `DISCORD_WEBHOOK_DUDAS_URL`, `DISCORD_WEBHOOK_LOGROS_URL` | En cada canal: **Integraciones → Webhooks → Copiar URL del webhook** |
 | `DISCORD_MENTOR_ROLE_IDS`, `DISCORD_STAFF_ROLE_IDS` | **Ajustes del servidor → Roles →** clic derecho en el rol **→ Copiar ID del rol** (requiere el Modo desarrollador) |
 | `SIMULATED_MENTORS` | Los mentores simulados por su `autor.id`, por ejemplo `sim-andres-mentor` |
-| `BACKEND_INGEST_URL` | La puerta de backend. Opcional: sin ella, `send_batch.py --prueba` funciona igual |
+| `BACKEND_INGEST_URL` | La puerta de la API Java: `http://127.0.0.1:8008/api/v1/lotes`. Opcional: sin ella, `send_batch.py --prueba` funciona igual |
+| `BACKEND_API_KEY` | La clave de la cabecera `X-Api-Key`. **No se escribe a mano:** desde la raíz del repositorio, `python scripts/generar_api_key.py` la crea y la escribe aquí y en el `.env` de la raíz, sin mostrarla |
 | `INGEST_REREAD_DAYS` | Días que se releen en cada extracción (por defecto, 7) |
 
 ## 4. Usar (en este orden)
@@ -96,8 +97,8 @@ Abre `.env` y completa:
 | 2 | `.\.venv\Scripts\python.exe simulate_students.py` | Publica las conversaciones de `simulation/conversations.json`. **Ejecútalo una sola vez**: cada ejecución vuelve a publicar todo y los mensajes se duplican |
 | 3 | `.\.venv\Scripts\python.exe extract.py` | Descarga los mensajes de los dos canales a `data/raw/<canal>.json`, sin modificarlos, y guarda los roles en `data/raw/context.json`. La primera vez trae todo el historial; después, solo lo nuevo y los últimos días. Con `--todo`, siempre todo. Solo lee |
 | 4 | `.\.venv\Scripts\python.exe build_batch.py` | Transforma los mensajes al contrato, **valida cada uno** y escribe el lote en `data/batches/`. Si un mensaje no cumple el contrato, dice qué campo falla |
-| 5 | `.\.venv\Scripts\python.exe send_batch.py --prueba` | Muestra lo que se enviaría a backend (opción C, "etiqueta + caja"), sin enviar nada |
-| 5 | `.\.venv\Scripts\python.exe send_batch.py` | Envía el último lote a backend. Si backend confirma, guarda el marcador para que la próxima extracción pida solo lo nuevo |
+| 5 | `.\.venv\Scripts\python.exe send_batch.py --prueba` | Revisa que el último lote cumpla el contrato, sin enviar nada. Se envía tal cual, sin convertirlo |
+| 5 | `.\.venv\Scripts\python.exe send_batch.py` | Envía el último lote a la API Java, con la API key. Si Java confirma, guarda el marcador para que la próxima extracción pida solo lo nuevo. Reenviar el mismo lote no duplica nada: Java responde `yaRecibido` |
 
 **Pruebas automáticas:** `.\.venv\Scripts\python.exe -m pytest` comprueba cada regla del contrato con mensajes de ejemplo. No se conecta a Discord ni usa `data/`.
 

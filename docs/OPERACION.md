@@ -23,6 +23,7 @@ Abrir `.env` y completar:
 | `POSTGRES_PASSWORD` | Sí | Una contraseña larga inventada. Sin ella, la base de datos no arranca |
 | `GEMINI_API_KEY` | No | La clave de Google AI Studio. Sin ella, la IA clasifica por palabras clave y el Agente FAQ no responde |
 | `OCI_PAR_URL` | No | Una URL PAR nueva de OCI. Sin ella, la API arranca igual pero no sube a OCI |
+| `API_KEY_INGESTA` | Sí, para recibir lotes | **No se escribe a mano.** Desde la raíz, `python scripts/generar_api_key.py` la crea al azar y la escribe aquí y en `ingestion/discord/.env` (`BACKEND_API_KEY`), sin mostrarla. Sin ella, la API Java rechaza todo con 401, salvo `/actuator/health` |
 
 El `.env` nunca se sube a git (está en `.gitignore`) ni entra a una imagen de Docker (está en `.dockerignore`).
 
