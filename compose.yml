@@ -48,6 +48,14 @@ services:
       PYTHON_NLP_URL: http://ia:8000
       # T06: false apaga la generación de borradores del Agente-Mod (cada logro gasta una llamada a Gemini)
       GENERACION_HABILITADA: ${GENERACION_HABILITADA:-true}
+      # T06b · FAQ semanal: true la arma una vez al encender Java (para la demo). Gasta unas 15 a 20 llamadas a Gemini
+      FAQ_SEMANAL_AL_ARRANCAR: ${FAQ_SEMANAL_AL_ARRANCAR:-false}
+      # Cuántos días hacia atrás se juntan las dudas
+      FAQ_SEMANAL_DIAS: ${FAQ_SEMANAL_DIAS:-7}
+      # false apaga la FAQ semanal. El horario es un cron de Spring (segundo minuto hora día mes día-de-la-semana)
+      FAQ_SEMANAL_HABILITADA: ${FAQ_SEMANAL_HABILITADA:-true}
+      FAQ_SEMANAL_CRON: "${FAQ_SEMANAL_CRON:-0 0 8 * * MON}"
+      FAQ_SEMANAL_ZONA: ${FAQ_SEMANAL_ZONA:-America/Bogota}
     ports:
       - "127.0.0.1:8008:8080"
     depends_on:
@@ -78,6 +86,8 @@ services:
       TIEMPO_REAL_TOPE_S: ${TIEMPO_REAL_TOPE_S:-25}
       # T06 · Agente-Mod (DEC-85): el modelo que redacta. Vacío = el mismo que clasifica
       MOD_MODEL_NAME: ${MOD_MODEL_NAME:-}
+      # T06b · tope total de POST /v1/faq; tiene que ser menor que los 150 s que espera Java
+      FAQ_SEMANAL_TOPE_S: ${FAQ_SEMANAL_TOPE_S:-120}
     ports:
       - "127.0.0.1:8000:8000"
     volumes:

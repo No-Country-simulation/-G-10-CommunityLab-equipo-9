@@ -40,6 +40,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
         "seguridad.max-bytes-cuerpo=200000",
         "clasificacion.habilitada=false",  // que la tarea programada no tome los mensajes de estas pruebas
         "generacion.habilitada=false",  // T06: que la generación no tome los logros de estas pruebas
+        "faq.habilitada=false",  // T06b: que la FAQ semanal no tome las dudas de estas pruebas
 })
 @AutoConfigureMockMvc
 class LotesApiTest {

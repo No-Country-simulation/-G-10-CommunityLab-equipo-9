@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.insightedulab.backend_java.client.IaNoDisponibleException;
 import com.insightedulab.backend_java.client.IaRechazoException;
 import com.insightedulab.backend_java.client.NlpDataClient;
+import com.insightedulab.backend_java.client.RespuestaFaqSemanal;
 import com.insightedulab.backend_java.client.RespuestaGenerar;
 import com.insightedulab.backend_java.client.RespuestaIa;
 import com.insightedulab.backend_java.config.RestClientConfig;
@@ -42,8 +43,8 @@ class NlpDataClientTest {
         RestClient.Builder builder = RestClient.builder();
         ia = MockRestServiceServer.bindTo(builder).build();
         // El mismo armado que usa la aplicación (URL y cabeceras), con el servidor simulado
-        cliente = new NlpDataClient(RestClientConfig.configurar(builder, "http://ia:8000", "clave-ia").build(),
-                new ObjectMapper());
+        RestClient rest = RestClientConfig.configurar(builder, "http://ia:8000", "clave-ia").build();
+        cliente = new NlpDataClient(rest, rest, new ObjectMapper());  // en la aplicación, la FAQ usa otro tiempo
     }
 
     @Test
@@ -149,5 +150,49 @@ class NlpDataClientTest {
     void losTiemposSonLosDeD4() {
         assertThat(RestClientConfig.TIEMPO_CONEXION).hasSeconds(5);
         assertThat(RestClientConfig.TIEMPO_LECTURA).hasSeconds(30);
+    }
+
+    // ── T06b: POST /v1/faq ──
+
+    @Test
+    void faqEnviaElPedidoConLaClaveYLeeLosGrupos() {
+        ia.expect(requestTo("http://ia:8000/v1/faq")).andExpect(method(HttpMethod.POST))
+                .andExpect(header("X-Api-Key", "clave-ia"))
+                .andExpect(header("X-Id-Correlacion", "faq-1"))
+                .andExpect(jsonPath("$.semana").value("2026-W40"))
+                .andRespond(withSuccess("""
+                        {"versionContratoIa":"1.0","pedidoId":"faq-1","semana":"2026-W40","estado":"OK",
+                         "texto":"# Preguntas frecuentes","motivo":"1 preguntas repetidas, 1 con respuesta.",
+                         "grupos":[{"pregunta":"¿Plazo?","personas":3,"respondida":true,"origen":"agenteFaq",
+                                    "fuentes":["Reglamento.pdf (Pág. 4)"],"motivo":null}],
+                         "metricas":{"duracionMs":38250,"tokensIn":2210,"tokensOut":240}}
+                        """, MediaType.APPLICATION_JSON));
+
+        RespuestaFaqSemanal r = cliente.faq(Map.of("semana", "2026-W40"), "faq-1");
+
+        assertThat(r.ok()).isTrue();
+        assertThat(r.grupos()).hasSize(1);
+        assertThat(r.grupos().get(0).personas()).isEqualTo(3);
+        assertThat(r.grupos().get(0).fuentes()).containsExactly("Reglamento.pdf (Pág. 4)");
+        assertThat(r.metricas().tokensIn()).isEqualTo(2210);
+        ia.verify();
+    }
+
+    @Test
+    void faqCon500Y422LanzaLasMismasExcepciones() {
+        ia.expect(requestTo("http://ia:8000/v1/faq")).andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
+        assertThatThrownBy(() -> cliente.faq(Map.of(), "faq-1")).isInstanceOf(IaNoDisponibleException.class);
+
+        ia.reset();
+        ia.expect(requestTo("http://ia:8000/v1/faq")).andRespond(withStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"codigo\":\"CONTRATO_INVALIDO\",\"mensaje\":\"x\",\"errores\":[],\"idCorrelacion\":\"faq-1\"}"));
+        assertThatThrownBy(() -> cliente.faq(Map.of(), "faq-1")).isInstanceOf(IaRechazoException.class);
+    }
+
+    @Test
+    void laFaqEsperaMasQueElTopeDeLaIa() {
+        // La IA corta /v1/faq a los 120 s (FAQ_SEMANAL_TOPE_S): Java tiene que esperar más
+        assertThat(RestClientConfig.TIEMPO_LECTURA_FAQ_S).isEqualTo(150).isGreaterThan(120);
     }
 }

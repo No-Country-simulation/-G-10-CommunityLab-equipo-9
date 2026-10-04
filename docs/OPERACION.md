@@ -24,6 +24,8 @@ Abrir `.env` y completar:
 | `GEMINI_API_KEY` | No | La clave de Google AI Studio. Sin ella, la IA clasifica por palabras clave y el Agente FAQ no responde |
 | `MOD_MODEL_NAME` | No | T06 · El modelo de Gemini que redacta los posts y casos de éxito (DEC-85). Vacío: el mismo de `GEMINI_MODEL` |
 | `GENERACION_HABILITADA` | No | T06 · `true` por defecto. Con `false`, Java no pide borradores al Agente-Mod (cada logro nuevo gasta una llamada a Gemini) |
+| `FAQ_SEMANAL_AL_ARRANCAR` | No | T06b · `false` por defecto. Con `true`, Java arma la FAQ semanal una vez al encender, para la demo (ver la sección 9) |
+| `FAQ_SEMANAL_DIAS` | No | T06b · Cuántos días hacia atrás se juntan las dudas para la FAQ. `7` por defecto |
 | `OCI_PAR_URL` | No | Una URL PAR nueva de OCI. Sin ella, la API arranca igual pero no sube a OCI |
 | `API_KEY_INGESTA` | Sí, para recibir lotes | **No se escribe a mano.** Desde la raíz, `python scripts/generar_api_key.py` la crea al azar y la escribe aquí y en `ingestion/discord/.env` (`BACKEND_API_KEY`), sin mostrarla. Sin ella, la API Java rechaza todo con 401, salvo `/actuator/health` |
 | `API_KEY_IA` | Sí, para clasificar | **No se escribe a mano.** `python scripts/generar_api_key.py --cliente ia` la crea y la escribe aquí, sin mostrarla. La usan los dos servicios: la API Java la envía y la IA la exige en `/v1/procesar`. Sin ella, los mensajes se quedan en `PENDIENTE` |
@@ -59,9 +61,9 @@ Los puertos escuchan solo en `127.0.0.1`: funcionan desde esta misma máquina y 
 
 ## 5. Base de datos y pruebas del backend
 
-**Las tablas las crea Flyway** cuando arranca `api-java`, con los archivos SQL de `backend-java/src/main/resources/db/migration/` (`V1__…`, `V2__…`, `V3__…`). Hibernate solo comprueba que coincidan (`ddl-auto=validate`).
+**Las tablas las crea Flyway** cuando arranca `api-java`, con los archivos SQL de `backend-java/src/main/resources/db/migration/` (`V1__…` a `V5__…`). Hibernate solo comprueba que coincidan (`ddl-auto=validate`).
 
-⚠️ **Una migración ya aplicada nunca se edita.** Los cambios van en un archivo nuevo (el siguiente es `V4__…`).
+⚠️ **Una migración ya aplicada nunca se edita.** Los cambios van en un archivo nuevo (el siguiente es `V6__…`).
 
 **Pruebas de Java** (no hace falta instalar Java en Windows). Usan una base aparte, `insightedu_test`. La prueba se niega a correr si la base no termina en `_test`, para no borrar la base principal.
 
@@ -126,3 +128,41 @@ La voz de los textos sale de [agents/agent_mod/guia_de_voz.md](../agents/agent_m
 
 ⚠️ Si la IA estuvo caída un buen rato, varios logros pueden quedar en `ERROR`. Para que se vuelvan a intentar: `docker compose exec postgres psql -U insightedu -d insightedu -c "UPDATE mensajes SET generacion_estado = NULL, generacion_intentos = 0 WHERE generacion_estado = 'ERROR';"`
 
+## 9. FAQ semanal (T06b)
+
+Una vez por semana, Java junta las dudas de los alumnos de los últimos 7 días y le pide a la IA un **borrador de preguntas frecuentes** (`POST /v1/faq`). El borrador tiene:
+- las preguntas que hicieron **al menos 2 personas distintas**, cada una con su respuesta: la del bot, si ya respondió, o la que encuentre el Agente FAQ en los PDF;
+- aparte, las preguntas repetidas que los PDF **no responden**, para que la institución sepa qué falta en su documentación.
+
+**Nada se publica**: el borrador queda `PENDIENTE` (`tipo = FAQ`) hasta que Marketing lo apruebe en el panel (T07).
+
+**Cuándo corre:**
+
+| Disparador | Cuándo | Variable |
+|---|---|---|
+| Semanal | Los lunes a las 8:00, hora de Bogotá | `FAQ_SEMANAL_CRON` y `FAQ_SEMANAL_ZONA` (opcionales) |
+| Reintento | Cada 30 minutos, solo si la semana falló. Al tercer fallo queda en `ERROR` | — |
+| Al encender | Una vez, 90 s después de encender Java (para que la IA termine de cargar). Para la demo | `FAQ_SEMANAL_AL_ARRANCAR=true` |
+
+**Nunca hay dos FAQ de la misma semana**: la tabla `faq_semanas` tiene una fila por semana, con su estado. Si Java está apagado el lunes a las 8:00, esa semana se salta.
+
+Cuánto gasta: una llamada a Gemini para agrupar las dudas, más 2 o 3 por cada pregunta repetida que el bot no había respondido. Con las dudas de la demo, unas 15 a 20.
+
+| Para… | Comando (desde la raíz) |
+|---|---|
+| Armarla ahora, para la demo, **sin tocar el `.env`** | `$env:FAQ_SEMANAL_AL_ARRANCAR = "true"` y después `docker compose up -d api-java`. La variable de la terminal le gana a la del `.env`, y solo dura mientras la terminal esté abierta. Esperar unos 2 a 4 minutos |
+| Juntar más días de dudas (por ejemplo, 10) | Antes de levantar: `$env:FAQ_SEMANAL_DIAS = "10"` |
+| Ver la tarea en el registro de Java | `docker compose logs api-java \| Select-String "FAQ semanal"` (con números y sin textos) |
+| Ver cada semana | `docker compose exec postgres psql -U insightedu -d insightedu -P pager=off -c "SELECT semana, estado, intentos, dudas, repetidas, con_respuesta, borrador_id, desde, hasta, motivo FROM faq_semanas ORDER BY semana;"` |
+| Leer el texto de la última FAQ | `docker compose exec postgres psql -U insightedu -d insightedu -P pager=off -A -t -c "SELECT texto_ia FROM borradores WHERE tipo = 'FAQ' ORDER BY id DESC LIMIT 1;"` |
+| Volver a la normalidad después de la demo | `Remove-Item Env:FAQ_SEMANAL_AL_ARRANCAR` y `docker compose up -d api-java` (o cerrar la terminal y abrir otra) |
+| Apagar la FAQ semanal | Poner `FAQ_SEMANAL_HABILITADA=false` en el `.env` y `docker compose up -d api-java` |
+
+| Estado de la semana | Qué significa |
+|---|---|
+| (vacío) | Se está armando, o falló y se va a reintentar (mirar `intentos` y `motivo`) |
+| `GENERADA` | Tiene su borrador FAQ (`borrador_id`) |
+| `SIN_REPETIDAS` | Ninguna pregunta la hicieron 2 personas distintas. No se vuelve a intentar |
+| `ERROR` | Falló 3 veces (la IA caída, sin clave de Gemini o una respuesta inválida). No se vuelve a intentar solo |
+
+⚠️ Para que una semana en `ERROR` se vuelva a intentar: `docker compose exec postgres psql -U insightedu -d insightedu -c "UPDATE faq_semanas SET estado = NULL, intentos = 0, terminada_en = NULL WHERE estado = 'ERROR';"`. El reintento la toma en menos de 30 minutos.

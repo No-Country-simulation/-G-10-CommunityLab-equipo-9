@@ -8,7 +8,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import static org.assertj.core.api.Assertions.assertThat;
 
 // La tarea programada queda creada pero no llega a correr: así se comprueba que arranca bien
-@SpringBootTest(properties = {"clasificacion.retraso-inicial-ms=3600000", "generacion.retraso-inicial-ms=3600000"})
+@SpringBootTest(properties = {"clasificacion.retraso-inicial-ms=3600000", "generacion.retraso-inicial-ms=3600000",
+        "faq.cron=-"})
 class BackendJavaApplicationTests {
 
 	@Autowired

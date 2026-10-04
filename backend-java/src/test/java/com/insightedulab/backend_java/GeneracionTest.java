@@ -52,6 +52,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 @SpringBootTest(properties = {
         "clasificacion.habilitada=false",
         "generacion.habilitada=false",  // la tarea programada no corre: las pruebas llaman a procesarTanda()
+        "faq.habilitada=false",  // T06b: que la FAQ semanal no tome las dudas de estas pruebas
         "generacion.tanda=3",
         "generacion.max-intentos=3",
         "generacion.max-respuestas=20",
