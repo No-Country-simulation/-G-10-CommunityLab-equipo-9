@@ -1,6 +1,7 @@
 package com.insightedulab.backend_java.curaduria;
 
 import com.insightedulab.backend_java.curaduria.VistasPanel.DetalleBorrador;
+import com.insightedulab.backend_java.curaduria.VistasPanel.EstadoOci;
 import com.insightedulab.backend_java.curaduria.VistasPanel.MensajeEnError;
 import com.insightedulab.backend_java.curaduria.VistasPanel.Origen;
 import com.insightedulab.backend_java.curaduria.VistasPanel.ResumenBorrador;
@@ -56,7 +57,9 @@ public class CuraduriaRepository {
                    b.aprobado_por, b.aprobado_en, b.tiempo_curaduria_seg, b.rechazado_por, b.rechazado_en,
                    b.motivo_rechazo, m.id AS mensaje_id, m.discord_id, m.fecha AS mensaje_fecha,
                    m.texto AS mensaje_texto, m.generacion_motivo, %s AS autor_nombre, %s AS canal,
-                   f.semana, f.desde, f.hasta, f.motivo AS faq_motivo
+                   f.semana, f.desde, f.hasta, f.motivo AS faq_motivo,
+                   (SELECT s.estado FROM subidas_oci s WHERE s.borrador_id = b.id AND s.carpeta = 'generados') AS oci_generados,
+                   (SELECT s.estado FROM subidas_oci s WHERE s.borrador_id = b.id AND s.carpeta = 'aprobados') AS oci_aprobados
               FROM borradores b
               LEFT JOIN mensajes m ON m.id = b.mensaje_id
               LEFT JOIN faq_semanas f ON f.borrador_id = b.id
@@ -153,7 +156,8 @@ public class CuraduriaRepository {
                     rs.getString("texto_ia"), rs.getString("texto_final"), rs.getBoolean("consentimiento_confirmado"),
                     instante(rs, "creado_en"), rs.getString("aprobado_por"), instante(rs, "aprobado_en"),
                     (Integer) rs.getObject("tiempo_curaduria_seg"), rs.getString("rechazado_por"),
-                    instante(rs, "rechazado_en"), rs.getString("motivo_rechazo"), motivoIa, origen, faq);
+                    instante(rs, "rechazado_en"), rs.getString("motivo_rechazo"), motivoIa, origen, faq,
+                    new EstadoOci(rs.getString("oci_generados"), rs.getString("oci_aprobados")));
         });
         return filas.isEmpty() ? null : filas.get(0);
     }
