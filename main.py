@@ -1,9 +1,15 @@
-from fastapi import FastAPI, HTTPException
+from datetime import datetime
+from typing import List, Optional
+
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import Optional, List
 
-# Importamos los contratos reales desde tu estructura
+import agents.orquestador.config as config
+
+# IMPORTANTE: Asegúrate de que OutputOrquestador esté incluido aquí arriba
 from agents.orquestador.contratos import (
     InputOrquestador,
     OutputOrquestador,
@@ -13,7 +19,6 @@ from agents.orquestador.contratos import (
     ResumenLote,
     LogEjecucion
 )
-import agents.orquestador.config as config
 
 app = FastAPI(
     title="No Country - Orquestador FAQ & NLP API",
@@ -29,29 +34,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-def health_check():
-    """Endpoint de verificación de estado."""
-    return {
-        "status": "online",
-        "agente": getattr(config, "AGENTE_NOMBRE", "orquestador_g10"),
-        "version": getattr(config, "AGENTE_VERSION", "1.0.0")
-    }
+# Manejador de excepciones 422 para ver qué falla exactamente
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    print("--- ERROR DE VALIDACIÓN 422 DETECTADO ---")
+    print("Detalles del error:", exc.errors())
+    body_bytes = await request.body()
+    print("Cuerpo recibido desde Java:", body_bytes.decode("utf-8"))
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": body_bytes.decode("utf-8")},
+    )
 
 @app.post("/api/v1/orquestador/ejecutar", response_model=OutputOrquestador)
 def ejecutar_flujo_orquestador(input_data: InputOrquestador):
+    print("PAYLOAD RECIBIDO EXITOSAMENTE EN PYTHON:", input_data.model_dump())
+    
     """
     Endpoint principal que recibe el InputOrquestador (lote de mensajes)
     y devuelve el OutputOrquestador con respuestas y auditoría completa.
     """
+    # Si la validación pasa, aquí sí se ejecutará esto:
+    print("PAYLOAD RECIBIDO EXITOSAMENTE EN PYTHON:", input_data.model_dump())
+    
     try:
-        # 1. Aquí más adelante conectarás la llamada real a tu orquestador.py
-        # resultado = ejecutar_orquestador(input_data)
-        
-        # 2. Mock temporal alineado estrictamente con tus contratos Pydantic
-        from datetime import datetime
-        
-        tiempo_actual = datetime.utcnow().isoformat()
+        # Generamos un timestamp limpio compatible con Instant de Java (formato ISO con Z)
+        tiempo_actual = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
         respuestas_mock = [
             RespuestaIndividual(

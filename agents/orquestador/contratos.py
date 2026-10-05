@@ -3,35 +3,46 @@ Contratos Pydantic del Orquestador.
 
 Define los schemas de:
 - Input del backend (webhook de Discord)
-- Output hacia n8n (respuesta_discord)
+- Output hacia n8n / Java (respuesta_discord)
 - Contratos internos (sub-agentes, paquete final, logs)
 """
 from __future__ import annotations
 from typing import Optional, List, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
+from pydantic.alias_generators import to_camel
 
 
-# -- Entradas (desde n8n / Discord) ---
+# -- Clase Base para Salidas (Convierte automáticamente snake_case a camelCase para Java) ---
+class OutputBaseModel(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True
+    )
+
+
+# -- Entradas (desde Java / Discord) ---
 class MensajeNormalizado(BaseModel):
-    """Mensaje individual ya filtrado del webhook crudo de Discord."""
-    mensaje_id: str
-    autor_id: str
-    autor_username: str
-    channel_id: str
-    contenido: str
-    timestamp: str
-    es_bot: bool = False
+    mensaje_id: str = Field(..., alias="discordId")         # Mapea "discordId" de Java a "mensaje_id"
+    autor_id: str = Field(..., alias="authorId")
+    autor_username: str = Field(..., alias="authorUsername")
+    channel_id: str = Field(..., alias="channelId")
+    contenido: str = Field(..., alias="textoMensaje")       # Mapea "textoMensaje" de Java a "contenido"
+    timestamp: str = Field(..., alias="timestampMensaje")   # Mapea "timestampMensaje" de Java a "timestamp"
+    es_bot: bool = Field(False, alias="esBot")
+
+    model_config = ConfigDict(populate_by_name=True)
 
 class InputOrquestador(BaseModel):
-    """Contrato de entrada del Orquestador."""
-    lote_id: str
+    lote_id: str = Field(..., alias="loteId")
     origen: str = "discord"
     servidor: str = "Discord_ONE_G10"
-    mensajes: List[MensajeNormalizado]
+    mensajes: list[MensajeNormalizado]
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
-# --- Clasificaciión de intenciones (nodo clasificador) ---
-class ClasificacionIntencion(BaseModel):
+# --- Clasificación de intenciones (nodo clasificador) ---
+class ClasificacionIntencion(OutputBaseModel):
     """Output del nodo clasificador."""
     mensaje_id: str
     intencion: Literal["TESTIMONIO", "PREGUNTA_FAQ", "COMENTARIO", "OTRO"]
@@ -39,11 +50,11 @@ class ClasificacionIntencion(BaseModel):
     razon: str
 
 # --- Output normalizado de sub-agentes ---
-class OutputSubAgente(BaseModel):
+class OutputSubAgente(OutputBaseModel):
     """Cáscara común que todos los sub-agentes deben devolver."""
     mensaje_id: str
     intencion: str
-    texto_respuesta: str           # Texto listo para enviar al usuario
+    texto_respuesta: str             # Texto listo para enviar al usuario
     output: dict = Field(default_factory=dict)      # Datos específicos
     metadata: dict = Field(default_factory=dict)    # Tokens, tiempos
     status: Literal["exito", "atencion_humano"] = "exito"
@@ -51,32 +62,32 @@ class OutputSubAgente(BaseModel):
 
 
 # --- PAQUETE FINAL (auditoría interna) ---
-class ResumenLote(BaseModel):
-    total_mensajes: int          # Todos los mensajes del webhook
-    descartados_filtro: int      # Bots, comandos, vacíos (antes del LLM)
+class ResumenLote(OutputBaseModel):
+    total_mensajes: int            # Todos los mensajes del webhook
+    descartados_filtro: int        # Bots, comandos, vacíos (antes del LLM)
     
     # Clasificados (post-LLM)
-    testimonios: int             # TESTIMONIO
-    preguntas_faq: int           # PREGUNTA_FAQ
-    comentarios: int             # COMENTARIO
-    otro: int                    # OTRO (clasificados como ruido por el LLM)
+    testimonios: int               # TESTIMONIO
+    preguntas_faq: int             # PREGUNTA_FAQ
+    comentarios: int               # COMENTARIO
+    otro: int                      # OTRO (clasificados como ruido por el LLM)
     
     # Estados de procesamiento
-    procesados_exito: int        # Sub-agentes que resolvieron
-    requieren_humano: int        # Sub-agentes que fallaron (status=atencion_humano)
+    procesados_exito: int          # Sub-agentes que resolvieron
+    requieren_humano: int          # Sub-agentes que fallaron (status=atencion_humano)
 
-class ActivoGenerado(BaseModel):
+class ActivoGenerado(OutputBaseModel):
     mensaje_id: str
     intencion: str
     output: dict
     metadata: dict
 
-class ItemRequiereHumano(BaseModel):
+class ItemRequiereHumano(OutputBaseModel):
     mensaje_id: str
     motivo: str
     detalle: Optional[str] = None
 
-class PaqueteFinal(BaseModel):
+class PaqueteFinal(OutputBaseModel):
     lote_id: str
     resumen_lote: ResumenLote
     activos_generados: List[ActivoGenerado] = Field(default_factory=list)
@@ -84,7 +95,7 @@ class PaqueteFinal(BaseModel):
 
 
 # --- LOG DE EJECUCIÓN ---
-class SublogMensaje(BaseModel):
+class SublogMensaje(OutputBaseModel):
     mensaje_id: str
     intencion: Optional[str] = None
     confianza: Optional[float] = None
@@ -94,7 +105,7 @@ class SublogMensaje(BaseModel):
     status: str = "pendiente"
     error: Optional[str] = None
 
-class LogEjecucion(BaseModel):
+class LogEjecucion(OutputBaseModel):
     lote_id: str
     timestamp_inicio: str
     timestamp_fin: str
@@ -104,8 +115,8 @@ class LogEjecucion(BaseModel):
     errores: List[str] = Field(default_factory=list)
 
 
-# --- salida (Respuesta Discord)---
-class RespuestaIndividual(BaseModel):
+# --- salida (Respuesta Discord) ---
+class RespuestaIndividual(OutputBaseModel):
     """Respuesta lista para enviar a Discord."""
     mensaje_id: str
     channel_id: str
@@ -113,15 +124,15 @@ class RespuestaIndividual(BaseModel):
     requiere_humano: bool = False
     intencion: str
 
-class RespuestaDiscord(BaseModel):
+class RespuestaDiscord(OutputBaseModel):
     """Bloque de respuestas para el lote."""
     lote_id: str
     respuestas: List[RespuestaIndividual] = Field(default_factory=list)
 
 
 # --- Output final del Orquestador ---
-class OutputOrquestador(BaseModel):
-    """Contrato de salida del Orquestador hacia n8n."""
+class OutputOrquestador(OutputBaseModel):
+    """Contrato de salida del Orquestador hacia Java."""
     lote_id: str
     respuesta_discord: RespuestaDiscord
     paquete_final: PaqueteFinal
