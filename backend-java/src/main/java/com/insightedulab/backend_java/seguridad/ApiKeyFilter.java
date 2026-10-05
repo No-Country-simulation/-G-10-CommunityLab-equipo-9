@@ -49,7 +49,8 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     /** Las rutas del panel (T07) llevan un id (/api/v1/borradores/5/aprobar): se protege la ruta y todo lo que cuelga de ella. */
     static final Map<String, String> CLIENTE_POR_PREFIJO = Map.of(
             "/api/v1/borradores", ClientePermitido.PANEL,
-            "/api/v1/errores", ClientePermitido.PANEL);
+            "/api/v1/errores", ClientePermitido.PANEL,
+            "/api/v1/dashboard", ClientePermitido.PANEL);  // T08: solo lectura
 
     private final Map<String, byte[]> huellasPorCliente = new LinkedHashMap<>();
     private final RespuestaError respuestaError;

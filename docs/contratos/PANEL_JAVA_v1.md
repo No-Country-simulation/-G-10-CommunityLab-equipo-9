@@ -1,6 +1,8 @@
 # Contrato Panel ↔ Java v1 — InsightEdu Lab
 
 > **Estado:** v1.0 · **Fecha:** 2026-10-04 · **Tarea:** T07 · **Decisiones:** D6, DEC-70, DEC-110, DEC-111, DEC-112 y DEC-113
+>
+> **Agregado en T08** (DEC-122, solo agrega): las puertas de solo lectura del dashboard, en la [sección 7](#7-dashboard-t08). Nada de lo anterior cambió.
 
 ## 0. Sobre este documento
 
@@ -279,3 +281,130 @@ Java **no** responde cabeceras CORS: se quitó `CorsConfig`, que aceptaba cualqu
 - Subir lo aprobado a OCI (T09, DEC-113). El dashboard (T08).
 - Volver a generar un borrador, reintentar una semana de la FAQ en `ERROR` y publicar en LinkedIn.
 - Roles o permisos distintos por usuario: todos los usuarios del panel pueden hacer todo.
+
+## 7. Dashboard (T08)
+
+Seis puertas **de solo lectura** para la página "Dashboard" (N5, DEC-119 a DEC-123). Usan la misma clave `panel` (las protege el prefijo `/api/v1/dashboard`, con la ruta normalizada y la segunda revisión en el controlador). **No** piden `X-Usuario`: no cambian nada.
+
+**Java calcula y el panel solo dibuja** (DEC-123). No usan IA: todo sale de las etiquetas que ya guardaron la clasificación (T04) y el bot (T05).
+
+| Fuente | Dónde |
+|---|---|
+| Formas | [VistasDashboard.java](../../backend-java/src/main/java/com/insightedulab/backend_java/dashboard/VistasDashboard.java) |
+| Reglas y SQL | [DashboardService.java](../../backend-java/src/main/java/com/insightedulab/backend_java/dashboard/DashboardService.java) y [DashboardRepository.java](../../backend-java/src/main/java/com/insightedulab/backend_java/dashboard/DashboardRepository.java) |
+| Pruebas | `DashboardApiTest.java` |
+
+### 7.1 Parámetros comunes
+
+| Parámetro | Valores | Si no viene |
+|---|---|---|
+| `desde`, `hasta` | Días `AAAA-MM-DD`, **los dos incluidos**, en hora de Bogotá (`dashboard.zona`). Hasta 366 días | Los últimos 30 días, hasta hoy |
+| `agrupar` | `dia` o `semana` (las semanas empiezan el lunes y se nombran por su lunes) | `dia` |
+| `excluirOtro` | `true` o `false`: deja afuera los mensajes con el tema `otro` (preguntas que no son del curso) | `false` |
+
+Un período al revés, de más de 366 días o con una fecha mal escrita, o un valor fuera de rango, da **422** (`DATO_INVALIDO`, con el campo). Sin clave, 401; con la clave de otro cliente, 403 (§4).
+
+### 7.2 Quién cuenta
+
+| Regla | Dónde se aplica |
+|---|---|
+| Solo mensajes **clasificados `OK`** (no `PENDIENTE` ni `ERROR`) y de **personas** (no bots) | Sentimiento, temas, frustración y dudas |
+| Solo **alumnos** (`autor_rol = miembro`): un mentor no "deserta" ni necesita ayuda | Las 3 alertas |
+| Todos los mensajes de personas, de cualquier estado | Totales (`mensajes`, `personasActivas`) y deserción (escribir es actividad) |
+
+### 7.3 Las puertas
+
+| Puerta | Parámetros | Qué devuelve |
+|---|---|---|
+| `GET /api/v1/dashboard/totales` | `desde`, `hasta` | Para la cabecera: mensajes de personas, personas activas, dudas y logros (`OK`), mensajes sin clasificar en el período, y borradores pendientes **hoy** (sin `RESPUESTA_BOT`) |
+| `GET /api/v1/dashboard/sentimiento` | `desde`, `hasta`, `agrupar`, `excluirOtro` | Un punto por día o por semana, **también los vacíos**, con la cantidad de cada uno de los 5 sentimientos (0 si no hay) |
+| `GET /api/v1/dashboard/temas` | `desde`, `hasta`, `excluirOtro` | Por tema: cuántos en el período (`actual`), cuántos en el período anterior de igual largo (`anterior`) y `variacion = actual − anterior`. Ordenado de mayor a menor `actual` |
+| `GET /api/v1/dashboard/desercion` | `dias` (1 a 365; **14** por defecto, DEC-119) | Los alumnos cuyo último mensaje tiene más de `dias` días **contados desde hoy** (no depende del período): nombre visible, fecha del último mensaje, días sin escribir y cuántos mensajes escribió. El que lleva más tiempo, primero. Hasta 200 |
+| `GET /api/v1/dashboard/frustracion` | `desde`, `hasta` | DEC-121: los alumnos con un `MUY_NEGATIVO` **en el período**, o con 2 negativos (`NEGATIVO` o `MUY_NEGATIVO`) entre sus **últimos 3 mensajes `OK`** hasta el fin del período. `motivos`: `MUY_NEGATIVO` y/o `DOS_DE_TRES`. **Sin textos.** Hasta 200 |
+| `GET /api/v1/dashboard/dudas-sin-responder` | `desde`, `hasta`, `horas` (0 a 2160; **24** por defecto), `excluirOtro` | Las `PREGUNTA_FAQ` de alumnos, del período, con más de `horas` horas y **no atendidas** (DEC-123): el bot no la respondió (`RESPONDIDA`) y ninguna **persona distinta del autor** le contestó con "Responder" de Discord (`respondeA`). Una `DERIVADA` sigue sin responder. Con el texto de la duda (hasta 1000 caracteres), para que el CM la conteste. `total` puede ser mayor que la lista (tope de 200). La más antigua primero |
+
+### 7.4 Ejemplos
+
+```
+GET /api/v1/dashboard/totales?desde=2026-09-28&hasta=2026-10-04
+```
+```json
+{
+  "periodo": { "desde": "2026-09-28", "hasta": "2026-10-04" },
+  "mensajes": 52, "personasActivas": 10, "dudas": 21, "logros": 13, "sinClasificar": 0, "borradoresPendientes": 7
+}
+```
+
+```
+GET /api/v1/dashboard/sentimiento?desde=2026-09-28&hasta=2026-09-29&agrupar=dia
+```
+```json
+{
+  "periodo": { "desde": "2026-09-28", "hasta": "2026-09-29" },
+  "agrupar": "dia",
+  "excluirOtro": false,
+  "puntos": [
+    { "inicio": "2026-09-28", "cantidades": { "MUY_POSITIVO": 5, "POSITIVO": 3, "NEUTRO": 14, "NEGATIVO": 2, "MUY_NEGATIVO": 1 } },
+    { "inicio": "2026-09-29", "cantidades": { "MUY_POSITIVO": 0, "POSITIVO": 0, "NEUTRO": 0, "NEGATIVO": 0, "MUY_NEGATIVO": 0 } }
+  ]
+}
+```
+
+```
+GET /api/v1/dashboard/temas?desde=2026-10-01&hasta=2026-10-10
+```
+```json
+{
+  "periodo": { "desde": "2026-10-01", "hasta": "2026-10-10" },
+  "periodoAnterior": { "desde": "2026-09-21", "hasta": "2026-09-30" },
+  "excluirOtro": false,
+  "temas": [
+    { "tema": "empleo", "actual": 2, "anterior": 1, "variacion": 1 },
+    { "tema": "contenido_curso", "actual": 0, "anterior": 2, "variacion": -2 }
+  ]
+}
+```
+
+```
+GET /api/v1/dashboard/desercion?dias=3
+```
+```json
+{
+  "dias": 3,
+  "personas": [
+    { "nombre": "Camila Rojas", "ultimoMensaje": "2026-09-28T19:10:00Z", "diasSinEscribir": 6, "mensajes": 4 }
+  ]
+}
+```
+
+```
+GET /api/v1/dashboard/frustracion
+```
+```json
+{
+  "periodo": { "desde": "2026-09-05", "hasta": "2026-10-04" },
+  "personas": [
+    { "nombre": "Diego", "motivos": ["MUY_NEGATIVO", "DOS_DE_TRES"], "negativosEnPeriodo": 2,
+      "negativosEnUltimos3": 2, "ultimoNegativo": "2026-09-28T18:40:00Z" }
+  ]
+}
+```
+
+```
+GET /api/v1/dashboard/dudas-sin-responder?horas=24
+```
+```json
+{
+  "periodo": { "desde": "2026-09-05", "hasta": "2026-10-04" },
+  "horas": 24,
+  "excluirOtro": false,
+  "total": 1,
+  "dudas": [
+    { "mensajeId": 17, "discordId": "1554205178671009863", "fecha": "2026-09-28T18:56:30Z",
+      "tema": "herramientas_entorno", "derivada": false, "canal": "dudas", "autorNombre": "Ana Pérez",
+      "texto": "no me deja instalar python, ¿qué hago?" }
+  ]
+}
+```
+
+Los textos y los nombres llegan **tal cual**: el panel los muestra escapados (como en §2.2).
