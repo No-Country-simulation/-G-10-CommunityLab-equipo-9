@@ -38,12 +38,12 @@ public class CommunityService {
         // 1. Creamos la lista de interacciones mapeadas previamente
         List<Interaction> interacciones = new ArrayList<>();
 
-        if (request.getInteracciones() != null) {
-            for (InteractionInputDto dto : request.getInteracciones()) {
+        if (request.getMensajes() != null) {
+            for (InteractionInputDto dto : request.getMensajes()) {
                 Interaction interaction = Interaction.builder()
                         // Nota: el packageResult se asociará automáticamente gracias al Cascade en el save
                         .loteId(request.getLoteId())
-                        .tipoServidor(request.getTipoServidor())
+                        .tipoServidor(request.getServidor())
                         .discordId(dto.getDiscordId())
                         .channelId(dto.getChannelId())
                         .authorId(dto.getAuthorId())
@@ -63,8 +63,8 @@ public class CommunityService {
         // 2. Construimos el paquete completo con sus interacciones ya listas
         PackageResult pkg = PackageResult.builder()
                 .loteId(request.getLoteId())
-                .tipoServidor(request.getTipoServidor())
-                .tipoAutorRespuesta(TipoAutor.AI)
+                .tipoServidor(request.getServidor())    // Asegúrate de usar getServidor() para mapear tipoServidor
+                .tipoAutorRespuesta(TipoAutor.AI)      // Valor por defecto inicial
                 .fueEditadoPorHumano(false)
                 .tiempoCuraduriaSeg(0)
                 .timestampInicio(Instant.now())

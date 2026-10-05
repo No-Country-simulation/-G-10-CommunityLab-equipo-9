@@ -13,7 +13,7 @@ import java.time.Duration;
 @Configuration
 public class RestClientConfig {
 
-    @Value("${python.nlp.service.url}")
+    @Value("${python.nlp.service.url:http://localhost:8000}")
     private String nlpServiceUrl;
 
     @Bean

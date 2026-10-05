@@ -29,7 +29,7 @@ public class CommunityController {
     @PostMapping("/process")
     public ResponseEntity<CommunityProcessResponseDto> processBatch(@Valid @RequestBody CommunityProcessRequestDto request) {
         // 1. Validación de entrada
-        if (request == null || request.getInteracciones() == null || request.getInteracciones().isEmpty()) {
+        if (request == null || request.getMensajes() == null || request.getMensajes().isEmpty()) {
             CommunityProcessResponseDto errorResponse = CommunityProcessResponseDto.builder()
                     .status("error")
                     .mensaje("El lote recibido no contiene interacciones válidas para procesar")
@@ -39,7 +39,7 @@ public class CommunityController {
             return ResponseEntity.badRequest().body(errorResponse);
         }
 
-        int total = request.getInteracciones().size();
+        int total = request.getMensajes().size();
 
         communityService.processBatch(request);
 

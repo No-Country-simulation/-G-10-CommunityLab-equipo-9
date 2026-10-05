@@ -1,6 +1,5 @@
 package com.insightedulab.backend_java.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.insightedulab.backend_java.model.enums.ClasificacionSentimiento;
 import com.insightedulab.backend_java.model.enums.TipoAutor;
 import jakarta.persistence.*;

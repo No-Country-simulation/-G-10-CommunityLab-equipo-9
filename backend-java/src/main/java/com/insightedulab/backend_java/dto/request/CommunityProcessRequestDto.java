@@ -19,10 +19,12 @@ public class CommunityProcessRequestDto {
     @NotBlank(message = "El ID del lote no puede estar vacío")
     private String loteId;
 
-    @NotBlank(message = "El tipo de servidor es obligatorio")
-    private String tipoServidor;
+    private String origen; // Agregado para coincidir con Python
 
-    @NotEmpty(message = "La lista de interacciones no puede estar vacía")
-    @Valid // Asegura que también se validen los campos internos de cada InteractionInputDto
-    private List<InteractionInputDto> interacciones;
+    @NotBlank(message = "El servidor es obligatorio")
+    private String servidor; // Cambiado de tipoServidor a servidor
+
+    @NotEmpty(message = "La lista de interacciones no can not be empty")
+    @Valid
+    private List<InteractionInputDto> mensajes; // Cambiado de interacciones a mensajes para que el JSON mande "mensajes"
 }
