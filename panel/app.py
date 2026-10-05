@@ -6,7 +6,7 @@ los edita, los aprueba o los rechaza. El panel habla solo con la API Java (DEC-1
 
     streamlit run app.py        (desde panel/; en Docker lo levanta compose.yml en 127.0.0.1:8501)
 
-Páginas (DEC-114: el dashboard de T08 será una más): Borradores y Errores, en paginas/.
+Páginas (DEC-114), en paginas/: Borradores (T07), Dashboard (T08) y Errores (T07).
 """
 from __future__ import annotations
 
@@ -91,6 +91,7 @@ with st.sidebar:
 
 pagina = st.navigation([
     st.Page("paginas/borradores.py", title="Borradores", default=True),
+    st.Page("paginas/dashboard.py", title="Dashboard"),
     st.Page("paginas/errores.py", title="Errores"),
 ])
 pagina.run()

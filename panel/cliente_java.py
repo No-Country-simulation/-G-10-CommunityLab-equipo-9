@@ -10,6 +10,7 @@ Streamlit, no del navegador (por eso Java no necesita CORS, S6).
 from __future__ import annotations
 
 import os
+from datetime import date
 
 import httpx
 
@@ -74,6 +75,29 @@ class ClienteJava:
             raise ValueError(f"Etapa desconocida: {etapa}")
         return self._pedir("POST", f"/api/v1/errores/{etapa}/{int(mensaje_id)}/reintentar", usuario=usuario, cuerpo={})
 
+    # ── Dashboard (T08, solo lectura: sin X-Usuario) ──
+
+    def dashboard_totales(self, desde: date, hasta: date) -> dict:
+        return self._pedir("GET", "/api/v1/dashboard/totales", params=_periodo(desde, hasta))
+
+    def dashboard_sentimiento(self, desde: date, hasta: date, agrupar: str, excluir_otro: bool) -> dict:
+        params = {**_periodo(desde, hasta), "agrupar": agrupar, "excluirOtro": _booleano(excluir_otro)}
+        return self._pedir("GET", "/api/v1/dashboard/sentimiento", params=params)
+
+    def dashboard_temas(self, desde: date, hasta: date, excluir_otro: bool) -> dict:
+        params = {**_periodo(desde, hasta), "excluirOtro": _booleano(excluir_otro)}
+        return self._pedir("GET", "/api/v1/dashboard/temas", params=params)
+
+    def dashboard_desercion(self, dias: int) -> dict:
+        return self._pedir("GET", "/api/v1/dashboard/desercion", params={"dias": int(dias)})
+
+    def dashboard_frustracion(self, desde: date, hasta: date) -> dict:
+        return self._pedir("GET", "/api/v1/dashboard/frustracion", params=_periodo(desde, hasta))
+
+    def dashboard_dudas(self, desde: date, hasta: date, horas: int, excluir_otro: bool) -> dict:
+        params = {**_periodo(desde, hasta), "horas": int(horas), "excluirOtro": _booleano(excluir_otro)}
+        return self._pedir("GET", "/api/v1/dashboard/dudas-sin-responder", params=params)
+
     # ── Común ──
 
     def _pedir(self, metodo: str, ruta: str, usuario: str | None = None, cuerpo: dict | None = None,
@@ -87,6 +111,15 @@ class ClienteJava:
         if r.is_success:
             return r.json()
         raise _error_de(r)
+
+
+def _periodo(desde: date, hasta: date) -> dict:
+    return {"desde": desde.isoformat(), "hasta": hasta.isoformat()}
+
+
+def _booleano(valor: bool) -> str:
+    # Java espera "true" o "false"; str(True) daría "True"
+    return "true" if valor else "false"
 
 
 def _error_de(r: httpx.Response) -> ErrorJava:

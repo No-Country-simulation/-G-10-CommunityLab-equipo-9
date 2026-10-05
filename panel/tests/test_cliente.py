@@ -115,3 +115,26 @@ def test_una_etapa_desconocida_no_sale_del_panel():
         cliente.reintentar("../borradores", 1, "harrison")
 
     assert pedidos == []
+
+
+def test_el_dashboard_envia_fechas_iso_y_booleanos_de_java_sin_usuario():
+    from datetime import date
+
+    cliente, pedidos = _cliente(_ok({}))
+
+    cliente.dashboard_sentimiento(date(2026, 9, 1), date(2026, 9, 30), "semana", True)
+    cliente.dashboard_dudas(date(2026, 9, 1), date(2026, 9, 30), 48, False)
+    cliente.dashboard_desercion(3)
+
+    sentimiento, dudas, desercion = pedidos
+    assert sentimiento.url.path == "/api/v1/dashboard/sentimiento"
+    assert dict(sentimiento.url.params) == {"desde": "2026-09-01", "hasta": "2026-09-30", "agrupar": "semana",
+                                            "excluirOtro": "true"}
+    assert dudas.url.path == "/api/v1/dashboard/dudas-sin-responder"
+    assert dict(dudas.url.params)["excluirOtro"] == "false"
+    assert dict(dudas.url.params)["horas"] == "48"
+    assert dict(desercion.url.params) == {"dias": "3"}
+    for p in pedidos:
+        assert p.method == "GET"
+        assert p.headers["X-Api-Key"] == CLAVE
+        assert "X-Usuario" not in p.headers  # solo lectura

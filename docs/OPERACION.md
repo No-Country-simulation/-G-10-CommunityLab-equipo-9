@@ -65,9 +65,9 @@ Los puertos escuchan solo en `127.0.0.1`: funcionan desde esta misma máquina y 
 
 ## 5. Base de datos y pruebas del backend
 
-**Las tablas las crea Flyway** cuando arranca `api-java`, con los archivos SQL de `backend-java/src/main/resources/db/migration/` (`V1__…` a `V6__…`). Hibernate solo comprueba que coincidan (`ddl-auto=validate`).
+**Las tablas las crea Flyway** cuando arranca `api-java`, con los archivos SQL de `backend-java/src/main/resources/db/migration/` (`V1__…` a `V7__…`). Hibernate solo comprueba que coincidan (`ddl-auto=validate`).
 
-⚠️ **Una migración ya aplicada nunca se edita.** Los cambios van en un archivo nuevo (el siguiente es `V7__…`).
+⚠️ **Una migración ya aplicada nunca se edita.** Los cambios van en un archivo nuevo (el siguiente es `V8__…`).
 
 **Pruebas de Java** (no hace falta instalar Java en Windows). Usan una base aparte, `insightedu_test`. La prueba se niega a correr si la base no termina en `_test`, para no borrar la base principal.
 
@@ -220,3 +220,34 @@ En el panel, una persona de Marketing entra con **su usuario y su contraseña**,
 
 **Consulta de solo lectura** (para revisar las aprobaciones en la base):
 `docker compose exec postgres psql -U insightedu -d insightedu -P pager=off -c "SELECT id, tipo, estado, aprobado_por, aprobado_en, tiempo_curaduria_seg, consentimiento_confirmado, rechazado_por, motivo_rechazo, (texto_final IS NOT NULL AND texto_final <> texto_ia) AS editado FROM borradores ORDER BY id;"`
+
+## 11. Dashboard (T08)
+
+En el mismo panel, la página **Dashboard** muestra el clima de la comunidad, los temas del momento y **a quién ayudar**. No usa IA ni gasta Gemini: todo sale de las etiquetas que ya guardó la clasificación. Java calcula y el panel dibuja ([contratos/PANEL_JAVA_v1.md §7](contratos/PANEL_JAVA_v1.md#7-dashboard-t08)).
+
+| Para… | Cómo |
+|---|---|
+| Levantarlo (después de actualizar el código) | `docker compose up -d --build api-java panel`. Java aplica la `V7` (un índice) al encender |
+| Abrirlo | Entrar al panel (`http://127.0.0.1:8501`) y elegir **Dashboard** en la barra de la izquierda |
+| Cambiar el período | El selector **Período** (por defecto, los últimos 30 días). Hay que elegir las dos fechas |
+| Ver por día o por semana | **Ver por**. Las semanas empiezan el lunes |
+| Dejar afuera las preguntas que no son del curso | **Excluir el tema «otro»** |
+| Ajustar las alertas | **Deserción: días sin escribir** (14 por defecto, DEC-119) y **Dudas sin responder después de (horas)** (24 por defecto) |
+
+| Indicador | Cómo se calcula |
+|---|---|
+| Resumen | Mensajes de personas en el período, personas activas, dudas y logros ya clasificados, mensajes sin clasificar y borradores pendientes **hoy** |
+| Clima de la comunidad | Cuántos mensajes de cada sentimiento hubo por día o por semana (solo mensajes de personas clasificados `OK`) |
+| Temas en tendencia | Cuántos mensajes de cada tema hubo en el período y en el período anterior del mismo largo |
+| Posible deserción | Alumnos (no mentores) cuyo último mensaje tiene más días que el umbral, **contados desde hoy** |
+| Posible frustración | Alumnos con un mensaje `MUY_NEGATIVO` en el período, o con 2 negativos entre sus últimos 3 mensajes (DEC-121) |
+| Dudas sin responder | Dudas de alumnos con más horas que el umbral, que el bot no respondió y a las que **ninguna otra persona contestó con "Responder" de Discord** (DEC-123). Una duda derivada a un mentor sigue aquí hasta que alguien la conteste |
+
+⚠️ **Para que una duda cuente como atendida, el mentor tiene que usar "Responder" en Discord** sobre el mensaje del alumno. Si escribe en el canal sin responder, el sistema no sabe a qué duda contestó.
+
+**Consultas de solo lectura** para comprobar un número del dashboard (desde la raíz):
+
+| Número | Comando |
+|---|---|
+| Sentimiento por día (hora de Bogotá) | `docker compose exec postgres psql -U insightedu -d insightedu -P pager=off -c "SELECT (fecha AT TIME ZONE 'America/Bogota')::date AS dia, sentimiento, count(*) FROM mensajes WHERE estado_clasificacion = 'OK' AND autor_tipo = 'persona' AND sentimiento IS NOT NULL GROUP BY 1, 2 ORDER BY 1, 2;"` |
+| Último mensaje de cada alumno | `docker compose exec postgres psql -U insightedu -d insightedu -P pager=off -c "SELECT autor_id, max(fecha) AS ultimo, count(*) FROM mensajes WHERE autor_tipo = 'persona' AND autor_rol = 'miembro' GROUP BY autor_id ORDER BY ultimo;"` |
