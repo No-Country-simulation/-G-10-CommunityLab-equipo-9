@@ -54,7 +54,8 @@ public class Borrador {
 
     private Integer tokensOut;
 
-    private String estadoOci;              // sin lista cerrada hasta la fase 6
+    // Sin uso desde la V8: cada borrador tiene dos subidas a OCI, y se siguen en la tabla subidas_oci (T09)
+    private String estadoOci;
 
     private String rutaOci;
 

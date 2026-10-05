@@ -37,7 +37,10 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # T09: la URL PAR del bucket (una credencial: solo escritura y con vencimiento). Vacía = no se sube nada a OCI
       OCI_PAR_URL: ${OCI_PAR_URL:-}
+      # T09: false apaga la subida de borradores a OCI aunque haya PAR
+      OCI_HABILITADA: ${OCI_HABILITADA:-true}
       # S1: clave de la ingesta para POST /api/v1/lotes. Vacía = la API rechaza todo salvo /actuator/health
       API_KEY_INGESTA: ${API_KEY_INGESTA:-}
       # T05: clave del bot para POST /api/v1/mensajes/en-vivo (cada clave abre solo su puerta, DEC-70)

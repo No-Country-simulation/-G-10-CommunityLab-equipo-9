@@ -81,6 +81,26 @@ def fecha(iso: str | None) -> str:
         return "—"
 
 
+_ESTADOS_OCI = {
+    "SUBIDO": "✅ subido",
+    "PENDIENTE": "⏳ pendiente (se sube en segundo plano)",
+    "ERROR": "❌ error (revisar con quien administra el servidor)",
+    None: "— todavía no",
+}
+
+
+def lineas_oci(oci: dict | None, estado_borrador: str) -> list[str]:
+    """
+    Si el borrador ya está en OCI (T09), una línea por carpeta. Solo el estado: Java nunca manda la ruta
+    ni la URL PAR. A aprobados/ solo va lo aprobado (F11): en lo demás no se menciona.
+    """
+    oci = oci or {}
+    lineas = [f"generados/: {_ESTADOS_OCI.get(oci.get('generados'), str(oci.get('generados')))}"]
+    if estado_borrador == "APROBADO":
+        lineas.append(f"aprobados/: {_ESTADOS_OCI.get(oci.get('aprobados'), str(oci.get('aprobados')))}")
+    return lineas
+
+
 def mostrar_texto(texto: str | None) -> None:
     """Un texto de un alumno o de la IA, tal cual y sin interpretar (ni HTML ni markdown)."""
     st.code(texto if texto else "(sin texto)", language=None, wrap_lines=True)

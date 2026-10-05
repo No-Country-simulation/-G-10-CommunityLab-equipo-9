@@ -1,7 +1,7 @@
 # Operación — levantar InsightEdu Lab con Docker
 
-> **Estado:** v0.3 · **Fecha:** 2026-10-04 · **Rama:** `feature/integracion-arquitectura-3`
-> Cubre los servicios que ya están en `compose.yml`: base de datos, API Java, IA y bot de Discord (T05). El panel y la ingesta se suman en las fases siguientes del [análisis](ANALISIS_INGENIERIA_PROPUESTA_3.md).
+> **Estado:** v0.4 · **Fecha:** 2026-10-05 · **Rama:** `feature/integracion-arquitectura-3`
+> Cubre los servicios que ya están en `compose.yml`: base de datos, API Java, IA, bot de Discord (T05) y panel (T07, T08), y la subida de borradores a OCI (T09, sección 12). La ingesta se suma en las fases siguientes del [análisis](ANALISIS_INGENIERIA_PROPUESTA_3.md).
 
 Todos los comandos se ejecutan **desde la raíz del repositorio**, en PowerShell.
 
@@ -26,7 +26,8 @@ Abrir `.env` y completar:
 | `GENERACION_HABILITADA` | No | T06 · `true` por defecto. Con `false`, Java no pide borradores al Agente-Mod (cada logro nuevo gasta una llamada a Gemini) |
 | `FAQ_SEMANAL_AL_ARRANCAR` | No | T06b · `false` por defecto. Con `true`, Java arma la FAQ semanal una vez al encender, para la demo (ver la sección 9) |
 | `FAQ_SEMANAL_DIAS` | No | T06b · Cuántos días hacia atrás se juntan las dudas para la FAQ. `7` por defecto |
-| `OCI_PAR_URL` | No | Una URL PAR nueva de OCI. Sin ella, la API arranca igual pero no sube a OCI |
+| `OCI_PAR_URL` | No | T09 · La URL PAR **nueva** del bucket de OCI (solo escritura y con vencimiento). **Es una credencial: no se pega en un chat.** Cómo crearla: sección 12. Sin ella, la API arranca igual pero no sube nada a OCI |
+| `OCI_HABILITADA` | No | T09 · `true` por defecto. Con `false`, Java no sube borradores a OCI aunque haya PAR |
 | `API_KEY_INGESTA` | Sí, para recibir lotes | **No se escribe a mano.** Desde la raíz, `python scripts/generar_api_key.py` la crea al azar y la escribe aquí y en `ingestion/discord/.env` (`BACKEND_API_KEY`), sin mostrarla. Sin ella, la API Java rechaza todo con 401, salvo `/actuator/health` |
 | `API_KEY_IA` | Sí, para clasificar | **No se escribe a mano.** `python scripts/generar_api_key.py --cliente ia` la crea y la escribe aquí, sin mostrarla. La usan los dos servicios: la API Java la envía y la IA la exige en `/v1/procesar`. Sin ella, los mensajes se quedan en `PENDIENTE` |
 | `API_KEY_BOT` | Sí, para el bot | **No se escribe a mano.** `python scripts/generar_api_key.py --cliente bot`. El bot la envía y la API Java la exige en `/api/v1/mensajes/en-vivo`, **su única puerta** (DEC-70) |
@@ -65,9 +66,9 @@ Los puertos escuchan solo en `127.0.0.1`: funcionan desde esta misma máquina y 
 
 ## 5. Base de datos y pruebas del backend
 
-**Las tablas las crea Flyway** cuando arranca `api-java`, con los archivos SQL de `backend-java/src/main/resources/db/migration/` (`V1__…` a `V7__…`). Hibernate solo comprueba que coincidan (`ddl-auto=validate`).
+**Las tablas las crea Flyway** cuando arranca `api-java`, con los archivos SQL de `backend-java/src/main/resources/db/migration/` (`V1__…` a `V8__…`). Hibernate solo comprueba que coincidan (`ddl-auto=validate`).
 
-⚠️ **Una migración ya aplicada nunca se edita.** Los cambios van en un archivo nuevo (el siguiente es `V8__…`).
+⚠️ **Una migración ya aplicada nunca se edita.** Los cambios van en un archivo nuevo (el siguiente es `V9__…`).
 
 **Pruebas de Java** (no hace falta instalar Java en Windows). Usan una base aparte, `insightedu_test`. La prueba se niega a correr si la base no termina en `_test`, para no borrar la base principal.
 
@@ -205,7 +206,7 @@ En el panel, una persona de Marketing entra con **su usuario y su contraseña**,
 **Reglas que cuida Java:**
 - Solo se cambian los borradores `PENDIENTE`. Si otra persona aprobó o rechazó el mismo borrador un momento antes, el panel avisa "otra persona lo revisó" y no cambia nada.
 - Al aprobar se guardan quién (`aprobado_por`), cuándo (`aprobado_en`), cuánto tardó la revisión (`tiempo_curaduria_seg`, desde que se abrió el borrador) y el consentimiento (`consentimiento_confirmado`).
-- Aprobar **no publica nada**: solo cambia el estado en la base. Subirlo a OCI es la tarea T09, y publicarlo en LinkedIn lo hace Marketing a mano.
+- Aprobar **no publica nada**: solo cambia el estado en la base. Una tarea en segundo plano lo guarda en OCI (sección 12), y publicarlo en LinkedIn lo hace Marketing a mano.
 
 **Si algo falla:**
 
@@ -251,3 +252,80 @@ En el mismo panel, la página **Dashboard** muestra el clima de la comunidad, lo
 |---|---|
 | Sentimiento por día (hora de Bogotá) | `docker compose exec postgres psql -U insightedu -d insightedu -P pager=off -c "SELECT (fecha AT TIME ZONE 'America/Bogota')::date AS dia, sentimiento, count(*) FROM mensajes WHERE estado_clasificacion = 'OK' AND autor_tipo = 'persona' AND sentimiento IS NOT NULL GROUP BY 1, 2 ORDER BY 1, 2;"` |
 | Último mensaje de cada alumno | `docker compose exec postgres psql -U insightedu -d insightedu -P pager=off -c "SELECT autor_id, max(fecha) AS ultimo, count(*) FROM mensajes WHERE autor_tipo = 'persona' AND autor_rol = 'miembro' GROUP BY autor_id ORDER BY ultimo;"` |
+
+## 12. Borradores en OCI (T09)
+
+**OCI** (Oracle Cloud Infrastructure) es la nube donde guardamos los archivos. Un **bucket** es una carpeta en esa nube. Una **PAR** (*pre-authenticated request*) es una dirección web con una clave secreta incluida: quien la tenga puede escribir en el bucket sin usuario ni contraseña. Por eso **es una credencial**: no se pega en un chat, no se sube a git y nunca aparece en un registro.
+
+Una tarea de fondo de Java guarda cada borrador (post de LinkedIn, caso de éxito o FAQ) como un archivo **JSON** en el bucket:
+
+| Carpeta | Qué va | Cuándo |
+|---|---|---|
+| `generados/` | **Todo** borrador que creó la IA, también el que después se rechazó | Al crearse (la tarea lo ve en menos de un minuto) |
+| `aprobados/` | **Solo** los aprobados, con el texto final que dejó Marketing | Al aprobarse en el panel |
+
+Las respuestas del bot no se guardan (no se aprueban). El nombre del archivo es estable y legible: `generados/POST_LINKEDIN/2026-10-04/borrador-12.json` (tipo, fecha en hora de Bogotá e id del borrador). Si OCI está caído, **generar y aprobar siguen funcionando**: la subida se reintenta sola, esperando 1, 2, 3 y 4 minutos entre intentos, y al quinto fallo queda en `ERROR`.
+
+**Qué trae cada archivo** (y qué no): el borrador y sus datos. **Nunca** datos de Discord del alumno (ni su usuario, ni ids de Discord, ni el mensaje original completo): el primer nombre y la cita ya van dentro del texto.
+
+| Campo | Qué es |
+|---|---|
+| `version`, `id`, `tipo`, `estado` | La forma del archivo (`1.0`), el id del borrador, su tipo y su estado al subirlo (`PENDIENTE`, `APROBADO` o `RECHAZADO`) |
+| `textoIa`, `textoFinal` | Lo que propuso la IA y lo que dejó Marketing (`null` si nadie lo editó o lo aprobó) |
+| `consentimientoConfirmado`, `aprobadoPor`, `aprobadoEn`, `tiempoCuraduriaSeg` | La aprobación: si se confirmó el consentimiento, quién (su usuario del panel), cuándo y cuánto tardó |
+| `creadoEn`, `motivoIa`, `semana` | Cuándo lo generó la IA, por qué lo vio publicable (en la FAQ, el resumen de la semana) y, solo en la FAQ, la semana |
+
+⚠️ **El archivo de `generados/` es una foto del borrador en el momento de subirlo.** Normalmente dice `PENDIENTE`; si OCI estuvo caído y ya lo revisaron, trae su estado actual. Y no se vuelve a subir: la PAR es de solo escritura, así que si el borrador se edita después, el archivo de `generados/` queda como estaba (el de `aprobados/` tiene la versión final).
+
+### Crear la PAR (una sola vez)
+
+Lo hace Harrison, con una cuenta que tenga acceso al bucket. 📘 Según la [documentación de Oracle](https://docs.oracle.com/en-us/iaas/Content/Object/Tasks/usingpreauthenticatedrequests_topic-To_create_a_preauthenticated_request_for_all_objects_in_a_bucket.htm):
+
+1. Entrar a la consola de OCI y abrir **Storage → Buckets**, y luego el bucket.
+2. En **Pre-authenticated requests** (a veces dentro de *Management* o *Recursos*), pulsar **Create pre-authenticated request**.
+3. Completar: **Name**, por ejemplo `insightedu-t09`; **Target**: **Bucket**; **Access type**: **Permit object writes** (solo escritura); **Enable object listing**: **sin marcar**; **Expiration**: por ejemplo, el `2026-11-30` (después de la entrega).
+4. Pulsar **Create** y **copiar la URL en ese momento**: 📘 *"The URL is displayed only at the time of creation… You can't access and retrieve it again"*. Si se cierra la ventana, hay que crear otra.
+5. Pegarla en el `.env` de la raíz, en la línea `OCI_PAR_URL=`, **reemplazando la anterior**. Tiene que empezar con `https://objectstorage.` y terminar en `/o/`. **No la pegues en el chat.**
+6. Aplicar el cambio: `docker compose up -d --build api-java`. Java la revisa al arrancar (sin mostrarla) y la tarea empieza a los 30 segundos. La primera vez sube **todos** los borradores que ya existían (de a 10 cada 30 segundos), no solo los nuevos.
+
+⚠️ La PAR que un compañero había dejado en el `.env` **no se usa** (DEC-129): puede ser la que quedó en el historial público. Antes de levantar `api-java` con el código de T09, comprobar que `OCI_PAR_URL` tiene la PAR nueva. Con la PAR vieja, Java subiría los borradores a un bucket que no es el nuestro.
+
+### Comprobar que llegaron los archivos
+
+| Para… | Cómo |
+|---|---|
+| Ver la tarea en el registro de Java | `docker compose logs api-java \| Select-String "OCI"` (nombres de archivo, números y códigos HTTP; **nunca** la PAR). Al arrancar dice `OCI: hay una PAR con la forma esperada…`. Si dice `no hay URL PAR` o `no parece una PAR de bucket`, hay que corregir el `.env` |
+| Ver los archivos en el bucket | En la consola de Oracle: **Storage → Buckets →** el bucket **→ Objects**. Aparecen las carpetas `generados/` y `aprobados/`. Abrir un archivo con **View object details** y revisar que no tenga datos de Discord |
+| Ver el estado de cada subida | `docker compose exec postgres psql -U insightedu -d insightedu -P pager=off -c "SELECT s.id, s.borrador_id, b.tipo, s.carpeta, s.estado, s.intentos, s.subido_en, s.ultimo_error FROM subidas_oci s JOIN borradores b ON b.id = s.borrador_id ORDER BY s.id;"` |
+| Contar por estado | `docker compose exec postgres psql -U insightedu -d insightedu -P pager=off -c "SELECT carpeta, estado, count(*) FROM subidas_oci GROUP BY 1, 2 ORDER BY 1, 2;"` |
+| Ver el estado en el panel | Página **Borradores**, en el borrador elegido: **Guardado en OCI** (solo el estado, sin la ruta) |
+
+| Estado de la subida | Qué significa |
+|---|---|
+| `PENDIENTE` | Falta subirla, o falló y está esperando para reintentar (mirar `intentos` y `ultimo_error`) |
+| `SUBIDO` | Ya está en el bucket (la columna `ruta` tiene el nombre del archivo) |
+| `ERROR` | Falló 5 veces (OCI caído, PAR vencida o sin permiso). No se reintenta sola |
+
+### Cuando algo falla
+
+| Síntoma | Causa probable | Solución |
+|---|---|---|
+| `ultimo_error` dice `OCI respondió HTTP 401`, `403` o `404` | La PAR venció, se borró o no es de ese bucket | Crear una PAR nueva (arriba), cambiarla en el `.env` y `docker compose up -d api-java`. Después, reintentar los `ERROR` (abajo) |
+| `ultimo_error` dice `No se pudo hablar con OCI: …` | Sin internet, o OCI no respondió en 30 s | Esperar: se reintenta solo. Si quedaron en `ERROR`, reintentar (abajo) |
+| No hay ninguna fila en `subidas_oci` | Falta la PAR, o `OCI_HABILITADA=false` | Mirar el primer aviso de `docker compose logs api-java \| Select-String "OCI"` |
+
+**Reintentar los `ERROR`** (cuando ya se arregló la causa):
+
+`docker compose exec postgres psql -U insightedu -d insightedu -c "UPDATE subidas_oci SET estado = 'PENDIENTE', intentos = 0, ultimo_error = NULL, reservada_hasta = NULL WHERE estado = 'ERROR';"`
+
+La tarea los toma en menos de un minuto. Para **volver a subir uno que ya estaba `SUBIDO`** (por ejemplo, si alguien lo borró del bucket): `UPDATE subidas_oci SET estado = 'PENDIENTE', ruta = NULL, subido_en = NULL, intentos = 0 WHERE id = 1;`
+
+**Cambiar de PAR o de bucket** (por ejemplo, pasar de una PAR de prueba a la definitiva, o a un bucket propio): lo que ya está `SUBIDO` **no se vuelve a subir solo**, porque Java ya lo dio por guardado. Por eso, después de cambiar `OCI_PAR_URL` en el `.env` y correr `docker compose up -d api-java`, hay que decirle a Java que lo suba todo otra vez al bucket nuevo:
+
+`docker compose exec postgres psql -U insightedu -d insightedu -c "UPDATE subidas_oci SET estado = 'PENDIENTE', ruta = NULL, subido_en = NULL, intentos = 0, ultimo_error = NULL, reservada_hasta = NULL;"`
+
+La tarea los toma de a 10 cada 30 segundos y los archivos conservan el mismo nombre. Los archivos del bucket anterior no se borran (la PAR es de solo escritura): si hace falta, se limpian desde la consola de Oracle. 🧪 Esta consulta se probó dentro de una transacción que se deshizo: pasó las 27 subidas a `PENDIENTE` sin romper ninguna regla de la tabla.
+
+**Apagar la subida**: `OCI_HABILITADA=false` en el `.env` y `docker compose up -d api-java`. Los borradores se siguen creando y aprobando; cuando se vuelva a encender (con una PAR), se sube todo lo que faltó.
+
+**Lo que esta tarea no hace**: no borra ni actualiza archivos del bucket (la PAR es de solo escritura), no lee desde OCI y no sube los registros de la IA (DEC-130).
