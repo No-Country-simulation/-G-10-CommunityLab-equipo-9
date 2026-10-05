@@ -43,7 +43,7 @@ Discord ⇄ Bot ──► API Java ⇄ IA (privada)        Ingesta (cada hora) �
 
 | Carpeta | Pieza | Hoy en `compose.yml` |
 |---|---|---|
-| `backend-java/` | API Java (Spring Boot 3.4, Java 21) | ✅ `api-java`, en `127.0.0.1:8008` |
+| `backend-java/` | API Java (Spring Boot 3.4, Java 21). Sube los borradores a OCI en segundo plano (`oci/`, T09) | ✅ `api-java`, en `127.0.0.1:8008` |
 | — | PostgreSQL 17 | ✅ `postgres`, sin puerto publicado |
 | `agents/orquestador/`, `agents/agent_faq/` | IA (FastAPI + LangGraph; Agente FAQ con RAG) | ✅ `ia`, en `127.0.0.1:8000` |
 | `agents/bot_discord/` | Bot de Discord (pasa por Java, T05) | ✅ `bot`, sin puertos publicados. **Un solo bot encendido** |
