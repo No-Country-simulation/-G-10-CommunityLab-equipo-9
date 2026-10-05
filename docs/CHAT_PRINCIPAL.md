@@ -33,10 +33,10 @@ El chat principal sí puede editar la documentación de seguimiento: índice, re
 | Qué | Estado |
 |---|---|
 | Rama de integración | `feature/integracion-arquitectura-3`. Harrison desarrolla todo aquí; base congelada (D1) |
-| Tareas | T01 ✅ · T02 ✅ · T03 ✅ · T04 ✅ (fusión `--no-ff`) · T05 ✅ (auditada el 2026-10-04 con un cambio pedido y corregido) · T06 ✅ (auditada el 2026-10-04, sin cambios pedidos) · T06b ✅ (auditada el 2026-10-04, sin cambios pedidos) · T07 ✅ (auditada el 2026-10-04, sin cambios pedidos) · T08 ✅ (auditada el 2026-10-04, sin cambios pedidos) · **T09 y T10 sin ficha** |
+| Tareas | T01 ✅ · T02 ✅ · T03 ✅ · T04 ✅ (fusión `--no-ff`) · T05 ✅ (auditada el 2026-10-04 con un cambio pedido y corregido) · T06 ✅ (auditada el 2026-10-04, sin cambios pedidos) · T06b ✅ (auditada el 2026-10-04, sin cambios pedidos) · T07 ✅ (auditada el 2026-10-04, sin cambios pedidos) · T08 ✅ (auditada el 2026-10-04, sin cambios pedidos) · **T09 📝 ficha lista** · T10 sin ficha |
 | Docker local | `postgres` (sin puerto), `api-java` (`127.0.0.1:8008`), `ia` (`127.0.0.1:8000`) `bot` (sin puerto) y `panel` (`127.0.0.1:8501`). Falta la ingesta programada (cron, O3) |
 | Datos | 39 mensajes reales del servidor de pruebas en `mensajes`, **todos clasificados** por T04 (🧪 39 en `OK`, migración V2 aplicada) |
-| Decisiones | D1 a D8 en el análisis §0 y DEC-01 a DEC-126 en [DECISIONES.md](DECISIONES.md). **D3:** el bot responde sin aprobación, solo con respaldo en los PDFs |
+| Decisiones | D1 a D8 en el análisis §0 y DEC-01 a DEC-131 en [DECISIONES.md](DECISIONES.md). **D3:** el bot responde sin aprobación, solo con respaldo en los PDFs |
 | Plan de 2 días | ✅ Cumplido (T01 a T03) |
 | Entrega final | **2026-10-26** |
 

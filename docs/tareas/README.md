@@ -13,6 +13,7 @@ Cada tarea tiene una **ficha** (la orden de trabajo, que escribe el chat princip
 | [T06b](T06b-faq-semanal.md) | FAQ semanal: Java junta las dudas de la semana; la IA agrupa las repetidas, responde solo con respaldo en los PDF y lista aparte lo que no tiene respuesta; puerta `/v1/faq` (OE4) | T05, T06 | Opus 5.5 | ✅ Aprobada el 2026-10-04 (`b860789`) · [informe](T06b-informe.md) |
 | [T07](T07-panel.md) | Panel de curaduría: inicio de sesión por persona, editar, aprobar o rechazar borradores con consentimiento (D6), reintentar los `ERROR`; contrato `PANEL_JAVA_v1` (OE6) | T05, T06, T06b | Opus 5.5 | ✅ Aprobada el 2026-10-04 (`d4a9f71`) · [informe](T07-informe.md) · [contrato panel ↔ Java](../contratos/PANEL_JAVA_v1.md) |
 | [T08](T08-dashboard.md) | Dashboard en el panel: sentimiento en el tiempo, temas en tendencia, alertas de deserción y frustración, dudas sin responder (OE5) | T07 | Sonnet 5.5 | ✅ Aprobada el 2026-10-04 (`b955cc9`) · [informe](T08-informe.md) |
+| [T09](T09-oci.md) | OCI: los borradores generados van a `generados/` y los aprobados a `aprobados/`, en segundo plano, con JSON de Jackson y una PAR nueva (OE7) | T06, T06b, T07 | Sonnet 5.5 | 📝 Ficha lista (decisiones validadas el 2026-10-04) |
 
 Estados: 📝 ficha lista · 🔨 en curso · 🔍 en auditoría · ✅ aprobada o fusionada · ⏳ ficha pendiente
 
