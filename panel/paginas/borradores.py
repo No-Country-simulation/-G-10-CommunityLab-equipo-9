@@ -78,6 +78,10 @@ with col_izq:
             st.text("Junta las dudas repetidas de la semana. Revisa que ninguna pregunta incluya el nombre de un alumno.")
         st.markdown("**Por qué lo propuso la IA**")
         ui.mostrar_texto(d.get("motivoIa"))
+        # T09: si ya está guardado en OCI. Con st.text, no st.caption: así no cambia el orden de los avisos del botón
+        st.markdown("**Guardado en OCI**")
+        for linea in ui.lineas_oci(d.get("oci"), d["estado"]):
+            st.text(linea)
 
 with col_der:
     with st.container(border=True):

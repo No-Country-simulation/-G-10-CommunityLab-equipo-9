@@ -36,6 +36,7 @@ def _detalle(id_, tipo, texto_original="me contrataron!!!"):
                                     "texto": texto_original, "autorNombre": "Camila Rojas"},
         "faq": {"semana": "2026-W40", "desde": "2026-09-27T13:00:00Z", "hasta": "2026-10-04T13:00:00Z",
                 "motivo": "3 repetidas."} if faq else None,
+        "oci": {"generados": "SUBIDO", "aprobados": None},  # T09: solo el estado, nunca la ruta ni la PAR
     }
 
 
@@ -279,6 +280,49 @@ def test_lo_aprobado_sale_de_los_pendientes_y_se_ve_solo_para_leer(java):
     assert at.selectbox(key="borrador_sel").value == 1
     assert at.text_area(key="leer_1").disabled
     assert len([b for b in at.button if b.key and b.key.startswith("aprobar_")]) == 0
+
+
+# ── OCI (T09) ──
+
+def test_el_detalle_dice_si_el_borrador_ya_esta_en_oci(java):
+    at = _con_sesion()
+
+    # Un pendiente solo puede estar en generados/: a aprobados/ solo va lo aprobado
+    assert [t.value for t in at.text if "/:" in t.value] == ["generados/: ✅ subido"]
+
+
+def test_un_aprobado_muestra_las_dos_carpetas(java):
+    java.detalles[1] = {**_detalle(1, "POST_LINKEDIN"), "estado": "APROBADO",
+                        "oci": {"generados": "SUBIDO", "aprobados": "PENDIENTE"}}
+    java.borradores[0]["estado"] = "APROBADO"
+    at = _con_sesion()
+    at.radio(key="filtro_estado").set_value("Aprobados")
+    at = at.run()
+
+    assert [t.value for t in at.text if "/:" in t.value] == [
+        "generados/: ✅ subido", "aprobados/: ⏳ pendiente (se sube en segundo plano)"]
+
+
+def test_si_java_no_manda_el_estado_de_oci_el_panel_no_falla(java):
+    del java.detalles[1]["oci"]
+
+    at = _con_sesion()
+
+    assert not at.exception
+    assert [t.value for t in at.text if "/:" in t.value] == ["generados/: — todavía no"]
+
+
+@pytest.mark.parametrize("oci, estado, esperado", [
+    (None, "PENDIENTE", ["generados/: — todavía no"]),
+    ({"generados": "PENDIENTE", "aprobados": None}, "RECHAZADO",
+     ["generados/: ⏳ pendiente (se sube en segundo plano)"]),
+    ({"generados": "ERROR", "aprobados": "ERROR"}, "APROBADO",
+     ["generados/: ❌ error (revisar con quien administra el servidor)",
+      "aprobados/: ❌ error (revisar con quien administra el servidor)"]),
+    ({"generados": "SUBIDO", "aprobados": None}, "APROBADO", ["generados/: ✅ subido", "aprobados/: — todavía no"]),
+])
+def test_lineas_oci(oci, estado, esperado):
+    assert ui.lineas_oci(oci, estado) == esperado
 
 
 # ── Errores ──

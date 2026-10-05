@@ -3,6 +3,8 @@
 > **Estado:** v1.0 · **Fecha:** 2026-10-04 · **Tarea:** T07 · **Decisiones:** D6, DEC-70, DEC-110, DEC-111, DEC-112 y DEC-113
 >
 > **Agregado en T08** (DEC-122, solo agrega): las puertas de solo lectura del dashboard, en la [sección 7](#7-dashboard-t08). Nada de lo anterior cambió.
+>
+> **Agregado en T09** (solo agrega): el campo `oci` en la respuesta de [ver un borrador](#22-ver-un-borrador) (puerta 2, y las que devuelven el mismo borrador): si ya está guardado en OCI. Nada de lo anterior cambió.
 
 ## 0. Sobre este documento
 
@@ -125,7 +127,8 @@ GET /api/v1/borradores/1
     "texto": "me contrataron!!! empiezo el lunes como QA trainee",
     "autorNombre": "Camila Rojas"
   },
-  "faq": null
+  "faq": null,
+  "oci": { "generados": "SUBIDO", "aprobados": null }
 }
 ```
 
@@ -136,6 +139,7 @@ GET /api/v1/borradores/1
 | `motivoIa` | En un post o un caso de éxito, por qué la IA lo vio publicable (`mensajes.generacion_motivo`). En la FAQ, el resumen de la semana (`faq_semanas.motivo`) |
 | `origen` | El mensaje de Discord que dio origen al borrador. `autorNombre` es el `nombreVisible` del contrato v1. `null` en la FAQ, que junta muchas dudas |
 | `faq` | Solo en la FAQ: `{ "semana": "2026-W40", "desde": "…", "hasta": "…", "motivo": "…" }` |
+| `oci` | (T09) Si el borrador ya está guardado en OCI: el estado de cada subida, `PENDIENTE`, `SUBIDO` o `ERROR`, o `null` si todavía no se encoló. `generados` es la carpeta de todo borrador; `aprobados` solo existe en los `APROBADO` (F11), y es `null` en el resto. **Solo el estado**: nunca la ruta del objeto ni la URL PAR (es una credencial). Siempre viene el objeto, con sus dos campos |
 
 ### 2.3 Editar
 
