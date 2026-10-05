@@ -12,7 +12,7 @@ Cada tarea tiene una **ficha** (la orden de trabajo, que escribe el chat princip
 | [T06](T06-agente-mod.md) | Agente-Mod: borradores de post de LinkedIn y caso de éxito con la voz de CommunityLab; puerta `/v1/generar`; generación automática en Java (OE3) | T04, T05 | Opus 5.5 | ✅ Aprobada el 2026-10-04 (`158ff7f`) · [informe](T06-informe.md) · [guía de voz](../../agents/agent_mod/guia_de_voz.md) |
 | [T06b](T06b-faq-semanal.md) | FAQ semanal: Java junta las dudas de la semana; la IA agrupa las repetidas, responde solo con respaldo en los PDF y lista aparte lo que no tiene respuesta; puerta `/v1/faq` (OE4) | T05, T06 | Opus 5.5 | ✅ Aprobada el 2026-10-04 (`b860789`) · [informe](T06b-informe.md) |
 | [T07](T07-panel.md) | Panel de curaduría: inicio de sesión por persona, editar, aprobar o rechazar borradores con consentimiento (D6), reintentar los `ERROR`; contrato `PANEL_JAVA_v1` (OE6) | T05, T06, T06b | Opus 5.5 | ✅ Aprobada el 2026-10-04 (`d4a9f71`) · [informe](T07-informe.md) · [contrato panel ↔ Java](../contratos/PANEL_JAVA_v1.md) |
-| [T08](T08-dashboard.md) | Dashboard en el panel: sentimiento en el tiempo, temas en tendencia, alertas de deserción y frustración, dudas sin responder (OE5) | T07 | Sonnet 5.5 | 📝 Ficha lista (decisiones validadas el 2026-10-04) |
+| [T08](T08-dashboard.md) | Dashboard en el panel: sentimiento en el tiempo, temas en tendencia, alertas de deserción y frustración, dudas sin responder (OE5) | T07 | Sonnet 5.5 | ✅ Aprobada el 2026-10-04 (`b955cc9`) · [informe](T08-informe.md) |
 
 Estados: 📝 ficha lista · 🔨 en curso · 🔍 en auditoría · ✅ aprobada o fusionada · ⏳ ficha pendiente
 
@@ -72,3 +72,6 @@ Estados: 📝 ficha lista · 🔨 en curso · 🔍 en auditoría · ✅ aprobada
 | T07 | Usuario y contraseña viajan sin cifrar entre el navegador y el panel: en el servidor hace falta HTTPS (DEC-56). Además, Streamlit consulta un servicio externo al arrancar para averiguar la IP pública ("External URL"); conviene apagarlo | T10 |
 | T07 | El bloqueo por 5 fallos permite que alguien bloquee a un usuario 5 minutos a propósito; el contador vive en memoria | 🟡 / T10 |
 | T07 | Al recargar la página (F5) hay que volver a entrar; si dos personas editan el mismo borrador, la segunda pisa a la primera (aprobar y rechazar sí están protegidos); la FAQ semanal en `ERROR` no tiene botón de reintentar | 🟡 |
+| T08 | 🧪 Con los datos reales, casi todas las dudas salen "sin responder" (15 de 21): las 16 que llegaron por lote no tienen respuesta del bot, y los mentores no usaron "Responder" de Discord. Es correcto según DEC-123, pero hay que contarlo en la demo | T10 (guion) |
+| T08 | La alerta de frustración por "2 de los últimos 3" mira los últimos mensajes aunque sean viejos: un alumno que dejó de escribir enojado sigue apareciendo | 🟡 |
+| T08 | El tiempo de curaduría no se muestra en el dashboard (ficha §4) | 🟡 |
