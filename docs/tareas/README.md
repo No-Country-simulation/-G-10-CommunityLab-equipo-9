@@ -14,6 +14,7 @@ Cada tarea tiene una **ficha** (la orden de trabajo, que escribe el chat princip
 | [T07](T07-panel.md) | Panel de curaduría: inicio de sesión por persona, editar, aprobar o rechazar borradores con consentimiento (D6), reintentar los `ERROR`; contrato `PANEL_JAVA_v1` (OE6) | T05, T06, T06b | Opus 5.5 | ✅ Aprobada el 2026-10-04 (`d4a9f71`) · [informe](T07-informe.md) · [contrato panel ↔ Java](../contratos/PANEL_JAVA_v1.md) |
 | [T08](T08-dashboard.md) | Dashboard en el panel: sentimiento en el tiempo, temas en tendencia, alertas de deserción y frustración, dudas sin responder (OE5) | T07 | Sonnet 5.5 | ✅ Aprobada el 2026-10-04 (`b955cc9`) · [informe](T08-informe.md) |
 | [T09](T09-oci.md) | OCI: los borradores generados van a `generados/` y los aprobados a `aprobados/`, en segundo plano, con JSON de Jackson y una PAR nueva (OE7) | T06, T06b, T07 | Sonnet 5.5 | ✅ Aprobada el 2026-10-05 (`c0f8f0d`), **con 2 pendientes** (ver abajo) · [informe](T09-informe.md) |
+| [T10](T10-despliegue-demo.md) | Despliegue en una VM gratis de Oracle Cloud (Caddy + DuckDNS, HTTPS), ingesta cada hora, respaldos, claves nuevas y guion de la demo (OE9) | T01 a T09 | Opus 5.5 | 📝 Ficha lista (decisiones validadas el 2026-10-05) |
 
 Estados: 📝 ficha lista · 🔨 en curso · 🔍 en auditoría · ✅ aprobada o fusionada · ⏳ ficha pendiente
 

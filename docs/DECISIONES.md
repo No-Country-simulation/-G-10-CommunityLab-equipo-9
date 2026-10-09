@@ -175,15 +175,18 @@ Las decisiones grandes del análisis se llaman **D1 a D8**; las de este registro
 | # | Fecha | Decisión | Por qué | Estado | Detalle en |
 |---|---|---|---|---|---|
 | DEC-50 | 2026-10-03 | Todo se levanta con **Docker Compose**: un `.env` en la raíz para Docker y otro en `ingestion/discord/` para la ingesta; `postgres:17` con volumen; PyTorch solo para CPU | Un solo comando, sin instalar Java ni librerías en Windows | ✅ | OPERACION.md |
-| DEC-51 | 2026-10-03 | La revisión del servidor (O4) se pospone a la fase de despliegue | Harrison no la ve prioritaria ahora | ⏸️ Se retoma en T10 | Análisis § Objetivos (OE9) |
-| DEC-52 | 2026-10-03 | **D7:** desplegar primero en el servidor del equipo | Ya existe y el equipo lo probó | ⏸️ Depende de DEC-51 | Análisis §0 |
+| DEC-51 | 2026-10-03 | La revisión del servidor (O4) se pospone a la fase de despliegue | Harrison no la ve prioritaria ahora | 🔁 Reemplazada por DEC-137 (se despliega en una VM de Oracle, no en el servidor del equipo) | Análisis § Objetivos (OE9) |
+| DEC-52 | 2026-10-03 | **D7:** desplegar primero en el servidor del equipo | Ya existe y el equipo lo probó | 🔁 Reemplazada por DEC-137 | Análisis §0 |
+| DEC-137 | 2026-10-05 | Se despliega en **una VM "Always Free" de Oracle Cloud**, en la cuenta de Harrison (ARM Ampere) | El servidor del equipo nunca se revisó (O4); la VM gratis alcanza (🧪 ~1,6 GB de RAM en reposo) y combina con el bucket. Decisión de Harrison | ✅ Se implementa en T10 | [T10 §1.1](tareas/T10-despliegue-demo.md) |
+| DEC-138 | 2026-10-05 | El panel se abre a internet con **Caddy (HTTPS automático) y un subdominio gratis de DuckDNS**. Solo los puertos 80 y 443 quedan abiertos | Enlace seguro para la demo sin comprar un dominio. Resuelve DEC-56 junto con DEC-140. Decisión de Harrison | ✅ Se implementa en T10 | T10 §1.1 |
+| DEC-139 | 2026-10-05 | La demo usa **los datos reales más mensajes escritos en vivo** | El jurado ve el sistema funcionando, sin datos ficticios (DEC-120). Decisión de Harrison | ✅ Se implementa en T10 | T10 §1.1 |
+| DEC-140 | 2026-10-05 | En el servidor: la ingesta es un servicio de Docker que habla con Java **por la red interna** y corre con `cron` cada hora; respaldos diarios con `pg_dump` (los últimos 7); **claves nuevas** generadas allí (DEC-71); y se apaga el bot de la PC antes de encender el del servidor | Las claves no viajan por internet (DEC-56); un solo bot. Decisión del chat principal | ✅ Se implementa en T10 | T10 §1.1 |
 
 ## G · Pendientes de decidir
 
 | # | Pregunta | Cuándo | Origen |
 |---|---|---|---|
 | DEC-55 | ¿Hace falta vincular lotes y mensajes (una tabla intermedia)? | T07, solo si el panel lo necesita | Observación de T01 |
-| DEC-56 | Red interna o HTTPS para que las claves no viajen en texto plano; ¿hay dominio para el HTTPS del panel? | T10 | Observación de T03, S3 |
 | DEC-57 | ¿Qué versión se entrega el 26 de octubre? ¿Se avisa al equipo? | Antes de T10 | Análisis §8 (riesgo "dos versiones") |
 
-Ya resueltas: DEC-58 (el cambio de T04 al contrato Java ↔ IA), en la auditoría de T04; DEC-54 (el tope en vivo), en la ficha T05, y DEC-53 (los logros de aprendizaje), en la ficha T06. Ahora están en las secciones B y E.
+Ya resueltas: DEC-58 (el cambio de T04 al contrato Java ↔ IA), en la auditoría de T04; DEC-54 (el tope en vivo), en la ficha T05, DEC-53 (los logros de aprendizaje), en la ficha T06, y DEC-56 (red interna y HTTPS), con DEC-138 y DEC-140 en la ficha T10. DEC-57 sigue pendiente: Harrison lo decide con el equipo (2026-10-05).
