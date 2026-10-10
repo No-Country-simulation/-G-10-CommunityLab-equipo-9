@@ -172,20 +172,28 @@ Escribe estos mensajes en tu servidor, uno por uno:
 
 ### 8.3 · La ingesta por lotes
 
-En producción, esto correrá solo cada hora y rescatará lo que el bot no vio. Aquí lo corres a mano, desde `ingestion/discord`, con un entorno de Python propio:
+En producción, esto correrá solo cada hora y rescatará lo que el bot no vio. Aquí lo corres a mano, desde `ingestion/discord`, con un **entorno de Python propio** (una carpeta `.venv` con las librerías de la ingesta, separada del Python de tu PC).
+
+**La primera vez** (crea el entorno e instala las librerías). Ejecuta **una línea a la vez**:
 
 ```powershell
 cd ingestion/discord
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python extract.py
-python build_batch.py
-python send_batch.py
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+**Cada vez que quieras enviar un lote** (desde `ingestion/discord`):
+
+```powershell
+.\.venv\Scripts\python.exe extract.py
+.\.venv\Scripts\python.exe build_batch.py
+.\.venv\Scripts\python.exe send_batch.py
 cd ../..
 ```
 
-El último comando debería decir `Java recibió el lote …`, con `nuevos` (las respuestas del bot) y `sin cambios` o `actualizados` (los mensajes que ya había guardado el bot). **Ningún mensaje se duplica.** Las líneas de `venv` e `install` se hacen solo la primera vez; las siguientes basta con activar el entorno.
+El último comando debería decir `Java recibió el lote …`, con `nuevos` (las respuestas del bot) y `sin cambios` o `actualizados` (los mensajes que ya había guardado el bot). **Ningún mensaje se duplica.** La primera vez trae todo el historial del servidor; después, solo lo nuevo y los últimos días.
+
+> 💡 Se usa `.\.venv\Scripts\python.exe` en lugar de "activar" el entorno: funciona igual aunque PowerShell bloquee los scripts. Si al instalar aparece `Defaulting to user installation`, las librerías **no** se instalaron en `.venv` sino en el Python de tu PC: revisa que el comando empiece con `.\.venv\Scripts\python.exe`.
 
 ### 8.4 · El dashboard
 
