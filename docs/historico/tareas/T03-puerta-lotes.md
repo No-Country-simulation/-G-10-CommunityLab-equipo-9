@@ -24,10 +24,10 @@ El resultado se comprueba con los mensajes reales del servidor de pruebas, **sin
 | Qué | Dónde |
 |---|---|
 | Tablas y upsert (`MensajeUpsertRepository.upsert` devuelve `NUEVO` / `ACTUALIZADO` / `SIN_CAMBIOS`; la caja es un `Map<String, Object>`) | `backend-java/` (T01) y [T01-informe.md](T01-informe.md) |
-| El contrato v1 en JSON (camelCase) y su schema | [CONTRACT.md](../../ingestion/discord/docs/CONTRACT.md), [contract_v1.schema.json](../../ingestion/discord/schema/contract_v1.schema.json) |
-| Cómo envía hoy la ingesta: arma el formato "opción C", espera `status: "exitoso"` y guarda el marcador solo si Java confirma | `ingestion/discord/send_batch.py`, `tests/test_send.py` y [INGESTION_GUIDE.md §11](../../ingestion/discord/docs/INGESTION_GUIDE.md) |
+| El contrato v1 en JSON (camelCase) y su schema | [CONTRACT.md](../../../ingestion/discord/docs/CONTRACT.md), [contract_v1.schema.json](../../../ingestion/discord/schema/contract_v1.schema.json) |
+| Cómo envía hoy la ingesta: arma el formato "opción C", espera `status: "exitoso"` y guarda el marcador solo si Java confirma | `ingestion/discord/send_batch.py`, `tests/test_send.py` y [INGESTION_GUIDE.md §11](../ingesta/INGESTION_GUIDE.md) |
 | S1 (API key) y F13 (errores) | [Análisis §3 y §4](../ANALISIS_INGENIERIA_PROPUESTA_3.md) |
-| El formato común de error, ya usado por la IA: `{codigo, mensaje, errores[], idCorrelacion}` | [docs/contratos/JAVA_IA_v1.md](../contratos/JAVA_IA_v1.md) |
+| El formato común de error, ya usado por la IA: `{codigo, mensaje, errores[], idCorrelacion}` | [docs/contratos/JAVA_IA_v1.md](../../contratos/JAVA_IA_v1.md) |
 
 ## 3. Alcance: qué entra
 
@@ -85,7 +85,7 @@ El resultado se comprueba con los mensajes reales del servidor de pruebas, **sin
 
 ## 5. Pruebas exigidas
 
-**Java**, con PostgreSQL real (base `insightedu_test`, [OPERACION.md §5](../OPERACION.md)):
+**Java**, con PostgreSQL real (base `insightedu_test`, [OPERACION.md §5](../../OPERACION.md)):
 
 | # | Caso | Resultado esperado |
 |---|---|---|

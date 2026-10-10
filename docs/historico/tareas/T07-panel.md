@@ -36,9 +36,9 @@ Decisiones del chat principal (Harrison no se opuso):
 
 | Qué | Dónde |
 |---|---|
-| N6: el panel muestra lo pendiente, Marketing edita o aprueba, Java guarda la aprobación | [PDF de la propuesta 3](../referencias/Propuesta_3_Arquitectura_InsightEdu.pdf), §6 (N6) |
+| N6: el panel muestra lo pendiente, Marketing edita o aprueba, Java guarda la aprobación | [PDF de la propuesta 3](../propuesta-3/Propuesta_3_Arquitectura_InsightEdu.pdf), §6 (N6) |
 | S3, S6, S12 y C5 | [Análisis](../ANALISIS_INGENIERIA_PROPUESTA_3.md) §2 y §3 |
-| D6 (consentimiento), DEC-42 (el panel es el único servicio público), DEC-70 (cada clave, su puerta), DEC-81 (primer nombre) y DEC-91 (reintentos) | [DECISIONES.md](../DECISIONES.md) |
+| D6 (consentimiento), DEC-42 (el panel es el único servicio público), DEC-70 (cada clave, su puerta), DEC-81 (primer nombre) y DEC-91 (reintentos) | [DECISIONES.md](../../DECISIONES.md) |
 | La tabla `borradores` (`texto_ia`, `texto_final`, `estado`, `consentimiento_confirmado`, `aprobado_por`, `aprobado_en`, `tiempo_curaduria_seg`) y las columnas de generación y de la FAQ | Migraciones V1, V4 y V5; `model/Borrador.java` |
 | La API key por cliente y la ruta normalizada (la lección de la auditoría de T05) | `seguridad/ApiKeyFilter.java`, `ClientePermitido.java` y [CHAT_PRINCIPAL.md §5](../CHAT_PRINCIPAL.md) |
 | El panel viejo, por su diseño | `panel/app.py` |

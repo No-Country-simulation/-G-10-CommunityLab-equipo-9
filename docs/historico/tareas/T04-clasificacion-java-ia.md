@@ -12,7 +12,7 @@
 
 ## 1. Objetivo
 
-Que todo mensaje que llega a la base con `estado_clasificacion = PENDIENTE` se envíe a la IA (`POST /v1/procesar`, [contrato Java ↔ IA v1](../contratos/JAVA_IA_v1.md)) y quede guardado con su intención, confianza, sentimiento, tema y estado.
+Que todo mensaje que llega a la base con `estado_clasificacion = PENDIENTE` se envíe a la IA (`POST /v1/procesar`, [contrato Java ↔ IA v1](../../contratos/JAVA_IA_v1.md)) y quede guardado con su intención, confianza, sentimiento, tema y estado.
 
 Se hace **en segundo plano y en tandas chicas**, sin que un fallo de la IA pierda mensajes. El flujo **en vivo** (bot → Java → IA → bot) **no** está en esta tarea: es C2, en otra ficha.
 
@@ -20,7 +20,7 @@ Se hace **en segundo plano y en tandas chicas**, sin que un fallo de la IA pierd
 
 | Qué | Dónde |
 |---|---|
-| El contrato Java ↔ IA: entrada (un `Lote` del contrato v1), salida, estados `OK` / `ERROR`, campo `metodo` y listas cerradas (§4.3) | [docs/contratos/JAVA_IA_v1.md](../contratos/JAVA_IA_v1.md) y su JSON Schema |
+| El contrato Java ↔ IA: entrada (un `Lote` del contrato v1), salida, estados `OK` / `ERROR`, campo `metodo` y listas cerradas (§4.3) | [docs/contratos/JAVA_IA_v1.md](../../contratos/JAVA_IA_v1.md) y su JSON Schema |
 | Observaciones de T02: los lotes de historial no entran en 30 s si van todos juntos, y las listas de sentimiento y tema pasan a `CHECK` | [README de tareas](README.md) |
 | Tablas, upsert y la caja (`Map<String, Object>`) | `backend-java/` (T01) |
 | La puerta de lotes, la API key y el formato común de error | `backend-java/` (T03) y [T03-informe.md](T03-informe.md) |

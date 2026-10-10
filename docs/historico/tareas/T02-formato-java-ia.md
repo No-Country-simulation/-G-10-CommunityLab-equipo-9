@@ -21,7 +21,7 @@ El resultado es un **contrato Java ↔ IA v1** documentado, con un JSON Schema, 
 | Qué | Dónde |
 |---|---|
 | Los hallazgos C3, C4, F4, F5 y F8, y las decisiones D3 (el bot responde solo con respaldo) y D4 (tiempos 20 / 30 / 40 s) | [Análisis](../ANALISIS_INGENIERIA_PROPUESTA_3.md) |
-| El contrato v1. Ojo: el JSON usa **camelCase** (`textoOriginal`), porque `contract.py` tiene `alias_generator=to_camel` | [CONTRACT.md](../../ingestion/discord/docs/CONTRACT.md) y [contract.py](../../ingestion/discord/contract.py) |
+| El contrato v1. Ojo: el JSON usa **camelCase** (`textoOriginal`), porque `contract.py` tiene `alias_generator=to_camel` | [CONTRACT.md](../../../ingestion/discord/docs/CONTRACT.md) y [contract.py](../../../ingestion/discord/contract.py) |
 | Las tablas donde Java va a guardar el resultado: columnas `intencion`, `confianza`, `sentimiento`, `tema`, `estado_clasificacion` (`PENDIENTE` / `OK` / `ERROR`) | `backend-java/src/main/resources/db/migration/V1__modelo_inicial.sql` |
 | El código de la IA de hoy | `agents/orquestador/` (`api.py`, `contratos.py`, `adaptador.py`, `orquestador.py`, `nodos/`, `clasificadores/`) |
 

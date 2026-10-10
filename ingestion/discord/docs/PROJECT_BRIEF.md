@@ -9,8 +9,8 @@
 **Para quién.** Todo el equipo: backend, IA, frontend y data.
 
 **Cómo se relaciona con los otros documentos.**
-- [EVENT_CATALOG.md](EVENT_CATALOG.md) traduce este brief a situaciones concretas de Discord.
-- [SCOPE.md](SCOPE.md) fija el alcance de la ingesta.
+- [EVENT_CATALOG.md](../../../docs/historico/ingesta/EVENT_CATALOG.md) traduce este brief a situaciones concretas de Discord.
+- [SCOPE.md](../../../docs/historico/ingesta/SCOPE.md) fija el alcance de la ingesta.
 - [CONTRACT.md](CONTRACT.md) define el formato en que entra cada mensaje.
 
 **Fuentes.** Cada afirmación lleva su origen:
@@ -57,7 +57,7 @@
 
 ### 2.4 Requisitos técnicos
 
-Estos requisitos vienen del brief, pero aquí no se copian completos. La correspondencia con sus listas (problemas PR1–PR4 y objetivos del MVP M1–M6) está en [EVENT_CATALOG.md](EVENT_CATALOG.md) §1.3.
+Estos requisitos vienen del brief, pero aquí no se copian completos. La correspondencia con sus listas (problemas PR1–PR4 y objetivos del MVP M1–M6) está en [EVENT_CATALOG.md](../../../docs/historico/ingesta/EVENT_CATALOG.md) §1.3.
 - Un flujo automatizado en Python, orquestado con LangGraph (M4).
 - Un panel para que una persona apruebe antes de publicar, y un dashboard (M5).
 - Guardar los activos generados en OCI: 📄 *"persistir todos los paquetes de activos generados en un Bucket Always Free"* (M6).
@@ -80,7 +80,7 @@ Estos requisitos vienen del brief, pero aquí no se copian completos. La corresp
 | Discord o Slack | Solo Discord | 👤 2026-10-01 |
 | "Debates en foros" | Extraer hilos y foros queda fuera del MVP (P5), pero el contrato ya tiene el campo `hilo` para no cambiar de versión después | 👤 2026-10-01 |
 | OCI Object Storage | ✅ Obligatorio para los activos generados | 📄 M6 |
-| Databricks | ❌ No se usa: el brief exige OCI ([SCOPE.md](SCOPE.md)) | 👤 2026-09-29 |
+| Databricks | ❌ No se usa: el brief exige OCI ([SCOPE.md](../../../docs/historico/ingesta/SCOPE.md)) | 👤 2026-09-29 |
 
 **Plazo:** la hackatón dura 5 semanas. **Entrega final: 2026-10-26.** 👤
 
@@ -99,7 +99,7 @@ Estos requisitos vienen del brief, pero aquí no se copian completos. La corresp
 
 ### 4.2 Objetivos técnicos de la ingesta (esta rama)
 
-Los objetivos O1–O5 están en [SCOPE.md](SCOPE.md) §2. En resumen: un contrato v1 (JSON Schema) que sirve igual por lotes y en vivo, la transformación y validación de todos los mensajes, la entrega a archivo y por HTTP, la especificación del endpoint para backend y un pull request a `main`.
+Los objetivos O1–O5 están en [SCOPE.md](../../../docs/historico/ingesta/SCOPE.md) §2. En resumen: un contrato v1 (JSON Schema) que sirve igual por lotes y en vivo, la transformación y validación de todos los mensajes, la entrega a archivo y por HTTP, la especificación del endpoint para backend y un pull request a `main`.
 
 **Criterio de diseño 👤:** el contrato tiene que funcionar con **una institución real**. La simulación es el banco de pruebas, no el objetivo.
 
@@ -127,7 +127,7 @@ Los objetivos O1–O5 están en [SCOPE.md](SCOPE.md) §2. En resumen: un contrat
 
 | Riesgo | Por qué importa | Dónde se sigue |
 |---|---|---|
-| Los foros no se extraen en el MVP | Si la institución real usa foros para las dudas, el análisis por lotes no las verá | [SCOPE.md](SCOPE.md) P5 |
-| Consentimiento para publicar testimonios | Citar a un alumno con su nombre en LinkedIn usa sus datos personales | [SCOPE.md](SCOPE.md) P3 |
-| No hay datos reales | Todo se prueba con un servidor simulado; los datos reales pueden ser más desordenados | [SCOPE.md](SCOPE.md) P1 |
+| Los foros no se extraen en el MVP | Si la institución real usa foros para las dudas, el análisis por lotes no las verá | [SCOPE.md](../../../docs/historico/ingesta/SCOPE.md) P5 |
+| Consentimiento para publicar testimonios | Citar a un alumno con su nombre en LinkedIn usa sus datos personales | [SCOPE.md](../../../docs/historico/ingesta/SCOPE.md) P3 |
+| No hay datos reales | Todo se prueba con un servidor simulado; los datos reales pueden ser más desordenados | [SCOPE.md](../../../docs/historico/ingesta/SCOPE.md) P1 |
 | El rol es el de hoy, no el de entonces | Un alumno que pasó a ser mentor aparece como mentor también en sus mensajes viejos | [CONTRACT.md](CONTRACT.md) §4.1 |

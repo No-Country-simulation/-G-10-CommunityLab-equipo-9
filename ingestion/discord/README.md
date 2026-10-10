@@ -2,12 +2,13 @@
 
 Este módulo es la puerta de entrada de InsightEdu Lab: se conecta a Discord, extrae los mensajes de los canales `#dudas` y `#logros` y los prepara para el resto del sistema.
 
-- **Empieza aquí si eres nuevo** (explicación completa para el equipo y comparación con backend): [docs/INGESTION_GUIDE.md](docs/INGESTION_GUIDE.md)
+También define el **contrato v1**, el formato de cada mensaje en todo el sistema: el bot lo reutiliza (`transform.py`) para que un mensaje en vivo y uno del lote salgan idénticos.
+
+- **Cómo encaja en el sistema:** [docs/ARQUITECTURA.md](../../docs/ARQUITECTURA.md) §4.1 (lotes) y §4.3 (en vivo)
+- **El contrato v1, campo por campo** (fuente de verdad del formato): [docs/CONTRACT.md](docs/CONTRACT.md)
 - **Qué pide el cliente y qué entra en el MVP:** [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md)
-- **Qué incluye y qué no:** [docs/SCOPE.md](docs/SCOPE.md)
 - **Cómo son los datos de Discord** (léelo si nunca trabajaste con Discord): [docs/DISCORD_DATA_GUIDE.md](docs/DISCORD_DATA_GUIDE.md)
-- **Qué pide el proyecto y qué eventos de la comunidad importan:** [docs/EVENT_CATALOG.md](docs/EVENT_CATALOG.md)
-- **Cómo encajan las piezas del sistema (propuesta):** [docs/ARCHITECTURE_PROPOSAL.md](docs/ARCHITECTURE_PROPOSAL.md)
+- **Documentos de etapas anteriores** (guía para el equipo, alcance, catálogo de eventos y primera propuesta de arquitectura): [docs/historico/ingesta/](../../docs/historico/ingesta/). No son instrucciones vigentes
 
 ## Estructura
 
@@ -15,19 +16,15 @@ Este módulo es la puerta de entrada de InsightEdu Lab: se conecta a Discord, ex
 ingestion/discord/
 ├── README.md                 ← este archivo
 ├── docs/
-│   ├── INGESTION_GUIDE.md       ← explicación completa para el equipo y comparación con backend
+│   ├── CONTRACT.md              ← contrato v1 (el formato que recibe el sistema)
 │   ├── PROJECT_BRIEF.md         ← el brief del cliente, objetivos y qué entra en el MVP
-│   ├── SCOPE.md                 ← alcance, decisiones y pendientes
-│   ├── CONTRACT.md              ← contrato de ingesta (el formato que recibe el sistema)
-│   ├── ARCHITECTURE_PROPOSAL.md ← propuesta de arquitectura (para discutir con el equipo)
-│   ├── DISCORD_DATA_GUIDE.md    ← guía y diccionario de datos
-│   └── EVENT_CATALOG.md         ← interpretación del brief y catálogo de eventos
+│   └── DISCORD_DATA_GUIDE.md    ← guía y diccionario de datos de Discord
 ├── config.py                 ← lee la configuración del .env
 ├── discord_api.py            ← cliente de la API de Discord (autenticación, reintentos y límites)
 ├── contract.py               ← el contrato v1 como código (pydantic); genera el JSON Schema
 ├── transform.py              ← convierte un mensaje de Discord al contrato (sin internet)
 ├── verify_connection.py      ← paso 1: comprueba la conexión del bot
-├── simulate_students.py      ← paso 2: publica conversaciones de alumnos ficticios
+├── simulate_students.py      ← ⚠️ NO ejecutar: publica alumnos ficticios y duplica mensajes
 ├── extract.py                ← paso 3: extrae los mensajes y los roles a data/raw/
 ├── build_batch.py            ← paso 4: transforma, valida y arma el lote en data/batches/
 ├── send_batch.py             ← paso 5: envía el lote a la API Java, tal cual (D8), con la API key
@@ -56,7 +53,7 @@ Hace falta un servidor de pruebas propio. Es gratis.
    2. En **Bot**, activa **Message Content Intent**.
    3. En **OAuth2 → URL Generator**, marca el scope `bot` y los permisos *View Channels*, *Read Message History* y *Send Messages*.
    4. Abre la URL generada y agrega el bot a tu servidor.
-3. **Webhooks.** En cada canal: **Editar canal → Integraciones → Webhooks → Nuevo webhook**.
+3. **Webhooks** (opcional: solo sirven para reconocer los mensajes de alumnos simulados que ya existan). En cada canal: **Editar canal → Integraciones → Webhooks → Nuevo webhook**.
 
 ## 2. Instalar (Windows, PowerShell)
 
@@ -94,7 +91,7 @@ Abre `.env` y completa:
 | Paso | Comando | Qué hace |
 |---|---|---|
 | 1 | `.\.venv\Scripts\python.exe verify_connection.py` | Comprueba el token, el permiso de contenido y la lectura de cada canal, y muestra los IDs para el `.env`. Solo lee |
-| 2 | `.\.venv\Scripts\python.exe simulate_students.py` | Publica las conversaciones de `simulation/conversations.json`. **Ejecútalo una sola vez**: cada ejecución vuelve a publicar todo y los mensajes se duplican |
+| — | ~~`simulate_students.py`~~ | ⚠️ **No lo ejecutes.** Publica alumnos ficticios y, cada vez que corre, duplica los mensajes. Para probar, escribe los mensajes a mano en Discord |
 | 3 | `.\.venv\Scripts\python.exe extract.py` | Descarga los mensajes de los dos canales a `data/raw/<canal>.json`, sin modificarlos, y guarda los roles en `data/raw/context.json`. La primera vez trae todo el historial; después, solo lo nuevo y los últimos días. Con `--todo`, siempre todo. Solo lee |
 | 4 | `.\.venv\Scripts\python.exe build_batch.py` | Transforma los mensajes al contrato, **valida cada uno** y escribe el lote en `data/batches/`. Si un mensaje no cumple el contrato, dice qué campo falla |
 | 5 | `.\.venv\Scripts\python.exe send_batch.py --prueba` | Revisa que el último lote cumpla el contrato, sin enviar nada. Se envía tal cual, sin convertirlo |

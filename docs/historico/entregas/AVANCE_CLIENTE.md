@@ -1,5 +1,7 @@
 # InsightEdu Lab (CommunityLab)
 
+> ⚠️ **Documento histórico:** un informe al cliente del 2026-10-05; el estado actual está en ESTADO.md. **No es una instrucción vigente.** Cómo funciona hoy: [ARQUITECTURA.md](../../ARQUITECTURA.md) · Qué falta: [ESTADO.md](../../ESTADO.md)
+
 **Informe de avance para el cliente**
 Equipo 9 · G10 · Hackatón No Country + ONE
 Versión 1.0 · 5 de octubre de 2026 · Entrega final: 26 de octubre de 2026

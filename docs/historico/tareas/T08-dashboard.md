@@ -45,10 +45,10 @@ Decisiones del chat principal (Harrison no se opuso), **DEC-123**:
 
 | Qué | Dónde |
 |---|---|
-| Los 5 indicadores y cómo se calcula cada uno | [PDF de la propuesta 3](../referencias/Propuesta_3_Arquitectura_InsightEdu.pdf), §6 (N5) y [análisis §5](../ANALISIS_INGENIERIA_PROPUESTA_3.md) (tabla de indicadores) |
+| Los 5 indicadores y cómo se calcula cada uno | [PDF de la propuesta 3](../propuesta-3/Propuesta_3_Arquitectura_InsightEdu.pdf), §6 (N5) y [análisis §5](../ANALISIS_INGENIERIA_PROPUESTA_3.md) (tabla de indicadores) |
 | Las columnas: `fecha`, `autor_id`, `autor_tipo`, `estado_clasificacion`, `intencion`, `sentimiento`, `tema`, `responde_a`, `respuesta_estado`, `respondido_en`, y el nombre visible dentro de `contrato` | Migraciones V1 a V3 |
 | El panel: páginas, cliente, estilos y cómo se muestran los textos | `panel/` ([T07-informe.md](T07-informe.md)) |
-| El contrato del panel, que esta tarea amplía | [PANEL_JAVA_v1.md](../contratos/PANEL_JAVA_v1.md) |
+| El contrato del panel, que esta tarea amplía | [PANEL_JAVA_v1.md](../../contratos/PANEL_JAVA_v1.md) |
 | Las observaciones que pasan a esta tarea | [README de tareas](README.md) (filas que dicen "T08" o "Fase 5") |
 
 ## 3. Alcance: qué entra
@@ -67,7 +67,7 @@ Decisiones del chat principal (Harrison no se opuso), **DEC-123**:
 
    Además, unos **totales** para la cabecera: mensajes, personas activas, dudas, logros y borradores pendientes.
 2. **Rendimiento:** consultas SQL con los índices existentes (`fecha`, `autor_id` e `intencion`, de V1). Si hace falta uno nuevo, va en una **`V7__…`**. Topes de período (por ejemplo, 1 año) y de cantidad de filas en las listas.
-3. **Contrato:** agregar las puertas a [PANEL_JAVA_v1.md](../contratos/PANEL_JAVA_v1.md), con un ejemplo cada una. **Solo agrega.**
+3. **Contrato:** agregar las puertas a [PANEL_JAVA_v1.md](../../contratos/PANEL_JAVA_v1.md), con un ejemplo cada una. **Solo agrega.**
 4. Si hace falta, la entidad `Mensaje` suma las columnas de V3 y V4 (observación de T05, T06 y T07), o se usa SQL directo, como en el resto de las consultas.
 
 ### Parte B · El panel

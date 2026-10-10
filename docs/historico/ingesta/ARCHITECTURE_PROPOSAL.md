@@ -1,5 +1,7 @@
 # Propuesta de arquitectura — InsightEdu Lab
 
+> ⚠️ **Documento histórico:** la primera propuesta de arquitectura de la ingesta (2026-09-29). **No es una instrucción vigente.** Cómo funciona hoy: [ARQUITECTURA.md](../../ARQUITECTURA.md) · Qué falta: [ESTADO.md](../../ESTADO.md)
+
 > **Estado:** propuesta para discutir con el equipo · **Fecha:** 2026-09-29 · **Rama:** `feature/discord-ingestion`
 
 ## 0. Para qué sirve este documento

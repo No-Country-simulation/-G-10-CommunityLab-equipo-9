@@ -43,12 +43,12 @@ Decisiones del chat principal (Harrison no se opuso), **DEC-140**:
 
 | Qué | Dónde |
 |---|---|
-| La propuesta de despliegue: un solo `docker compose`, red interna y el panel como única puerta | [Análisis §7](../ANALISIS_INGENIERIA_PROPUESTA_3.md) (O1 a O9) y [PDF de la propuesta 3](../referencias/Propuesta_3_Arquitectura_InsightEdu.pdf), §8 |
-| Cómo se levanta hoy, servicio por servicio, y qué variables pide cada uno | [OPERACION.md](../OPERACION.md) y `compose.yml` |
-| La guía para el equipo (los pasos que un integrante sigue en su PC) | [README.md](../../README.md), "Guía para probar el proyecto" |
+| La propuesta de despliegue: un solo `docker compose`, red interna y el panel como única puerta | [Análisis §7](../ANALISIS_INGENIERIA_PROPUESTA_3.md) (O1 a O9) y [PDF de la propuesta 3](../propuesta-3/Propuesta_3_Arquitectura_InsightEdu.pdf), §8 |
+| Cómo se levanta hoy, servicio por servicio, y qué variables pide cada uno | [OPERACION.md](../../OPERACION.md) y `compose.yml` |
+| La guía para el equipo (los pasos que un integrante sigue en su PC) | [README.md](../../../README.md), "Guía para probar el proyecto" |
 | La ingesta: `extract.py`, `build_batch.py`, `send_batch.py`, sus marcadores y `INGEST_REREAD_DAYS` | `ingestion/discord/` y su `.env.example` |
 | Observaciones que pasan a esta tarea: HTTPS y la consulta de Streamlit a un servicio externo (T07), el ritmo de la clasificación (T04), Java encendido el lunes para la FAQ (T06b), el vencimiento de la PAR y los 2 pendientes (T09), "dudas sin responder" en la demo (T08) | [README de tareas](README.md), filas "T10" |
-| Decisiones de seguridad que no se pueden romper | DEC-42 (puertos), DEC-43 (secretos), DEC-70 (cada clave, su puerta) y DEC-110 (inicio de sesión del panel) en [DECISIONES.md](../DECISIONES.md) |
+| Decisiones de seguridad que no se pueden romper | DEC-42 (puertos), DEC-43 (secretos), DEC-70 (cada clave, su puerta) y DEC-110 (inicio de sesión del panel) en [DECISIONES.md](../../DECISIONES.md) |
 
 ## 3. Alcance: qué entra
 

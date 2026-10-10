@@ -4,9 +4,9 @@
 
 ## 0. Sobre este documento
 
-**Qué es el contrato.** Es el formato en que cada mensaje de Discord entra al sistema. Es el mismo formato tanto en el análisis por lotes como en el bot en vivo (ver [ARCHITECTURE_PROPOSAL.md](ARCHITECTURE_PROPOSAL.md)).
+**Qué es el contrato.** Es el formato en que cada mensaje de Discord entra al sistema. Es el mismo formato tanto en el análisis por lotes como en el bot en vivo (ver [ARCHITECTURE_PROPOSAL.md](../../../docs/historico/ingesta/ARCHITECTURE_PROPOSAL.md)).
 
-**Cómo se diseñó.** A partir del [catálogo de eventos](EVENT_CATALOG.md), sin tomar como referencia los modelos de backend ni del motor IA, para no sesgarlo. La regla fue: **cada campo cita los casos del catálogo que lo necesitan**, y los campos técnicos citan la decisión que los exige. Si un dato no tiene casos, no entra. La comparación con backend es el paso siguiente (§9).
+**Cómo se diseñó.** A partir del [catálogo de eventos](../../../docs/historico/ingesta/EVENT_CATALOG.md), sin tomar como referencia los modelos de backend ni del motor IA, para no sesgarlo. La regla fue: **cada campo cita los casos del catálogo que lo necesitan**, y los campos técnicos citan la decisión que los exige. Si un dato no tiene casos, no entra. La comparación con backend es el paso siguiente (§9).
 
 **Para quién.**
 - Backend, que lo recibe.
@@ -30,7 +30,7 @@
 
 | Campo | Tipo | Ejemplo | Por qué existe |
 |---|---|---|---|
-| `versionContrato` | texto | `"1.0"` | Decisión: contrato versionado ([SCOPE.md](SCOPE.md)) |
+| `versionContrato` | texto | `"1.0"` | Decisión: contrato versionado ([SCOPE.md](../../../docs/historico/ingesta/SCOPE.md)) |
 | `loteId` | texto (UUID) | `"3f2b…"` | Para rastrear cada envío y detectar los reenvíos |
 | `fuente` | texto | `"discord"` | Permite sumar otras plataformas en el futuro sin cambiar el formato |
 | `modo` | `historial` \| `tiempoReal` | `"historial"` | Los dos flujos de la arquitectura |
@@ -40,7 +40,7 @@
 
 ## 3. El mensaje
 
-> Todos los campos de cada mensaje. La columna "Casos" remite al [catálogo](EVENT_CATALOG.md).
+> Todos los campos de cada mensaje. La columna "Casos" remite al [catálogo](../../../docs/historico/ingesta/EVENT_CATALOG.md).
 
 | Campo | Tipo | Ejemplo | De dónde sale en Discord | Casos |
 |---|---|---|---|---|
@@ -50,7 +50,7 @@
 | `fecha` | fecha | `"2026-09-28T18:56:30.331Z"` | `timestamp`, convertido a UTC con `Z` | A1, A2, A4, A5, A7, B1–B5, D1, D2, E1–E5, F2, H3 |
 | `tipo` | valor fijo (§5) | `"respuesta"` | Se deduce de `type` | A7, G4, I1. Distingue a las personas de los avisos del sistema |
 | `tipoDiscord` | entero | `19` | `type`, sin cambios | Trazabilidad: el valor original de Discord |
-| `esSimulado` | booleano | `true` | `true` si lo publicó uno de **nuestros** webhooks de simulación | Decisión: marcar los mensajes simulados ([SCOPE.md](SCOPE.md)) |
+| `esSimulado` | booleano | `true` | `true` si lo publicó uno de **nuestros** webhooks de simulación | Decisión: marcar los mensajes simulados ([SCOPE.md](../../../docs/historico/ingesta/SCOPE.md)) |
 | `autor` | objeto (§4.1) | — | `author`, más reglas (§4.1) | A1, A7, A8, A10, B1, B5, B6, E1, E3, H1, I2 |
 | `textoOriginal` | texto | `"como instalo pyhton…"` | `content`, sin cambios | A1, A4, B1–B6, C1, C3, D1–D3, E1, E2, E5, F2, H1, H3 |
 | `tieneTexto` | booleano | `false` | `content` no está vacío | A3. Hallazgo de la guía: hay mensajes sin texto |
@@ -297,7 +297,7 @@
 ## 9. Próximos pasos
 
 1. ~~**Validar este borrador.**~~ Hecho el 2026-10-01.
-2. ~~**Comparar con backend (3.6).**~~ Hecho el 2026-10-02: ver [INGESTION_GUIDE.md](INGESTION_GUIDE.md) §10 y §11. Falta la respuesta de backend sobre las opciones.
+2. ~~**Comparar con backend (3.6).**~~ Hecho el 2026-10-02: ver [INGESTION_GUIDE.md](../../../docs/historico/ingesta/INGESTION_GUIDE.md) §10 y §11. Falta la respuesta de backend sobre las opciones.
 3. ~~**Programar.**~~ Hecho el 2026-10-02:
    - el contrato como código está en [contract.py](../contract.py), y su JSON Schema en [schema/contract_v1.schema.json](../schema/contract_v1.schema.json);
    - la transformación está en [transform.py](../transform.py);

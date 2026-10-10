@@ -26,7 +26,7 @@
 - 👤 **Usuario real:** observado en los mensajes que una persona escribió con su propia cuenta.
 
 **Documentos relacionados:**
-- [SCOPE.md](SCOPE.md): alcance de la ingesta.
+- [SCOPE.md](../../../docs/historico/ingesta/SCOPE.md): alcance de la ingesta.
 - [README](../README.md): cómo instalar y correr los scripts.
 
 ---

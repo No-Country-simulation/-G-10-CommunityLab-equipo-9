@@ -21,7 +21,7 @@ Las pruebas automáticas pasan (Java 143 y panel 37), y la prueba real de Harris
 | Se editan, aprueban y rechazan borradores, con el consentimiento obligatorio en posts y casos de éxito, y sin aprobaciones dobles | ✅ | `CuraduriaApiTest`, casos 3 a 8 (el 7, con dos hilos y 10 vueltas). Panel: `test_un_post_no_se_aprueba_sin_la_casilla`. Prueba real §4.3 |
 | Se reintentan los `ERROR` desde el panel | ✅ en pruebas | `CuraduriaApiTest` caso 9: después del reintento, `procesarTanda()` de T04 y de T06 toma el mensaje. Panel: `test_la_pagina_de_errores_reintenta` |
 | Las puertas del panel solo aceptan la clave `panel`, y el CORS quedó cerrado | ✅ | `CuraduriaApiTest` casos 1 y 10: sin clave 401; con la clave de `bot` o de `ingesta`, 403, también con `;x=1`, `%65`, `%73`, `//` y `/` al final. Además, la segunda capa en el controlador. Se borró `CorsConfig.java` |
-| `PANEL_JAVA_v1.md` está escrito, y el panel corre en Docker en `127.0.0.1:8501` | ✅ | [PANEL_JAVA_v1.md](../contratos/PANEL_JAVA_v1.md). 🧪 `docker compose ps`: `panel Up (healthy)`, junto a `api-java` y los demás. Corre como el usuario `panel` (no root) |
+| `PANEL_JAVA_v1.md` está escrito, y el panel corre en Docker en `127.0.0.1:8501` | ✅ | [PANEL_JAVA_v1.md](../../contratos/PANEL_JAVA_v1.md). 🧪 `docker compose ps`: `panel Up (healthy)`, junto a `api-java` y los demás. Corre como el usuario `panel` (no root) |
 | Las pruebas de Java y de Python pasan, y la prueba real muestra las aprobaciones en la base | ✅ | §4 |
 | El informe está completo y no se tocó nada fuera del alcance | ✅ | No se tocó nada fuera del alcance (§6) |
 
@@ -67,7 +67,7 @@ Las pruebas automáticas pasan (Java 143 y panel 37), y la prueba real de Harris
 
 | Comando ejecutado | Resultado (🧪) |
 |---|---|
-| `docker run … maven:3.9-eclipse-temurin-21 mvn test` (contra `insightedu_test`, [OPERACION.md §5](../OPERACION.md)) | **143 pruebas, 0 fallos y 0 errores** (110 de antes y 33 de `CuraduriaApiTest`). La primera corrida tuvo 3 errores en mis pruebas (creaban un borrador sin su mensaje); se corrigieron y se volvió a correr todo |
+| `docker run … maven:3.9-eclipse-temurin-21 mvn test` (contra `insightedu_test`, [OPERACION.md §5](../../OPERACION.md)) | **143 pruebas, 0 fallos y 0 errores** (110 de antes y 33 de `CuraduriaApiTest`). La primera corrida tuvo 3 errores en mis pruebas (creaban un borrador sin su mensaje); se corrigieron y se volvió a correr todo |
 | `python -m pytest panel/tests -q` | **37 passed** |
 | `python -m pytest agents/orquestador/tests -q` | 79 passed |
 | `python -m pytest agents/bot_discord/tests -q` | 22 passed, 1 warning (ya estaba) |
@@ -123,7 +123,7 @@ Borrador 4 (CASO_EXITO) rechazado por harrison
 Borrador 11 (FAQ) aprobado por harrison en 1000 s
 ```
 
-Consulta de solo lectura ([OPERACION.md §10](../OPERACION.md)), solo los revisados. Los otros 7 siguen `PENDIENTE`:
+Consulta de solo lectura ([OPERACION.md §10](../../OPERACION.md)), solo los revisados. Los otros 7 siguen `PENDIENTE`:
 ```
  id |     tipo      |  estado   | aprobado_por | tiempo_curaduria_seg | consentimiento_confirmado | rechazado_por | editado
 ----+---------------+-----------+--------------+----------------------+---------------------------+---------------+---------

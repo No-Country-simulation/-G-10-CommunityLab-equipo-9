@@ -53,7 +53,7 @@ Rutas Java relativas a `backend-java/src/main/java/com/insightedulab/backend_jav
 
 | Comando ejecutado | Resultado (🧪) |
 |---|---|
-| `docker run … maven:3.9-eclipse-temurin-21 mvn test` (base `insightedu_test`, [OPERACION.md §5](../OPERACION.md)) | `Tests run: 28, Failures: 0, Errors: 0, Skipped: 0` · `BUILD SUCCESS` (17 de `LotesApiTest`, 10 de `ModeloDatosTest` y 1 de `BackendJavaApplicationTests`) |
+| `docker run … maven:3.9-eclipse-temurin-21 mvn test` (base `insightedu_test`, [OPERACION.md §5](../../OPERACION.md)) | `Tests run: 28, Failures: 0, Errors: 0, Skipped: 0` · `BUILD SUCCESS` (17 de `LotesApiTest`, 10 de `ModeloDatosTest` y 1 de `BackendJavaApplicationTests`) |
 | Lo mismo, quitando a propósito la transacción de `LoteService` (y restaurándola después) | `Failures: 3`: `siLaBaseFallaEnMedioSeDeshaceTodo`, `elMismoLoteDosVecesDevuelveElMismoRecibo` y `dosEnviosSimultaneosDelMismoLoteNoDuplican`. Las pruebas detectan la falta de transacción |
 | `python -m pytest -q` (desde `ingestion/discord`) | `36 passed` (34 de antes; `test_send.py` pasó de 5 a 7) |
 | `generar_api_key.py` con dos `.env` falsos en una carpeta temporal | Misma clave en los dos (43 caracteres), nunca en pantalla; `\r\n` y `\n` conservados; las otras líneas, intactas; sin `--reemplazar` no pisa; con `--reemplazar` crea una nueva |

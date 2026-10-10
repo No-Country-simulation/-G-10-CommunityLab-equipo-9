@@ -19,7 +19,7 @@ El bot ya no va directo a la IA: arma el contrato v1 con `transform.py` de la in
 | Un mensaje en vivo se clasifica una sola vez, aunque corra la tarea en segundo plano o llegue el lote de la hora | ✅ | 🧪 Casos 5, 6 y 7: una sola llamada a la IA; el lote de la hora da `sinCambios` (o `actualizados` si cambió una reacción) sin tocar etiquetas ni respuesta |
 | La IA respeta el tope total en `tiempoReal`, y la puerta vieja `/procesar` ya no existe | ✅ | 🧪 4 pruebas del tope y `test_la_puerta_vieja_procesar_ya_no_existe` (404) |
 | El bot corre en Docker, solo en `#dudas` y `#logros`, sin menciones y sin textos en los registros | ✅ | 🧪 22 pruebas del bot con objetos falsos. Prueba real: `Bot conectado … Escucha ['#dudas', '#logros']`, y el registro tiene solo IDs, órdenes y milisegundos (sección 4.5) |
-| `BOT_JAVA_v1.md` está escrito, y `JAVA_IA_v1.md` tiene el agregado del tope | ✅ | [BOT_JAVA_v1.md](../contratos/BOT_JAVA_v1.md); [JAVA_IA_v1.md](../contratos/JAVA_IA_v1.md) §6 (solo agrega, ningún campo cambió) |
+| `BOT_JAVA_v1.md` está escrito, y `JAVA_IA_v1.md` tiene el agregado del tope | ✅ | [BOT_JAVA_v1.md](../../contratos/BOT_JAVA_v1.md); [JAVA_IA_v1.md](../../contratos/JAVA_IA_v1.md) §6 (solo agrega, ningún campo cambió) |
 | Las pruebas de Java y Python pasan, y la prueba real muestra las respuestas en Discord y en la base | ✅ | Secciones 4 y 4.5 |
 | El informe está completo, y no se tocó nada fuera del alcance | ✅ con una excepción validada | No se tocó el contrato v1 (`contract.py`, `transform.py`, el schema), ni V1 ni V2, ni el código viejo de la IA salvo `/procesar`. **Excepción:** una línea de `agents/agent_faq/vectorstore/reranker.py` (decisión 11, validada por Harrison) |
 

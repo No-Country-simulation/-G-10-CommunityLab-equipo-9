@@ -1,5 +1,7 @@
 # Catálogo de eventos de la comunidad — InsightEdu Lab
 
+> ⚠️ **Documento histórico:** el catálogo de eventos de la comunidad usado para diseñar el contrato v1. **No es una instrucción vigente.** Cómo funciona hoy: [ARQUITECTURA.md](../../ARQUITECTURA.md) · Qué falta: [ESTADO.md](../../ESTADO.md)
+
 > **Estado:** aprobado v1.1 · **Fecha:** 2026-10-01 · **Rama:** `feature/discord-ingestion`
 
 ## 0. Sobre este documento
@@ -14,13 +16,13 @@
 3. La §3 es el catálogo.
 4. Las §4 y §5 dicen qué priorizar y qué le falta hoy a la ingesta.
 
-Si nunca trabajaste con Discord, lee antes la sección 2 de la [guía de datos](DISCORD_DATA_GUIDE.md).
+Si nunca trabajaste con Discord, lee antes la sección 2 de la [guía de datos](../../../ingestion/discord/docs/DISCORD_DATA_GUIDE.md).
 
 ---
 
 ## 1. Qué nos pide el proyecto
 
-> Una lectura ordenada del brief, sin repeticiones, para que todos partamos de lo mismo. El texto del brief, los objetivos de negocio y las decisiones del MVP están en [PROJECT_BRIEF.md](PROJECT_BRIEF.md).
+> Una lectura ordenada del brief, sin repeticiones, para que todos partamos de lo mismo. El texto del brief, los objetivos de negocio y las decisiones del MVP están en [PROJECT_BRIEF.md](../../../ingestion/discord/docs/PROJECT_BRIEF.md).
 
 ### 1.1 En una frase
 Convertir automáticamente la actividad de una comunidad EduTech en Discord en **activos de marketing, contenido educativo y alertas de retención**, con una persona que revisa y aprueba antes de publicar.

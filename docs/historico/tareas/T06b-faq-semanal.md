@@ -42,13 +42,13 @@ Decisiones del chat principal (Harrison no se opuso):
 
 | Qué | Dónde |
 |---|---|
-| La FAQ dinámica semanal: Java junta, el Agente FAQ detecta las repetidas, la IA escribe el borrador y sigue en N6 | [PDF de la propuesta 3](../referencias/Propuesta_3_Arquitectura_InsightEdu.pdf), §6 (N4) |
+| La FAQ dinámica semanal: Java junta, el Agente FAQ detecta las repetidas, la IA escribe el borrador y sigue en N6 | [PDF de la propuesta 3](../propuesta-3/Propuesta_3_Arquitectura_InsightEdu.pdf), §6 (N4) |
 | Las dudas y lo que respondió el bot: `intencion`, `tema`, `respuesta_estado`, `respuesta_texto`, `respuesta_fuentes` | V2 y V3 en `backend-java/src/main/resources/db/migration/`, y [T05-informe.md](T05-informe.md) |
 | El patrón que hay que copiar: tarea en segundo plano, reserva, transacción, reintentos y registros sin textos | `backend-java/.../generacion/` ([T06-informe.md](T06-informe.md)) |
 | El Agente FAQ: cómo se le pregunta y qué devuelve (`texto`, `encontrada`, `fuentes`, `motivo`) | `agents/orquestador/grafo_v1.py` (`responder_con_agente_faq`) y `agents/agent_faq/` |
 | La guía de voz y la protección de datos personales del Agente-Mod | `agents/agent_mod/` (DEC-81, DEC-86 y DEC-87) |
-| El contrato Java ↔ IA, que esta tarea amplía | [JAVA_IA_v1.md](../contratos/JAVA_IA_v1.md) y su JSON Schema |
-| La regla 3 de la propuesta: la IA no guarda la verdad del sistema | DEC-83 en [DECISIONES.md](../DECISIONES.md) |
+| El contrato Java ↔ IA, que esta tarea amplía | [JAVA_IA_v1.md](../../contratos/JAVA_IA_v1.md) y su JSON Schema |
+| La regla 3 de la propuesta: la IA no guarda la verdad del sistema | DEC-83 en [DECISIONES.md](../../DECISIONES.md) |
 
 ## 3. Alcance: qué entra
 
@@ -73,7 +73,7 @@ Decisiones del chat principal (Harrison no se opuso):
    - las métricas (duración y tokens).
 
    Errores con el formato común: 401, 422 y 500.
-5. **Contrato:** una sección nueva en [JAVA_IA_v1.md](../contratos/JAVA_IA_v1.md), con un ejemplo, y el JSON Schema regenerado. **Solo agrega**: `/v1/procesar` y `/v1/generar` no cambian.
+5. **Contrato:** una sección nueva en [JAVA_IA_v1.md](../../contratos/JAVA_IA_v1.md), con un ejemplo, y el JSON Schema regenerado. **Solo agrega**: `/v1/procesar` y `/v1/generar` no cambian.
 
 ### Parte B · Java
 

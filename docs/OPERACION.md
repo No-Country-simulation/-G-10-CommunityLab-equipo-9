@@ -1,7 +1,7 @@
 # Operación — levantar InsightEdu Lab con Docker
 
-> **Estado:** v0.4 · **Fecha:** 2026-10-05 · **Rama:** `feature/integracion-arquitectura-3`
-> Cubre los servicios que ya están en `compose.yml`: base de datos, API Java, IA, bot de Discord (T05) y panel (T07, T08), y la subida de borradores a OCI (T09, sección 12). La ingesta se suma en las fases siguientes del [análisis](ANALISIS_INGENIERIA_PROPUESTA_3.md).
+> **Estado:** v0.5 · **Fecha:** 2026-10-09 · **Rama:** `main`
+> Cubre los servicios que ya están en `compose.yml`: base de datos, API Java, IA, bot de Discord (T05) y panel (T07, T08), y la subida de borradores a OCI (T09, sección 12). La ingesta por lotes todavía se corre a mano (ver el [README](../README.md) §8.3); programarla en un servidor está pendiente ([ESTADO.md](ESTADO.md)). Cómo funciona cada pieza: [ARQUITECTURA.md](ARQUITECTURA.md). Las menciones a T01–T10 remiten a la traza de [historico/tareas/](historico/tareas/).
 
 Todos los comandos se ejecutan **desde la raíz del repositorio**, en PowerShell.
 
@@ -279,7 +279,7 @@ Las respuestas del bot no se guardan (no se aprueban). El nombre del archivo es 
 
 ### Crear la PAR (una sola vez)
 
-Lo hace Harrison, con una cuenta que tenga acceso al bucket. 📘 Según la [documentación de Oracle](https://docs.oracle.com/en-us/iaas/Content/Object/Tasks/usingpreauthenticatedrequests_topic-To_create_a_preauthenticated_request_for_all_objects_in_a_bucket.htm):
+La crea el dueño del bucket (o alguien con acceso a él en la consola de Oracle). 📘 Según la [documentación de Oracle](https://docs.oracle.com/en-us/iaas/Content/Object/Tasks/usingpreauthenticatedrequests_topic-To_create_a_preauthenticated_request_for_all_objects_in_a_bucket.htm):
 
 1. Entrar a la consola de OCI y abrir **Storage → Buckets**, y luego el bucket.
 2. En **Pre-authenticated requests** (a veces dentro de *Management* o *Recursos*), pulsar **Create pre-authenticated request**.

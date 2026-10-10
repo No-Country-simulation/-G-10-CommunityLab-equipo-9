@@ -1,5 +1,7 @@
 # Guía de la ingesta para el equipo — InsightEdu Lab
 
+> ⚠️ **Documento histórico:** la guía de la ingesta de antes de la integración (su "opción C" la reemplazó D8). **No es una instrucción vigente.** Cómo funciona hoy: [ARQUITECTURA.md](../../ARQUITECTURA.md) · Qué falta: [ESTADO.md](../../ESTADO.md)
+
 > **Estado:** v1.0, para revisar con backend · **Fecha:** 2026-10-02 · **Rama:** `feature/discord-ingestion`
 
 ## 0. Cómo leer este documento
@@ -35,10 +37,10 @@
 - 🔎 **Deducción nuestra:** razonable, pero no verificada.
 
 **Documentos relacionados** (este documento los resume; el detalle está en ellos):
-- [PROJECT_BRIEF.md](PROJECT_BRIEF.md): el brief y qué entra en el MVP.
-- [DISCORD_DATA_GUIDE.md](DISCORD_DATA_GUIDE.md): cómo son los datos de Discord.
+- [PROJECT_BRIEF.md](../../../ingestion/discord/docs/PROJECT_BRIEF.md): el brief y qué entra en el MVP.
+- [DISCORD_DATA_GUIDE.md](../../../ingestion/discord/docs/DISCORD_DATA_GUIDE.md): cómo son los datos de Discord.
 - [EVENT_CATALOG.md](EVENT_CATALOG.md): el catálogo de casos de la comunidad.
-- [CONTRACT.md](CONTRACT.md): el contrato de ingesta, campo por campo.
+- [CONTRACT.md](../../../ingestion/discord/docs/CONTRACT.md): el contrato de ingesta, campo por campo.
 - [SCOPE.md](SCOPE.md): el alcance de la ingesta y los pendientes.
 
 ---
@@ -94,7 +96,7 @@ Son unas 25 a 30 líneas de código, sin tablas nuevas.
 
 **Por qué todo empieza en la ingesta.** La ingesta es la puerta de entrada: saca los mensajes de Discord y se los entrega al resto del sistema. **Si un dato no entra por esa puerta, ni la IA ni el dashboard pueden verlo nunca.** Por eso el contrato tiene que incluir todo lo que necesitan los activos.
 
-El detalle está en [PROJECT_BRIEF.md](PROJECT_BRIEF.md).
+El detalle está en [PROJECT_BRIEF.md](../../../ingestion/discord/docs/PROJECT_BRIEF.md).
 
 ---
 
@@ -216,7 +218,7 @@ Un bot propio, `InsightEdu Ingesta`, tiene permiso para leer ambos canales.
 | 📘 **Las direcciones de las imágenes vencen** (en la prueba, a las 24 horas) | Una imagen guardada hoy, mañana no abre | Se informa cuándo vence (decisión 3) |
 | Los **avisos del sistema** vienen mezclados con los mensajes de los alumnos | Se contarían como si los hubiera escrito un alumno | Se marcan como `avisoSistema` (decisión 4) |
 
-El detalle está en [DISCORD_DATA_GUIDE.md](DISCORD_DATA_GUIDE.md).
+El detalle está en [DISCORD_DATA_GUIDE.md](../../../ingestion/discord/docs/DISCORD_DATA_GUIDE.md).
 
 ---
 
@@ -465,7 +467,7 @@ Además, `mensajes` es la lista de mensajes del lote.
 | 6 | ¿Qué hacemos con las encuestas y las vistas previas, que todavía no probamos? | Se definen según la documentación oficial | Quitarlas y agregarlas después cambiaría la versión del contrato |
 | 7 | ¿Qué hacemos con los hilos y foros? | El campo `hilo` existe desde la v1, pero va en `null` en el MVP | 📄 El brief pide "debates en foros". Agregarlo después cambiaría la versión que backend ya programó |
 
-El detalle de cada campo está en [CONTRACT.md](CONTRACT.md).
+El detalle de cada campo está en [CONTRACT.md](../../../ingestion/discord/docs/CONTRACT.md).
 
 ---
 
@@ -820,11 +822,11 @@ tabla interacciones_originales
 | 2026-09-28 | Definimos el alcance de la ingesta | [SCOPE.md](SCOPE.md) |
 | 2026-09-28 | Creamos el servidor de pruebas, el bot y los webhooks, y verificamos la conexión | `verify_connection.py` |
 | 2026-09-28 | Simulamos 7 alumnos y 1 mentor, y extrajimos los 38 mensajes | `simulate_students.py`, `extract.py` |
-| 2026-09-28 | Documentamos cómo son los datos de Discord | [DISCORD_DATA_GUIDE.md](DISCORD_DATA_GUIDE.md) |
+| 2026-09-28 | Documentamos cómo son los datos de Discord | [DISCORD_DATA_GUIDE.md](../../../ingestion/discord/docs/DISCORD_DATA_GUIDE.md) |
 | 2026-09-29 | Interpretamos el brief, armamos el catálogo de casos y propusimos una arquitectura | [EVENT_CATALOG.md](EVENT_CATALOG.md) |
-| 2026-09-29 | Diseñamos el borrador del contrato y lo probamos con los 38 mensajes, sin errores | [CONTRACT.md](CONTRACT.md) v0.1 |
-| 2026-10-01 | Documentamos el brief y lo que entra en el MVP | [PROJECT_BRIEF.md](PROJECT_BRIEF.md) |
-| 2026-10-01 | Validamos el contrato con criterio de casos reales: 7 decisiones aprobadas | [CONTRACT.md](CONTRACT.md) v0.2 |
+| 2026-09-29 | Diseñamos el borrador del contrato y lo probamos con los 38 mensajes, sin errores | [CONTRACT.md](../../../ingestion/discord/docs/CONTRACT.md) v0.1 |
+| 2026-10-01 | Documentamos el brief y lo que entra en el MVP | [PROJECT_BRIEF.md](../../../ingestion/discord/docs/PROJECT_BRIEF.md) |
+| 2026-10-01 | Validamos el contrato con criterio de casos reales: 7 decisiones aprobadas | [CONTRACT.md](../../../ingestion/discord/docs/CONTRACT.md) v0.2 |
 | 2026-10-01 y 02 | Comparamos el contrato con el código de backend | Este documento |
 
 ### Lo que sigue

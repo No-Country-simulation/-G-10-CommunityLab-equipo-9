@@ -25,8 +25,8 @@ Las tablas se crean con **migraciones Flyway** (archivos SQL versionados), no co
 |---|---|
 | El modelo propuesto, los índices y las migraciones | Análisis §5. Es la base aprobada; los nombres de columnas se pueden ajustar para que coincidan con el contrato |
 | Duplicados, etiquetas que no se deben pisar y escrituras al mismo tiempo | Análisis F1, F2 y F3 |
-| Nombres y valores del contrato v1 | [CONTRACT.md](../../ingestion/discord/docs/CONTRACT.md) y [contract.py](../../ingestion/discord/contract.py). Por ejemplo: tipo de autor `persona` / `botPropio` / `otroBot`; `es_simulado`; rol `miembro` / `mentor` / `staff`; modo `historial` / `tiempoReal`; `version_contrato` `"1.0"` |
-| La "caja" de la opción C (el mensaje completo del contrato en `jsonb`) | [INGESTION_GUIDE.md §11](../../ingestion/discord/docs/INGESTION_GUIDE.md) |
+| Nombres y valores del contrato v1 | [CONTRACT.md](../../../ingestion/discord/docs/CONTRACT.md) y [contract.py](../../../ingestion/discord/contract.py). Por ejemplo: tipo de autor `persona` / `botPropio` / `otroBot`; `es_simulado`; rol `miembro` / `mentor` / `staff`; modo `historial` / `tiempoReal`; `version_contrato` `"1.0"` |
+| La "caja" de la opción C (el mensaje completo del contrato en `jsonb`) | [INGESTION_GUIDE.md §11](../ingesta/INGESTION_GUIDE.md) |
 | El código actual | `backend-java/src/main/java/com/insightedulab/backend_java/` (`model/`, `repository/`, `service/CommunityService.java`, `controller/CommunityController.java`, `dto/`) |
 
 ## 3. Alcance: qué entra

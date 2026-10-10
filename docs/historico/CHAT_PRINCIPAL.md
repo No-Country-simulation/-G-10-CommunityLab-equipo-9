@@ -1,11 +1,13 @@
 # Manual del chat principal (guía, orquestador y auditor)
 
+> ⚠️ **Documento histórico:** el método de trabajo con asistentes de IA usado durante la integración. **No es una instrucción vigente.** Cómo funciona hoy: [ARQUITECTURA.md](../ARQUITECTURA.md) · Qué falta: [ESTADO.md](../ESTADO.md)
+
 > Para el chat de Claude que toma el rol de **chat principal** de InsightEdu Lab. Escrito el 2026-10-04 por el chat principal anterior, al llenarse su contexto.
-> Se lee **después** de [CLAUDE.md](../CLAUDE.md). Tu memoria automática ya trae el perfil de Harrison y sus reglas de trabajo.
+> Se lee **después** de [CLAUDE.md](CLAUDE_integracion.md). Tu memoria automática ya trae el perfil de Harrison y sus reglas de trabajo.
 
 ## 0. Primeros pasos, en orden
 
-1. Lee `CLAUDE.md`, este archivo, [docs/DECISIONES.md](DECISIONES.md) (todas las decisiones en un solo lugar), [docs/tareas/README.md](tareas/README.md) (estado de las tareas y observaciones) y, del [análisis](ANALISIS_INGENIERIA_PROPUESTA_3.md), las secciones **Objetivos**, **0 · Decisiones** y **9 · Prioridades**.
+1. Lee `CLAUDE.md`, este archivo, [docs/DECISIONES.md](../DECISIONES.md) (todas las decisiones en un solo lugar), [docs/tareas/README.md](tareas/README.md) (estado de las tareas y observaciones) y, del [análisis](ANALISIS_INGENIERIA_PROPUESTA_3.md), las secciones **Objetivos**, **0 · Decisiones** y **9 · Prioridades**.
 2. Comprueba el estado real con comandos de solo lectura: `git fetch`, `git status -sb`, `git log --oneline -5 feature/integracion-arquitectura-3` y `docker compose ps`.
 3. **Primera tarea: auditar T04** (procedimiento en la sección 3). Ojo: T04 **modificó `docs/contratos/JAVA_IA_v1.md` y su JSON Schema**. Verifica qué cambió y si cambia el contrato Java ↔ IA v1 sin aprobación de Harrison.
 4. **Después de T04, el ciclo se repite hasta la entrega**, una tarea a la vez y en el orden de la sección 6 (**T05 → T06 → T06b → T07 → T08 → T09 → T10**, DEC-93):
@@ -36,7 +38,7 @@ El chat principal sí puede editar la documentación de seguimiento: índice, re
 | Tareas | T01 ✅ · T02 ✅ · T03 ✅ · T04 ✅ (fusión `--no-ff`) · T05 ✅ (auditada el 2026-10-04 con un cambio pedido y corregido) · T06 ✅ (auditada el 2026-10-04, sin cambios pedidos) · T06b ✅ (auditada el 2026-10-04, sin cambios pedidos) · T07 ✅ (auditada el 2026-10-04, sin cambios pedidos) · T08 ✅ (auditada el 2026-10-04, sin cambios pedidos) · T09 ✅ (auditada el 2026-10-05, con 2 pendientes de Harrison: confirmación de Gabriel y PAR propia) · **T10 📝 ficha lista** (VM de Oracle, Caddy + DuckDNS) |
 | Docker local | `postgres` (sin puerto), `api-java` (`127.0.0.1:8008`), `ia` (`127.0.0.1:8000`) `bot` (sin puerto) y `panel` (`127.0.0.1:8501`). Falta la ingesta programada (cron, O3) |
 | Datos | 39 mensajes reales del servidor de pruebas en `mensajes`, **todos clasificados** por T04 (🧪 39 en `OK`, migración V2 aplicada) |
-| Decisiones | D1 a D8 en el análisis §0 y DEC-01 a DEC-140 en [DECISIONES.md](DECISIONES.md). **D3:** el bot responde sin aprobación, solo con respaldo en los PDFs |
+| Decisiones | D1 a D8 en el análisis §0 y DEC-01 a DEC-140 en [DECISIONES.md](../DECISIONES.md). **D3:** el bot responde sin aprobación, solo con respaldo en los PDFs |
 | Plan de 2 días | ✅ Cumplido (T01 a T03) |
 | Entrega final | **2026-10-26** |
 
@@ -59,11 +61,11 @@ Cuando Harrison dice **"Txx terminó"**:
    - `curl` a `/actuator/health` y a `/health`;
    - consultas `SELECT` con `docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -c "…"'`.
 
-   Las pruebas de Java las corre el chat de tarea; si dudas, pídele a Harrison el comando de [OPERACION.md §5](OPERACION.md).
+   Las pruebas de Java las corre el chat de tarea; si dudas, pídele a Harrison el comando de [OPERACION.md §5](../OPERACION.md).
 6. **Veredicto** en una tabla: ✅ aprobada o ❌ con cambios pedidos. Las observaciones que no frenan la tarea van a la tabla de [docs/tareas/README.md](tareas/README.md), indicando a qué tarea pasan.
 7. **Actualiza la documentación:**
    - estado en `docs/tareas/README.md`;
-   - **[docs/DECISIONES.md](DECISIONES.md): una fila por cada decisión nueva** (del informe §5 o de Harrison), y cierra las ❓ que se resolvieron;
+   - **[docs/DECISIONES.md](../DECISIONES.md): una fila por cada decisión nueva** (del informe §5 o de Harrison), y cierra las ❓ que se resolvieron;
    - el análisis: fila del **registro de avance** y columna **"Estado"** de los OE;
    - `CLAUDE.md`, si cambió el mapa o se agregó una pieza.
 8. **Dale a Harrison los comandos**, uno por línea, con la carpeta y qué debería ver:

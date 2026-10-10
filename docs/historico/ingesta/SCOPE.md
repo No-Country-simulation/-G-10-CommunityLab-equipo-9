@@ -1,12 +1,14 @@
 # Ingesta de Discord — Alcance
 
+> ⚠️ **Documento histórico:** el alcance de la ingesta antes de la integración. **No es una instrucción vigente.** Cómo funciona hoy: [ARQUITECTURA.md](../../ARQUITECTURA.md) · Qué falta: [ESTADO.md](../../ESTADO.md)
+
 > **Estado:** aprobado v1.3 · **Rama:** `feature/discord-ingestion` · **Fecha:** 2026-10-01
 
 Este documento fija la pauta de cómo entran los mensajes de Discord a InsightEdu Lab. El backend programa contra el contrato que se define aquí.
 
 ## 1. Escenario
 
-- InsightEdu Lab convierte la actividad de una comunidad EduTech en Discord en activos de marketing, contenido educativo y alertas de retención, con aprobación humana antes de publicar. Lo que pide el brief y los objetivos de negocio están en [PROJECT_BRIEF.md](PROJECT_BRIEF.md).
+- InsightEdu Lab convierte la actividad de una comunidad EduTech en Discord en activos de marketing, contenido educativo y alertas de retención, con aprobación humana antes de publicar. Lo que pide el brief y los objetivos de negocio están en [PROJECT_BRIEF.md](../../../ingestion/discord/docs/PROJECT_BRIEF.md).
 - Activos del MVP: post de LinkedIn, caso de éxito o testimonio, FAQ o contenido educativo, dashboard de salud con alertas, y un bot que responde dudas en vivo con la documentación de la institución.
 - No hay datos reales. El servidor, los canales, los alumnos y el bot se simulan en Discord, que es gratis.
 - Canales iniciales: `#dudas` y `#logros`. El catálogo de eventos suma otros (ver [EVENT_CATALOG.md](EVENT_CATALOG.md) §5).
@@ -44,7 +46,7 @@ Este documento fija la pauta de cómo entran los mensajes de Discord a InsightEd
 | Almacenamiento en la nube | OCI Object Storage es obligatorio para los **activos generados**. Para la ingesta es opcional: sirve de respaldo de los datos crudos, escritos por lotes | El brief pide *"persistir todos los paquetes de activos generados en un Bucket Always Free"*. El plan Always Free incluye 20 GB y 50.000 peticiones al mes: guardar un archivo por cada mensaje agotaría el cupo, por eso se escribe por lotes. |
 | Databricks | No se usa en el MVP | El brief exige OCI, así que Databricks sería una segunda plataforma y no un reemplazo. Nadie del equipo la conoce y está pensada para volúmenes de datos que no tenemos. La organización por capas (crudo → contrato → activos) se logra con carpetas dentro del bucket de OCI. |
 | Contenido del contrato | Todo campo que necesite algún caso de [EVENT_CATALOG.md](EVENT_CATALOG.md). Los datos crudos se conservan completos | Los eventos ocasionales pueden valer mucho, como una contratación. Si un dato no está en el contrato, sigue disponible en la capa cruda y se puede volver a procesar. |
-| Datos de los miembros | No se extraen en el MVP: ni fecha de ingreso ni lista de roles. **Excepción (2026-10-01):** los roles del autor se consultan solo para calcular `autor.rol` (mentor o *staff*) | La deserción mensual se calcula con la actividad (autor y fecha de sus mensajes). Mide a quien dejó de escribir, no a quien abandonó el curso. Los roles sí hacen falta para reconocer a los mentores en una comunidad real (A8, C2, H1): en vivo llegan con el mensaje y por lotes cuestan una petición por autor. Ver [CONTRACT.md](CONTRACT.md) §8, decisión 2. |
+| Datos de los miembros | No se extraen en el MVP: ni fecha de ingreso ni lista de roles. **Excepción (2026-10-01):** los roles del autor se consultan solo para calcular `autor.rol` (mentor o *staff*) | La deserción mensual se calcula con la actividad (autor y fecha de sus mensajes). Mide a quien dejó de escribir, no a quien abandonó el curso. Los roles sí hacen falta para reconocer a los mentores en una comunidad real (A8, C2, H1): en vivo llegan con el mensaje y por lotes cuestan una petición por autor. Ver [CONTRACT.md](../../../ingestion/discord/docs/CONTRACT.md) §8, decisión 2. |
 
 ## 4. Alcance
 
@@ -77,14 +79,14 @@ Este documento fija la pauta de cómo entran los mensajes de Discord a InsightEd
 - **P4 · Fechas en Java.** Usar `Instant` u `OffsetDateTime`, no `LocalDateTime`, para no perder la zona horaria.
 - **P5 · Hilos y foros: descartados para el MVP.** Los mensajes dentro de un hilo o de un foro no aparecen en el historial del canal, y extraerlos exige recorrer los hilos aparte. Como el servidor de prueba lo diseñamos nosotros, `#dudas` es un canal normal y no se extraen hilos. **Limitación conocida:** si la institución real usa foros para las dudas, habrá que agregarlo. El brief pide "debates en foros", por eso el contrato v1 ya incluye el campo `hilo` (en `null`): agregar la extracción después no cambiará la versión del contrato.
 - **P6 · Extracción incremental. Resuelto (2026-10-02).** `extract.py` pide solo lo posterior al marcador (parámetro `after`) y relee los últimos `INGEST_REREAD_DAYS` días (7 por defecto) para captar reacciones y ediciones. `send_batch.py` guarda el marcador cuando backend confirma la recepción. Falta del lado de backend: actualizar en lugar de duplicar (*upsert*), según [INGESTION_GUIDE.md](INGESTION_GUIDE.md) §9.
-- **P7 · Mensajes partidos.** Una idea suele llegar en varios mensajes (saludo, contexto y pregunta; o una imagen y después su descripción). Decidir si la agrupación la hace la ingesta o el motor IA. Ver [DISCORD_DATA_GUIDE.md](DISCORD_DATA_GUIDE.md) §14.
+- **P7 · Mensajes partidos.** Una idea suele llegar en varios mensajes (saludo, contexto y pregunta; o una imagen y después su descripción). Decidir si la agrupación la hace la ingesta o el motor IA. Ver [DISCORD_DATA_GUIDE.md](../../../ingestion/discord/docs/DISCORD_DATA_GUIDE.md) §14.
 ## 6. Criterios de terminado
 
 - [x] El servidor de prueba tiene `#dudas` y `#logros` con mensajes de al menos 5 alumnos ficticios.
 - [x] Un comando extrae todos los mensajes de ambos canales, incluida la paginación.
 - [x] No hay tokens, IDs ni URLs escritos en el código.
-- [x] Hay muestras crudas guardadas y un diccionario de datos ([DISCORD_DATA_GUIDE.md](DISCORD_DATA_GUIDE.md)).
-- [x] El contrato v1 existe como JSON Schema ([schema/contract_v1.schema.json](../schema/contract_v1.schema.json)) y los 38 mensajes extraídos lo cumplen (2026-10-02).
+- [x] Hay muestras crudas guardadas y un diccionario de datos ([DISCORD_DATA_GUIDE.md](../../../ingestion/discord/docs/DISCORD_DATA_GUIDE.md)).
+- [x] El contrato v1 existe como JSON Schema ([schema/contract_v1.schema.json](../../../ingestion/discord/schema/contract_v1.schema.json)) y los 38 mensajes extraídos lo cumplen (2026-10-02).
 - [ ] La salida a archivo funciona y la salida HTTP está probada. La salida a archivo funciona. El envío HTTP (opción C, histórica: reemplazada por D8 el 2026-10-03) está probado contra un backend simulado; falta probarlo contra el backend real.
 - [ ] Backend recibió la especificación del endpoint.
 - [ ] Hay un pull request abierto hacia `main`.

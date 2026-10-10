@@ -18,7 +18,7 @@ Las pruebas automáticas pasan (Java 169 y panel 44), y la prueba real con los d
 |---|---|---|
 | La página "Dashboard" muestra los 5 indicadores y los totales, con los controles de la sección 3 | ✅ | `panel/paginas/dashboard.py`. Prueba real §4.3. `test_dibuja_los_indicadores_…` y `test_los_controles_envian_sus_valores` |
 | Las cuentas siguen las reglas: solo `OK` y personas, frustración según DEC-121 y dudas atendidas según DEC-123 | ✅ | `DashboardApiTest`, casos 1 a 5 (§4.1) |
-| Las puertas nuevas solo aceptan la clave `panel` y están en `PANEL_JAVA_v1.md` | ✅ | Caso 6. [PANEL_JAVA_v1.md §7](../contratos/PANEL_JAVA_v1.md#7-dashboard-t08) (solo agrega) |
+| Las puertas nuevas solo aceptan la clave `panel` y están en `PANEL_JAVA_v1.md` | ✅ | Caso 6. [PANEL_JAVA_v1.md §7](../../contratos/PANEL_JAVA_v1.md#7-dashboard-t08) (solo agrega) |
 | Las pruebas de Java y de Python pasan, y la prueba real muestra los indicadores con los datos reales | ✅ | §4 |
 | El informe está completo y no se tocó nada fuera del alcance | ✅ | No se tocó nada fuera del alcance (§6) |
 

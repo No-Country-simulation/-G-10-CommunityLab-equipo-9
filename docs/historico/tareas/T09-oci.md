@@ -39,7 +39,7 @@ Decisiones del chat principal (Harrison no se opuso), **DEC-131**:
 
 | Qué | Dónde |
 |---|---|
-| N7: Java sube los activos aprobados a OCI | [PDF de la propuesta 3](../referencias/Propuesta_3_Arquitectura_InsightEdu.pdf), §6 (N7) |
+| N7: Java sube los activos aprobados a OCI | [PDF de la propuesta 3](../propuesta-3/Propuesta_3_Arquitectura_InsightEdu.pdf), §6 (N7) |
 | D2, S4, F10 y F11 | [Análisis](../ANALISIS_INGENIERIA_PROPUESTA_3.md) §0, §3 y §4 |
 | Cómo se sube con una PAR de bucket: 📘 `PUT https://objectstorage.<región>.oraclecloud.com<access-uri>/<nombre-del-objeto>`, con el archivo en el cuerpo | [Documentación de Oracle: PAR de bucket](https://docs.oracle.com/en-us/iaas/Content/Object/Tasks/usingpreauthenticatedrequests_topic-To_create_a_preauthenticated_request_for_all_objects_in_a_bucket.htm) |
 | El patrón que hay que copiar: tarea programada, reserva, reintentos, registros sin textos | `backend-java/.../generacion/` ([T06-informe.md](T06-informe.md)) |

@@ -1,7 +1,7 @@
 # Contrato Java ↔ IA v1 — InsightEdu Lab
 
 > **Estado:** v1.0 · **Fecha:** 2026-10-03 · **Tarea:** T02 · **Lo implementa del lado Java:** T04
-> **Cambio de T04 (2026-10-04, validado por Harrison):** `/v1/procesar` exige `X-Api-Key` (S2) y hay un código de error más, `NO_AUTORIZADO` (401). Es un cambio que solo agrega: nada de lo anterior cambió.
+> **Cambio de T04 (2026-10-04, validado por el equipo):** `/v1/procesar` exige `X-Api-Key` (S2) y hay un código de error más, `NO_AUTORIZADO` (401). Es un cambio que solo agrega: nada de lo anterior cambió.
 > **Cambio de T05 (2026-10-04, DEC-54):** en `tiempoReal`, todo el pedido tiene un **tope de 25 s** (`TIEMPO_REAL_TOPE_S`, §6). Si se agota, la duda llega con sus etiquetas y `respuesta.encontrada = false`. Solo agrega: ningún campo cambió. Además se quitó la puerta vieja `POST /procesar`.
 > **Cambio de T06 (2026-10-04, DEC-82):** una puerta nueva, **`POST /v1/generar`**: el Agente-Mod redacta un post de LinkedIn y un caso de éxito a partir de un logro (§9). Solo agrega: `/v1/procesar` no cambió.
 > **Cambio de T06b (2026-10-04, DEC-97):** una puerta nueva, **`POST /v1/faq`**: con las dudas de la semana, la IA arma un borrador de preguntas frecuentes (§10). Solo agrega: `/v1/procesar` y `/v1/generar` no cambiaron.
@@ -166,7 +166,7 @@ La IA **no** guarda nada ni sube nada a OCI (D2): eso le toca a Java.
 
 ### 4.3 Lista cerrada de temas
 
-Validada por Harrison el 2026-10-03. Está pensada para que el dashboard pueda contar mensajes por tema (N5).
+Validada por el equipo el 2026-10-03. Está pensada para que el dashboard pueda contar mensajes por tema (N5).
 
 | Tema | Qué incluye |
 |---|---|

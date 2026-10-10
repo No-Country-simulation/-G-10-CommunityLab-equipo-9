@@ -30,11 +30,11 @@ El bot queda como un servicio más de `docker compose`, solo en `#dudas` y `#log
 
 | Qué | Dónde |
 |---|---|
-| El flujo en vivo de N1 y N4, y qué falta en el bot | [PDF de la propuesta 3](../referencias/Propuesta_3_Arquitectura_InsightEdu.pdf), §6 (N1 y N4) |
+| El flujo en vivo de N1 y N4, y qué falta en el bot | [PDF de la propuesta 3](../propuesta-3/Propuesta_3_Arquitectura_InsightEdu.pdf), §6 (N1 y N4) |
 | C2, F5, F8, F9, S8, S10, S11 y M3 | [Análisis](../ANALISIS_INGENIERIA_PROPUESTA_3.md) §2, §3 y §4 |
-| D3 (el bot responde sin aprobación, solo con respaldo) y D4 (tiempos 20 / 30 / 40 s) | [DECISIONES.md](../DECISIONES.md): DEC-19 y DEC-20 |
-| El contrato Java ↔ IA: modo `tiempoReal`, campo `respuesta` (§4.2) y tiempos (§6) | [JAVA_IA_v1.md](../contratos/JAVA_IA_v1.md) |
-| El contrato v1 y su conversión desde el JSON de Discord | [CONTRACT.md](../../ingestion/discord/docs/CONTRACT.md), `ingestion/discord/transform.py` (`a_contrato`, `armar_lote`, `Contexto`) y `extract.py` (cómo se arma el `Contexto`) |
+| D3 (el bot responde sin aprobación, solo con respaldo) y D4 (tiempos 20 / 30 / 40 s) | [DECISIONES.md](../../DECISIONES.md): DEC-19 y DEC-20 |
+| El contrato Java ↔ IA: modo `tiempoReal`, campo `respuesta` (§4.2) y tiempos (§6) | [JAVA_IA_v1.md](../../contratos/JAVA_IA_v1.md) |
+| El contrato v1 y su conversión desde el JSON de Discord | [CONTRACT.md](../../../ingestion/discord/docs/CONTRACT.md), `ingestion/discord/transform.py` (`a_contrato`, `armar_lote`, `Contexto`) y `extract.py` (cómo se arma el `Contexto`) |
 | La reserva, las guardas por `actualizado_en` y el cliente de la IA | `backend-java/.../clasificacion/` y `client/NlpDataClient.java` ([T04-informe.md](T04-informe.md)) |
 | La API key por cliente y el formato común de error | `backend-java/.../seguridad/ApiKeyFilter.java` y `error/` ([T03-informe.md](T03-informe.md)) |
 | El bot de hoy (va directo a la puerta vieja `/procesar` de la IA) | `agents/bot_discord/bot_communitylab.py` |

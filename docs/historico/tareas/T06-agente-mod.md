@@ -37,13 +37,13 @@ Decisiones del chat principal (Harrison no se opuso):
 
 | Qué | Dónde |
 |---|---|
-| N3: qué lee el Agente-Mod (texto para las citas, reacciones y respuestas) y dónde guarda el borrador | [PDF de la propuesta 3](../referencias/Propuesta_3_Arquitectura_InsightEdu.pdf), §6 (N3) y §7 (el caso de Camila) |
-| Lo que pide el brief: posts *"persuasivos y listos para publicar… respetando la voz de la marca"* y la *"extracción de citas"* (`textoOriginal`, sin corregir) | [PROJECT_BRIEF.md](../../ingestion/discord/docs/PROJECT_BRIEF.md) §2.3 y §5 |
+| N3: qué lee el Agente-Mod (texto para las citas, reacciones y respuestas) y dónde guarda el borrador | [PDF de la propuesta 3](../propuesta-3/Propuesta_3_Arquitectura_InsightEdu.pdf), §6 (N3) y §7 (el caso de Camila) |
+| Lo que pide el brief: posts *"persuasivos y listos para publicar… respetando la voz de la marca"* y la *"extracción de citas"* (`textoOriginal`, sin corregir) | [PROJECT_BRIEF.md](../../../ingestion/discord/docs/PROJECT_BRIEF.md) §2.3 y §5 |
 | La institución y sus reglas de comunicación (prohíbe publicar nombres completos sin consentimiento) | `agents/agent_faq/data/pdfs/10_Reglamento_de_Comunicaciones.pdf` y `06_Manual_del_Estudiante_V3.pdf` |
 | La tabla `borradores` (tipos `POST_LINKEDIN` y `CASO_EXITO`, `texto_ia`, `estado`, `tokens_in`, `tokens_out`) | `backend-java/src/main/resources/db/migration/V1__modelo_inicial.sql`, `model/Borrador.java` |
 | El patrón que hay que copiar: reserva, guardas, reintentos y registros sin textos | `backend-java/.../clasificacion/` ([T04-informe.md](T04-informe.md)) |
-| El contrato Java ↔ IA, que esta tarea amplía | [JAVA_IA_v1.md](../contratos/JAVA_IA_v1.md) y su JSON Schema |
-| D5 (un solo proveedor: Gemini), D6 (consentimiento en el panel) y DEC-53 | [DECISIONES.md](../DECISIONES.md) |
+| El contrato Java ↔ IA, que esta tarea amplía | [JAVA_IA_v1.md](../../contratos/JAVA_IA_v1.md) y su JSON Schema |
+| D5 (un solo proveedor: Gemini), D6 (consentimiento en el panel) y DEC-53 | [DECISIONES.md](../../DECISIONES.md) |
 | La observación de T02 ("por fin entendí recursividad" salió `TESTIMONIO`) | [README de tareas](README.md) |
 
 ## 3. Alcance: qué entra
@@ -75,7 +75,7 @@ Decisiones del chat principal (Harrison no se opuso):
    - recibe el mensaje del logro (la caja del contrato v1, tal cual) y, opcionalmente, las cajas de las respuestas que recibió (`respondeA`), con un tope de cantidad;
    - devuelve `publicable`, `motivo`, los dos textos (si corresponde), el estado (`OK` o `ERROR`) y las métricas (duración y tokens);
    - errores con el formato común: 401, 422 y 500. Un fallo del LLM es `ERROR`, **nunca** un borrador vacío ni inventado (F4).
-4. **Contrato:** se documenta en [JAVA_IA_v1.md](../contratos/JAVA_IA_v1.md), en una sección nueva, con un ejemplo de pedido y de respuesta, y se regenera el JSON Schema. **Solo agrega**: `/v1/procesar` no cambia.
+4. **Contrato:** se documenta en [JAVA_IA_v1.md](../../contratos/JAVA_IA_v1.md), en una sección nueva, con un ejemplo de pedido y de respuesta, y se regenera el JSON Schema. **Solo agrega**: `/v1/procesar` no cambia.
 
 ### Parte B · Java: la generación en segundo plano
 
