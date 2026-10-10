@@ -13,4 +13,4 @@ Servicio `ia` de InsightEdu Lab (FastAPI + LangGraph). **Solo lo llama la API Ja
 - **Cómo funciona dentro del sistema:** [docs/ARQUITECTURA.md](../../docs/ARQUITECTURA.md) §4 y §8.
 - **Pruebas** (sin Gemini, con un LLM falso): `python -m pytest agents/orquestador/tests -q`, desde la raíz.
 
-⚠️ **Código que ya no se usa** (de un diseño anterior, pendiente de borrar: [ESTADO.md](../../docs/ESTADO.md)): `orquestador.py`, `adaptador.py`, `nodos/` (salvo `invocador_faq.py`, que sí se usa), `aristas/`, `clasificadores/` (salvo `etiquetador.py`, `llm_models.py` y `keyword_fallback.py`), `storage/` y `test_orquestador.py`. El README original de este módulo está en [docs/historico/componentes/](../../docs/historico/componentes/orquestador_README.md).
+El código de un diseño anterior (`orquestador.py`, `adaptador.py`, `aristas/`, `storage/` y varios nodos y clasificadores) se borró en T11 (DEC-145). El README original de este módulo está en [docs/historico/componentes/](../../docs/historico/componentes/orquestador_README.md).

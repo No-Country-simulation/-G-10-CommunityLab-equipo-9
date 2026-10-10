@@ -73,7 +73,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
  * ⚠️ Vacían las tablas: solo corren en una base *_test.
  */
 // Las mismas propiedades (y el mismo @MockitoBean y @AutoConfigureMockMvc) que CuraduriaApiTest, en el mismo orden:
-// así Spring reutiliza su contexto y su grupo de conexiones, en vez de abrir otro (CHAT_PRINCIPAL §5)
+// así Spring reutiliza su contexto y su grupo de conexiones, en vez de abrir otro (AGENTS.md §5)
 @SpringBootTest(properties = {
         "seguridad.api-keys.ingesta=" + CuraduriaApiTest.CLAVE_INGESTA,
         "seguridad.api-keys.bot=" + CuraduriaApiTest.CLAVE_BOT,

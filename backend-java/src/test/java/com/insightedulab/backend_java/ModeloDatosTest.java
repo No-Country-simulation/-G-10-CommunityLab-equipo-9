@@ -26,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Pruebas del modelo de datos (T01) contra PostgreSQL real: jsonb y ON CONFLICT no existen en H2.
- * Usan la base que digan POSTGRES_HOST / POSTGRES_DB (ver docs/tareas/T01-informe.md).
+ * Usan la base que digan POSTGRES_HOST / POSTGRES_DB (ver docs/OPERACION.md §5).
  * ⚠️ Vacían las tablas antes de cada prueba: nunca correrlas contra la base principal.
  */
 @SpringBootTest(properties = {"clasificacion.habilitada=false", "generacion.habilitada=false", "faq.habilitada=false"})  // que la tarea programada no tome sus mensajes

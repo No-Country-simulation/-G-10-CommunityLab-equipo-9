@@ -1,7 +1,8 @@
 """
 Clasificador de último recurso basado en keywords.
 
-Se usa cuando Cohere y Laya no están disponibles.
+Solo se usa si se elige ORQ_CLASIFICADOR_PROVIDER=keyword (etiquetador.py);
+si el LLM falla, el mensaje queda en ERROR, nunca pasa aquí en silencio (F4).
 Es rápido pero menos preciso que un LLM.
 """
 from __future__ import annotations
