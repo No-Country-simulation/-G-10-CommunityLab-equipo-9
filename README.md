@@ -216,5 +216,6 @@ Escribe en el canal del equipo **qué hiciste, qué esperabas y qué viste**, y 
 | El bot responde siempre "un mentor te responderá" | Falta `GEMINI_API_KEY`, o se agotó tu límite gratuito | Revisa la clave en AI Studio |
 | `send_batch.py` dice 401 | La clave de la ingesta no coincide | Vuelve a correr `python scripts/generar_api_key.py --reemplazar` y `docker compose up -d api-java` |
 | El panel no deja entrar | No hay usuarios creados | Corre `python scripts/crear_usuario_panel.py` y `docker compose up -d panel` |
+| Ya tienes **otra copia** del proyecto corriendo en la misma PC | `compose.yml` fija el nombre `insightedu`: las dos copias compartirían contenedores, la base de datos y el bot | Apaga la otra (`docker compose down` en su carpeta, **sin** `-v`) o levanta esta con otro nombre: `docker compose -p otro-nombre up -d --build` (y `docker compose -p otro-nombre …` en cada comando) |
 
 **Para saber más:** [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) explica cómo funciona cada pieza, [docs/OPERACION.md](docs/OPERACION.md) cómo operarla y [docs/DECISIONES.md](docs/DECISIONES.md) por qué el sistema funciona así. La documentación original de cada equipo está en [docs/historico/equipos/](docs/historico/equipos/README_original_equipos.md).
