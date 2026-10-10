@@ -5,7 +5,7 @@
 | Fecha | 2026-10-10 |
 | Modelo de Claude usado | Opus 5.5 (`claude-opus-5-5`); la ficha recomendaba Sonnet 5.5 |
 | Rama | `tarea/T11-limpieza-codigo`, desde `feature/integracion-arquitectura-3` (`9bbb93a`) |
-| Commits | Los da Harrison al cerrar (sección 7): `refactor(ia): borrar el orquestador viejo, sus variables y el requirements.txt de la raiz (T11)` y `docs: informe de T11 y cierre de DEC-145 y DEC-146` |
+| Commits | `aecb97d` (`refactor(ia): borrar el orquestador viejo, sus variables y el requirements.txt de la raiz (T11)`), `0dd65d8` (`docs: informe de T11 y cierre de DEC-145 y DEC-146`) y el que completa la sección 7 |
 
 ## 1. Resumen
 
@@ -99,4 +99,14 @@ Las pruebas de Python se corrieron con el entorno `%USERPROFILE%\.venvs\insighte
 
 ## 7. Comandos que ejecutó Harrison
 
-Se completan al cerrar (`git add`, los dos commits y `git push -u origin tarea/T11-limpieza-codigo`).
+Desde `C:\Users\LENOVO\Documents\Cursos\No Country\Hackaton ONE 10\insightedu-lab`, en orden:
+
+| Comando | Resultado (🧪) |
+|---|---|
+| `git switch -c tarea/T11-limpieza-codigo` | Rama creada desde `9bbb93a` (la punta de `feature/integracion-arquitectura-3`) |
+| `git status` | 16 borrados, 10 modificados y el informe sin seguimiento |
+| `git add -A agents requirements.txt backend-java` y `git commit -m "refactor(ia): …"` | `aecb97d`: 23 archivos, 9 líneas agregadas y 1292 borradas |
+| `git add -A docs` y `git commit -m "docs: informe de T11 …"` | `0dd65d8`: 4 archivos |
+| `git push -u origin tarea/T11-limpieza-codigo` | Rama nueva en `origin`, con seguimiento |
+
+Las pruebas y Docker los corrió el chat de tarea: las cuatro suites de Python, `docker compose up -d --build ia` y las pruebas de Java de [OPERACION.md](../../OPERACION.md) §5 (sección 4).
