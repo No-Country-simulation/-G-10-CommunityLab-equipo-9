@@ -30,7 +30,7 @@ Si falta tiempo, lo último que se recorta es OE1, OE3 y OE6.
 
 | # | Qué | Por qué importa | Dónde empezar |
 |---|---|---|---|
-| 1 | **Limpiar el código que ya no se usa** en `agents/orquestador/` (`orquestador.py`, `nodos/`, `aristas/`, `adaptador.py`, `test_orquestador.py`) y el `requirements.txt` viejo de la raíz | Confunde a quien lee el código (personas o asistentes de IA) | [Ficha T11](historico/tareas/T11-limpieza-codigo.md): qué se borra, qué **no** (porque se usa) y qué pruebas correr |
+| 1 | ✅ **Hecho (T11, 2026-10-10):** se borró el código que ya no se usaba en `agents/orquestador/`, sus variables de `config.py` y el `requirements.txt` viejo de la raíz (DEC-145, DEC-146) | Confundía a quien lee el código (personas o asistentes de IA) | [Informe T11](historico/tareas/T11-informe.md): qué se borró, qué se conservó y por qué |
 | 2 | **Confirmar el bucket de OCI**: que estén `generados/` y `aprobados/`, que un archivo no tenga datos de Discord, y que la PAR sea de solo escritura y con vencimiento después de la entrega | Cierra OE7 | El dueño del bucket, en la consola de Oracle |
 | 3 | **Desplegar y ensayar la demo**: una VM gratis de Oracle Cloud, Caddy con HTTPS y un subdominio de DuckDNS, la ingesta cada hora con `cron`, respaldos diarios, claves nuevas del servidor y un guion de demo de 10 minutos | Cierra OE1, OE8 y OE9 | La propuesta completa está en [historico/tareas/T10-despliegue-demo.md](historico/tareas/T10-despliegue-demo.md), y las decisiones en DEC-137 a DEC-140 |
 | 4 | Revisar el **vencimiento de la PAR** de OCI antes de la demo | Si vence, las subidas pasan a `ERROR` | [OPERACION.md](OPERACION.md) §12 |

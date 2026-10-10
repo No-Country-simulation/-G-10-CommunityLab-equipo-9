@@ -300,8 +300,6 @@ Las cuatro corren en paralelo (4 hilos), cada una con su propia reserva en la ba
 | La ingesta y el contrato v1 | `ingestion/discord/` |
 | Los scripts de claves y usuarios | `scripts/` |
 
-⚠️ En `agents/orquestador/` todavía queda código de un diseño anterior que ya no se usa (`orquestador.py`, `nodos/`, `aristas/`, `adaptador.py`). Su limpieza está pendiente ([ESTADO.md](ESTADO.md)).
-
 Las pruebas viven junto a cada pieza: `backend-java/src/test/`, `agents/orquestador/tests/`, `agents/bot_discord/tests/`, `panel/tests/` e `ingestion/discord/tests/`. Cómo correrlas: [AGENTS.md](../AGENTS.md).
 
 ---
