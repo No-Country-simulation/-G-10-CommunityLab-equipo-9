@@ -4,7 +4,7 @@ para brindar verstailidad a la configuracion del agente
 """
 from langchain_core.language_models import BaseChatModel
 from .config import (
-    FAQ_PROVIDER, FAQ_MODEL_NAME, FAQ_TEMPERATURE,
+    FAQ_PROVIDER, FAQ_MODEL_NAME, FAQ_TEMPERATURE, FAQ_LLM_TIMEOUT_S,
     GEMINI_API_KEY, OPENAI_API_KEY, COHERE_API_KEY,
 )
 
@@ -21,6 +21,9 @@ def select_llm() -> BaseChatModel:
             model=FAQ_MODEL_NAME,
             temperature=FAQ_TEMPERATURE,
             google_api_key=GEMINI_API_KEY,
+            # Sin esto Gemini espera sin límite y reintenta 6 veces por su cuenta (F8)
+            timeout=FAQ_LLM_TIMEOUT_S,
+            max_retries=0,
         )
 
     if FAQ_PROVIDER == "openai":
@@ -31,6 +34,8 @@ def select_llm() -> BaseChatModel:
             model=FAQ_MODEL_NAME,
             temperature=FAQ_TEMPERATURE,
             api_key=OPENAI_API_KEY,
+            timeout=FAQ_LLM_TIMEOUT_S,
+            max_retries=0,
         )
 
     if FAQ_PROVIDER == "cohere":

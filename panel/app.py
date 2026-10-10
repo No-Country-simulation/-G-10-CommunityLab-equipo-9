@@ -1,91 +1,97 @@
+"""
+Panel de curaduría de CommunityLab (T07, N6, OE6).
+
+Una persona de Marketing entra con su usuario y su contraseña, y revisa los borradores de la IA:
+los edita, los aprueba o los rechaza. El panel habla solo con la API Java (DEC-112).
+
+    streamlit run app.py        (desde panel/; en Docker lo levanta compose.yml en 127.0.0.1:8501)
+
+Páginas (DEC-114), en paginas/: Borradores (T07), Dashboard (T08) y Errores (T07).
+"""
+from __future__ import annotations
+
+import logging
+import os
+import time
+
 import streamlit as st
-import json
 
-# Configuración de página
+import auth
+import ui
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+log = logging.getLogger("panel")
+
+# Una sesión sin uso durante 8 horas se cierra sola
+SESION_MAX_INACTIVA_S = 8 * 3600
+
 st.set_page_config(page_title="CommunityLab | Curaduría", layout="wide")
-
-st.markdown("""
-    <style>
-    button[kind="primary"] {
-        background-color: #4f46e5 !important; /* Color indigo moderno */
-        border: none !important;
-        border-radius: 8px !important;
-        padding: 0.5rem 2rem !important;
-        font-weight: 600 !important;
-        transition: all 0.2s ease-in-out !important;
-    }
-    button[kind="primary"]:hover {
-        background-color: #4338ca !important;
-        transform: translateY(-2px);
-    }
-
-    div[data-testid="stVerticalBlockBorderWrapper"] {
-        border-radius: 12px !important;
-        border: 1px solid #374151 !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
+st.markdown(ui.ESTILOS, unsafe_allow_html=True)  # solo los estilos fijos de ui.py, nunca datos
 st.title("Panel de Curaduría B2B - CommunityLab")
 
-# Cargar los datos del mock
-with open("mock_data.json", "r", encoding="utf-8") as f:
-    datos = json.load(f)
 
-# 1. CUADRO DE MÉTRICAS
-with st.container(border=True):
-    st.subheader("Rendimiento del Lote")
-    col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-    col_m1.metric("Clima de la Comunidad", datos.get("clasificacionSentimiento", "N/A"))
-    col_m2.metric("Similitud Promedio", f"{datos.get('similitudPromedio', 0) * 100}%")
-    col_m3.metric("Consumo de Tokens (In)", datos.get("tokensIn", 0))
-    
-    with col_m4:
-        st.caption("Origen de Datos")
-        st.markdown(f"#### {datos.get('tipoServidor', 'N/A')}")
+@st.cache_resource
+def _control_intentos() -> auth.ControlIntentos:
+    """Uno por proceso: los fallos se cuentan aunque se abra otra pestaña."""
+    return auth.ControlIntentos()
 
-st.write("") 
 
-st.markdown(f"**Identificador de Lote:** `{datos['loteId']}`")
+def _iniciar_sesion() -> None:
+    usuarios = auth.leer_usuarios(os.environ.get("PANEL_USUARIOS"))
+    if not usuarios:
+        st.error("El panel no tiene usuarios configurados, así que nadie puede entrar. "
+                 "Crea uno con `python scripts/crear_usuario_panel.py` y reinicia el panel.")
+        st.stop()
 
-# 2. CUADROS DE EDICIÓN 
-col_izq, col_der = st.columns(2)
+    with st.form("inicio_sesion"):
+        st.subheader("Iniciar sesión")
+        usuario = st.text_input("Usuario", key="login_usuario")
+        contrasena = st.text_input("Contraseña", type="password", key="login_contrasena")
+        entrar = st.form_submit_button("Entrar", type="primary")
+    if not entrar:
+        st.stop()
 
-with col_izq:
-    with st.container(border=True):
-        st.subheader("Publicación para LinkedIn")
-        post_linkedin = st.text_area(
-            "Edición de copy generado", 
-            value=datos['postLinkedin'], 
-            height=280
-        )
+    usuario = usuario.strip()
+    control = _control_intentos()
+    if control.bloqueado(usuario):
+        st.error("Demasiados intentos fallidos con este usuario. Espera unos minutos.")
+        st.stop()
+    if auth.verificar(usuarios, usuario, contrasena):
+        control.exito(usuario)
+        st.session_state["usuario"] = usuario
+        st.session_state["ultimo_uso"] = time.monotonic()
+        log.info("Inicio de sesión: %s", usuario)
+        st.rerun()
+    control.fallo(usuario)
+    # Sin el usuario en el registro: alguien podría escribir su contraseña en ese campo por error
+    log.warning("Intento de inicio de sesión fallido")
+    time.sleep(auth.PAUSA_FALLO_S)
+    st.error("Usuario o contraseña incorrectos.")
+    st.stop()
 
-with col_der:
-    with st.container(border=True):
-        st.subheader("Gestión de FAQ")
-        tema_faq = st.text_input("Categoría / Tema", value=datos['temaFaq'])
-        pregunta_faq = st.text_input("Pregunta detectada", value=datos['preguntaFaq'])
-        respuesta_faq = st.text_area(
-            "Respuesta de soporte sugerida", 
-            value=datos['respuestaFaq'], 
-            height=100
-        )
 
-st.write("")
+def _cerrar_sesion() -> None:
+    st.session_state.clear()
 
-# 3. ACCIÓN PRINCIPAL
-if st.button("Aprobar Lote y Enviar a OCI", type="primary"):
-    payload = {
-        "postLinkedin": post_linkedin,
-        "temaFaq": tema_faq,
-        "preguntaFaq": pregunta_faq,
-        "respuestaFaq": respuesta_faq,
-        "tipoAutorRespuesta": "HUMANO",
-        "fueEditadoPorHumano": True,
-        "tiempoCuraduriaSeg": 45
-    }
-    
-    st.success("Curaduría completada con éxito. Lote enviado al backend.")
-    
-    with st.expander("Inspeccionar Payload (JSON)"):
-        st.json(payload)
+
+# Sesión vencida por inactividad
+if "usuario" in st.session_state:
+    if time.monotonic() - st.session_state.get("ultimo_uso", 0) > SESION_MAX_INACTIVA_S:
+        _cerrar_sesion()
+        st.info("La sesión se cerró por inactividad. Vuelve a entrar.")
+    else:
+        st.session_state["ultimo_uso"] = time.monotonic()
+
+if "usuario" not in st.session_state:
+    _iniciar_sesion()
+
+with st.sidebar:
+    st.text(f"Sesión: {ui.usuario_actual()}")
+    st.button("Cerrar sesión", on_click=_cerrar_sesion)
+
+pagina = st.navigation([
+    st.Page("paginas/borradores.py", title="Borradores", default=True),
+    st.Page("paginas/dashboard.py", title="Dashboard"),
+    st.Page("paginas/errores.py", title="Errores"),
+])
+pagina.run()

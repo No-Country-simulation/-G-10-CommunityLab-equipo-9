@@ -1,0 +1,25 @@
+# Se aplica a las imágenes que se construyen desde la raíz del repositorio (la IA y el bot).
+# backend-java se construye desde su propia carpeta y solo copia pom.xml, .mvn y src.
+
+# Secretos: ningún .env entra a una imagen, en ninguna carpeta (S8 del análisis)
+**/.env
+**/.env.*
+!**/.env.example
+
+# Datos de Discord con información personal (ingesta)
+ingestion/**/data/
+
+# Control de versiones, editores y entornos locales
+.git
+.gitignore
+.idea/
+*.iml
+.vscode/
+**/.venv/
+**/venv/
+**/__pycache__/
+**/.pytest_cache/
+*.log
+
+# Compilados de Java
+**/target/

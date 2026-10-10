@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 import json
+import threading
 
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
@@ -23,9 +24,12 @@ class PreguntasStore:
     Gestiona el histórico de preguntas para detección de repeticiones.
     """
 
-    def __init__(self):
-        self.embeddings = select_embeddings()
+    def __init__(self, embeddings=None):
+        self.embeddings = embeddings or select_embeddings()
         self.vectorstore: FAISS | None = None
+        # El orquestador atiende pedidos en paralelo y la instancia es compartida:
+        # FAISS y el historial JSON no admiten lecturas y escrituras simultáneas.
+        self._lock = threading.Lock()
         self._cargar()
 
     def _cargar(self) -> None:
@@ -41,11 +45,11 @@ class PreguntasStore:
 
     def buscar_similares(self, pregunta: str) -> list[PreguntaSimilar]:
         """Busca preguntas previas similares."""
-        if not self.vectorstore:
-            return []
-
         query = f"query: {pregunta}" if requiere_prefijo_e5() else pregunta
-        resultados = self.vectorstore.similarity_search_with_score(query, k=TOP_K_PREGUNTAS)
+        with self._lock:
+            if not self.vectorstore:
+                return []
+            resultados = self.vectorstore.similarity_search_with_score(query, k=TOP_K_PREGUNTAS)
 
         similares = []
         for doc, score in resultados:
@@ -67,22 +71,23 @@ class PreguntasStore:
         metadata = {"fecha": datetime.utcnow().isoformat(), **(metadatos or {})}
         doc = Document(page_content=contenido, metadata=metadata)
 
-        if self.vectorstore is None:
-            self.vectorstore = FAISS.from_documents([doc], self.embeddings)
-        else:
-            self.vectorstore.add_documents([doc])
+        with self._lock:
+            if self.vectorstore is None:
+                self.vectorstore = FAISS.from_documents([doc], self.embeddings)
+            else:
+                self.vectorstore.add_documents([doc])
 
-        RUTA_FAISS_PREGUNTAS.mkdir(parents=True, exist_ok=True)
-        self.vectorstore.save_local(str(RUTA_FAISS_PREGUNTAS))
+            RUTA_FAISS_PREGUNTAS.mkdir(parents=True, exist_ok=True)
+            self.vectorstore.save_local(str(RUTA_FAISS_PREGUNTAS))
 
-        # Backup JSON legible
-        historial = []
-        if RUTA_HISTORIAL_PREGUNTAS.exists():
-            try:
-                historial = json.loads(RUTA_HISTORIAL_PREGUNTAS.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                historial = []
-        historial.append({"pregunta": pregunta, **metadata})
-        RUTA_HISTORIAL_PREGUNTAS.write_text(
-            json.dumps(historial, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+            # Backup JSON legible
+            historial = []
+            if RUTA_HISTORIAL_PREGUNTAS.exists():
+                try:
+                    historial = json.loads(RUTA_HISTORIAL_PREGUNTAS.read_text(encoding="utf-8"))
+                except json.JSONDecodeError:
+                    historial = []
+            historial.append({"pregunta": pregunta, **metadata})
+            RUTA_HISTORIAL_PREGUNTAS.write_text(
+                json.dumps(historial, ensure_ascii=False, indent=2), encoding="utf-8"
+            )

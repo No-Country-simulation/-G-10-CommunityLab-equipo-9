@@ -1,0 +1,153 @@
+# InsightEdu Lab · sistema con Docker (propuesta de arquitectura 3)
+#
+#   docker compose up -d --build   levanta todo (desde la raíz del repositorio)
+#   docker compose ps              muestra el estado y la salud de cada servicio
+#   docker compose down            lo detiene; los datos quedan en los volúmenes
+#
+# Las variables vienen del archivo .env de la raíz (plantilla: .env.example) y
+# cada servicio recibe solo las que necesita.
+# Los puertos publicados escuchan solo en 127.0.0.1: se usan desde esta misma
+# máquina y no quedan abiertos a la red (S5 del análisis).
+# Guía: docs/OPERACION.md
+
+name: insightedu
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-datos:/var/lib/postgresql/data
+    # Sin puertos publicados: solo la API Java llega a la base, por la red interna.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  api-java:
+    build: ./backend-java
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # T09: la URL PAR del bucket (una credencial: solo escritura y con vencimiento). Vacía = no se sube nada a OCI
+      OCI_PAR_URL: ${OCI_PAR_URL:-}
+      # T09: false apaga la subida de borradores a OCI aunque haya PAR
+      OCI_HABILITADA: ${OCI_HABILITADA:-true}
+      # S1: clave de la ingesta para POST /api/v1/lotes. Vacía = la API rechaza todo salvo /actuator/health
+      API_KEY_INGESTA: ${API_KEY_INGESTA:-}
+      # T05: clave del bot para POST /api/v1/mensajes/en-vivo (cada clave abre solo su puerta, DEC-70)
+      API_KEY_BOT: ${API_KEY_BOT:-}
+      # T07: clave del panel para /api/v1/borradores y /api/v1/errores (solo esas puertas)
+      API_KEY_PANEL: ${API_KEY_PANEL:-}
+      # S2: clave que Java envía a la IA en X-Api-Key (la misma que recibe el servicio ia)
+      API_KEY_IA: ${API_KEY_IA:-}
+      # Dentro de Docker la IA se encuentra por el nombre de su servicio, no por localhost.
+      PYTHON_NLP_URL: http://ia:8000
+      # T06: false apaga la generación de borradores del Agente-Mod (cada logro gasta una llamada a Gemini)
+      GENERACION_HABILITADA: ${GENERACION_HABILITADA:-true}
+      # T06b · FAQ semanal: true la arma una vez al encender Java (para la demo). Gasta unas 15 a 20 llamadas a Gemini
+      FAQ_SEMANAL_AL_ARRANCAR: ${FAQ_SEMANAL_AL_ARRANCAR:-false}
+      # Cuántos días hacia atrás se juntan las dudas
+      FAQ_SEMANAL_DIAS: ${FAQ_SEMANAL_DIAS:-7}
+      # false apaga la FAQ semanal. El horario es un cron de Spring (segundo minuto hora día mes día-de-la-semana)
+      FAQ_SEMANAL_HABILITADA: ${FAQ_SEMANAL_HABILITADA:-true}
+      FAQ_SEMANAL_CRON: "${FAQ_SEMANAL_CRON:-0 0 8 * * MON}"
+      FAQ_SEMANAL_ZONA: ${FAQ_SEMANAL_ZONA:-America/Bogota}
+    ports:
+      - "127.0.0.1:8008:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+
+  ia:
+    build:
+      context: .
+      dockerfile: agents/Dockerfile
+    environment:
+      # D5: un solo proveedor y un solo modelo para el clasificador y el Agente FAQ.
+      ORQ_CLASIFICADOR_PROVIDER: ${ORQ_CLASIFICADOR_PROVIDER:-google}
+      ORQ_CLASIFICADOR_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
+      FAQ_PROVIDER: google
+      FAQ_MODEL_NAME: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      # S2: /v1/procesar exige esta clave en X-Api-Key. Vacía = /v1/procesar rechaza todo con 401
+      API_KEY_IA: ${API_KEY_IA:-}
+      # DEC-54: tope total de un pedido en tiempoReal, para responder antes de los 30 s de Java
+      TIEMPO_REAL_TOPE_S: ${TIEMPO_REAL_TOPE_S:-25}
+      # T06 · Agente-Mod (DEC-85): el modelo que redacta. Vacío = el mismo que clasifica
+      MOD_MODEL_NAME: ${MOD_MODEL_NAME:-}
+      # T06b · tope total de POST /v1/faq; tiene que ser menor que los 150 s que espera Java
+      FAQ_SEMANAL_TOPE_S: ${FAQ_SEMANAL_TOPE_S:-120}
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      # Estado que la IA escribe; son copias derivadas que se pueden reconstruir (sección 5 del análisis).
+      - ia-preguntas:/app/agents/agent_faq/data/vectorstore/faiss_preguntas
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    restart: unless-stopped
+
+  # ⚠️ Un solo bot encendido con el mismo token, o cada mensaje se responde dos veces (docs/OPERACION.md §7)
+  bot:
+    build:
+      context: .
+      dockerfile: agents/bot_discord/Dockerfile
+    environment:
+      # Los mismos nombres que la ingesta (M3): el bot reutiliza ingestion/discord/config.py
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      DISCORD_CHANNEL_DUDAS_ID: ${DISCORD_CHANNEL_DUDAS_ID:-}
+      DISCORD_CHANNEL_LOGROS_ID: ${DISCORD_CHANNEL_LOGROS_ID:-}
+      # Para reconocer a los alumnos simulados y a los mentores igual que el lote de la hora (C2)
+      DISCORD_WEBHOOK_DUDAS_URL: ${DISCORD_WEBHOOK_DUDAS_URL:-}
+      DISCORD_WEBHOOK_LOGROS_URL: ${DISCORD_WEBHOOK_LOGROS_URL:-}
+      DISCORD_MENTOR_ROLE_IDS: ${DISCORD_MENTOR_ROLE_IDS:-}
+      DISCORD_STAFF_ROLE_IDS: ${DISCORD_STAFF_ROLE_IDS:-}
+      SIMULATED_MENTORS: ${SIMULATED_MENTORS:-sim-andres-mentor}
+      API_KEY_BOT: ${API_KEY_BOT:-}
+      # Dentro de Docker, Java se encuentra por el nombre de su servicio
+      BOT_JAVA_URL: http://api-java:8080
+    # Sin puertos publicados: el bot solo sale hacia Discord y hacia la API Java
+    depends_on:
+      api-java:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Panel de curaduría (T07). En el servidor será la única pieza abierta a internet (DEC-42, T10)
+  panel:
+    build: ./panel
+    environment:
+      # La clave que envía a Java (python scripts/generar_api_key.py --cliente panel)
+      API_KEY_PANEL: ${API_KEY_PANEL:-}
+      # Usuarios y hashes de sus contraseñas (python scripts/crear_usuario_panel.py). Vacía = nadie entra
+      PANEL_USUARIOS: ${PANEL_USUARIOS:-}
+      # Dentro de Docker, Java se encuentra por el nombre de su servicio. El panel nunca habla con la base ni con la IA
+      PANEL_JAVA_URL: http://api-java:8080
+    ports:
+      - "127.0.0.1:8501:8501"
+    depends_on:
+      api-java:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-datos:
+  ia-preguntas:

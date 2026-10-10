@@ -1,0 +1,18 @@
+# Configuración de Streamlit para el panel (T07). La única pieza que quedará abierta a internet (DEC-42).
+
+[server]
+headless = true
+# Protección contra pedidos falsificados desde otra página (viene encendida; se deja explícita)
+enableXsrfProtection = true
+# Nadie edita el código dentro del contenedor: no hace falta vigilar archivos
+fileWatcherType = "none"
+# El panel no recibe archivos
+maxUploadSize = 1
+
+[browser]
+gatherUsageStats = false
+
+[client]
+# Ante un error, el navegador ve un mensaje genérico; el detalle va solo al registro del contenedor
+showErrorDetails = "none"
+toolbarMode = "minimal"

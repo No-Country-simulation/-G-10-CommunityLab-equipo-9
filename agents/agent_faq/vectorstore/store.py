@@ -9,8 +9,8 @@ from .loader import cargar_pdfs, fragmentar_documentos
 class StorePDFs:
     """Wrapper para el vectorstore de PDFs."""
 
-    def __init__(self):
-        self.embeddings = select_embeddings()
+    def __init__(self, embeddings=None):
+        self.embeddings = embeddings or select_embeddings()
         self.vectorstore: FAISS | None = None
         self.retriever = None
 

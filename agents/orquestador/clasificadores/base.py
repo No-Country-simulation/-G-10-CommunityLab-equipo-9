@@ -1,8 +1,8 @@
 """
 Interfaz abstracta para clasificadores de intención.
 
-Permite intercambiar entre Cohere, Laya o cualquier otro modelo
-sin cambiar el resto del Orquestador.
+Hoy la implementa solo KeywordFallback, que usa el etiquetador
+cuando se elige ORQ_CLASIFICADOR_PROVIDER=keyword.
 """
 from __future__ import annotations
 from abc import ABC, abstractmethod

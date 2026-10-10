@@ -1,6 +1,8 @@
 """
 Reranking local con Cross-Encoder para mejorar precisión del RAG.
 """
+import re
+
 from sentence_transformers import CrossEncoder
 from ..config import FAQ_RERANKER_MODEL, TOP_N_RERANK
 
@@ -36,8 +38,10 @@ class Reranker:
         contexto = ""
         citaciones = []
         for idx, doc in enumerate(documentos, 1):
+            # Solo el nombre del archivo, corte con "/" o con "\": el índice guarda la ruta completa de la PC
+            # donde se armó (en Windows, con "\"), y esa ruta no se publica ni se envía a Gemini (T05)
             fuente = (
-                doc.metadata.get("source", "Desconocido").split("/")[-1]
+                re.split(r"[\\/]", doc.metadata.get("source", "Desconocido"))[-1]
                 if "source" in doc.metadata
                 else "Documento"
             )

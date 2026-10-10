@@ -1,0 +1,7 @@
+# Dependencias del bot de Discord (agents/bot_discord/Dockerfile).
+# Reutiliza contract.py, transform.py, config.py y discord_api.py de la ingesta: por eso httpx, pydantic y dotenv.
+# Pendiente (S13 del análisis): fijar versiones exactas.
+discord.py>=2.4,<3
+httpx>=0.28,<1
+pydantic>=2.13,<3
+python-dotenv>=1.0,<2

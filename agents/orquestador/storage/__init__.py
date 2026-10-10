@@ -1,1 +1,0 @@
-"""Clientes de almacenamiento (OCI + ChromaDB)."""

@@ -1,0 +1,30 @@
+# Dependencias del servicio de IA (orquestador + Agente FAQ) dentro de Docker.
+# Solo lo que el código importa; el bot de Discord tiene las suyas.
+# torch se instala antes, desde el índice de PyTorch para CPU (ver agents/Dockerfile).
+# Pendiente (S13 del análisis): fijar versiones exactas con `pip freeze` de la imagen.
+
+# Servidor HTTP
+fastapi>=0.110.0
+uvicorn>=0.28.0
+
+# Orquestación y agentes
+# 2.11 o más: el contrato v1 (ingestion/discord/contract.py) usa validate_by_name y serialize_by_alias
+pydantic>=2.11.0
+python-dotenv>=1.0.0
+langgraph>=0.2.0
+langchain-core>=0.3.0
+langchain-community>=0.3.0
+langchain-classic>=0.1.0
+langchain-text-splitters>=0.3.0
+
+# Proveedor de LLM (D5: uno solo; por defecto Google Gemini)
+langchain-google-genai
+
+# Búsqueda en los PDFs (RAG): embeddings, índice y reranker
+langchain-huggingface>=0.1.0
+sentence-transformers>=3.0.0
+faiss-cpu>=1.8.0
+pypdf>=5.0.0
+
+# Opcionales que el código usa si están configurados (fallan en silencio si no)
+oci
