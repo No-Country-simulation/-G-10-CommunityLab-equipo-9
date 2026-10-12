@@ -1,7 +1,7 @@
 # AGENTS.md — guía para asistentes de IA
 
 > Para cualquier asistente de IA o agente de código (de cualquier proveedor) que trabaje en este repositorio. También sirve a una persona que llega por primera vez.
-> **Rama:** `main` · **Actualizado:** 2026-10-09
+> **Rama:** `main` · **Actualizado:** 2026-10-12
 
 ## 1. El proyecto en tres líneas
 
@@ -57,7 +57,7 @@
 | **Datos personales** | Los borradores usan solo el **primer nombre** del alumno, y publicarlo exige la casilla de consentimiento. Los registros nunca llevan textos de alumnos: solo IDs y números |
 | **Respuestas del bot** | El bot responde solo si el Agente FAQ encontró **respaldo en los PDF**; si no, deriva a un mentor. Nada fuera de Discord se publica sin aprobación |
 | **Pruebas** | Ningún cambio está terminado sin pruebas que pasen, ejecutadas de verdad: las de la pieza tocada y las que ya existían |
-| **Ramas** | No modificar ni borrar las ramas originales de los equipos (`feature/java-core-api`, las de `ai-engine`, `feat/7-panel-minimo` y `feature/postman-docs-solo`). Trabajar en una rama nueva desde `main` y fusionar con un Pull Request |
+| **Ramas** | `main` es del equipo: **nunca se hace commit directo en `main`**. Cada cambio va en una rama nueva desde `main` y entra con un Pull Request. **No modificar ni borrar ramas ajenas**: las originales de los equipos (`feature/java-core-api`, las de `ai-engine`, `feat/7-panel-minimo` y `feature/postman-docs-solo`), `feature/automatizacion-linkedin` y cualquier otra rama de otra persona. Si una rama ajena necesita un cambio, se le pide a su autor |
 
 ## 5. Cómo levantar y probar
 

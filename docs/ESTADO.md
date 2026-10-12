@@ -1,7 +1,7 @@
 # Estado del proyecto y cómo continuar
 
 > **Qué es este documento:** qué está hecho, qué falta y cómo seguir trabajando sin romper lo que existe.
-> **Actualizado:** 2026-10-09 · **Rama:** `main` · **Entrega de la hackatón:** 2026-10-26
+> **Actualizado:** 2026-10-12 · **Rama:** `main` · **Entrega de la hackatón:** 2026-10-26
 > Cómo funciona el sistema: [ARQUITECTURA.md](ARQUITECTURA.md). Por qué se decidió cada cosa: [DECISIONES.md](DECISIONES.md).
 
 ## 1. En una frase
@@ -20,7 +20,7 @@
 | OE4 | Responder dudas en vivo con los PDF y convertir las repetidas en una FAQ | N4 | ✅ |
 | OE5 | Dashboard con sentimiento, temas y alertas | N5 | ✅ |
 | OE6 | Panel con inicio de sesión para revisar, editar, aprobar o rechazar, con consentimiento | N6 | ✅ |
-| OE7 | Guardar en OCI los activos generados y los aprobados | N7 | 🟡 Funciona: el 2026-10-09 se subieron 31 archivos sin errores. Falta que el dueño del bucket confirme en su consola lo que llegó |
+| OE7 | Guardar en OCI los activos generados y los aprobados | N7 | ✅ El 2026-10-09 se subieron 31 archivos sin errores, y el 2026-10-12 el dueño del bucket lo confirmó en su consola |
 | OE8 | Todo con un comando, seguro y con pruebas | Transversal | 🟡 5 de 6 servicios en Docker, con claves por cliente, inicio de sesión y pruebas automáticas en cada pieza. Falta la ingesta como servicio |
 | OE9 | Desplegarlo y ensayar la demo | Transversal | ⏸️ Diseñado, en pausa (sección 3, punto 3) |
 
@@ -31,9 +31,9 @@ Si falta tiempo, lo último que se recorta es OE1, OE3 y OE6.
 | # | Qué | Por qué importa | Dónde empezar |
 |---|---|---|---|
 | 1 | ✅ **Hecho (T11, 2026-10-10):** se borró el código que ya no se usaba en `agents/orquestador/`, sus variables de `config.py` y el `requirements.txt` viejo de la raíz (DEC-145, DEC-146) | Confundía a quien lee el código (personas o asistentes de IA) | [Informe T11](historico/tareas/T11-informe.md): qué se borró, qué se conservó y por qué |
-| 2 | **Confirmar el bucket de OCI**: que estén `generados/` y `aprobados/`, que un archivo no tenga datos de Discord, y que la PAR sea de solo escritura y con vencimiento después de la entrega | Cierra OE7 | El dueño del bucket, en la consola de Oracle |
+| 2 | ✅ **Hecho (2026-10-12):** el dueño del bucket confirmó que están `generados/` y `aprobados/`, que los archivos no tienen datos de Discord, y que la PAR es de solo escritura y vence después de la entrega (DEC-129) | Cierra OE7 | — |
 | 3 | **Desplegar y ensayar la demo**: una VM gratis de Oracle Cloud, Caddy con HTTPS y un subdominio de DuckDNS, la ingesta cada hora con `cron`, respaldos diarios, claves nuevas del servidor y un guion de demo de 10 minutos | Cierra OE1, OE8 y OE9 | La propuesta completa está en [historico/tareas/T10-despliegue-demo.md](historico/tareas/T10-despliegue-demo.md), y las decisiones en DEC-137 a DEC-140 |
-| 4 | Revisar el **vencimiento de la PAR** de OCI antes de la demo | Si vence, las subidas pasan a `ERROR` | [OPERACION.md](OPERACION.md) §12 |
+| 4 | ✅ **Hecho (2026-10-12):** la PAR de OCI vence después de la entrega. Si la demo se corre más tarde, hay que revisarla de nuevo | Si vence, las subidas pasan a `ERROR` | [OPERACION.md](OPERACION.md) §12 |
 
 ### Mejoras posibles (🟡), si sobra tiempo
 
@@ -52,7 +52,7 @@ Los **riesgos aceptados** (⚠️) están en [DECISIONES.md](DECISIONES.md): por
 ## 4. Cómo continuar el trabajo
 
 1. **Entender antes de cambiar:** leer el [README](../README.md) (cómo levantarlo), [ARQUITECTURA.md](ARQUITECTURA.md) y las reglas de [AGENTS.md](../AGENTS.md).
-2. **Una rama por cambio**, desde `main`, con un nombre que diga qué hace (por ejemplo, `mejora/razon-error-clasificacion`).
+2. **Una rama por cambio**, desde `main`, con un nombre que diga qué hace (por ejemplo, `mejora/razon-error-clasificacion`). Nunca un commit directo en `main`, y nunca cambiar la rama de otra persona (DEC-148).
 3. **Respetar las reglas que no se rompen** ([AGENTS.md](../AGENTS.md)): los contratos solo crecen agregando, una migración aplicada nunca se edita, los secretos nunca van a git, las claves solo abren su puerta y nunca hay dos bots encendidos.
 4. **Probar de verdad:** las pruebas de la pieza que se tocó, más las que ya existían. Ningún cambio está terminado sin pruebas que pasen.
 5. **Documentar:** si el cambio decide algo, una fila en [DECISIONES.md](DECISIONES.md); si cambia cómo funciona, actualizar [ARQUITECTURA.md](ARQUITECTURA.md); si cierra un pendiente, actualizar este documento.
@@ -60,7 +60,7 @@ Los **riesgos aceptados** (⚠️) están en [DECISIONES.md](DECISIONES.md): por
 
 ## 5. Ramas de trabajo retiradas
 
-La integración se hizo con una rama por tarea. Al terminar, todas se fusionaron en `main` y se borraron para dejar el repositorio ordenado: **su contenido completo está en `main`**. Las ramas originales de cada equipo (`feature/java-core-api`, las de `ai-engine`, `feat/7-panel-minimo` y `feature/postman-docs-solo`) **se conservan sin cambios**.
+La integración se hizo con una rama por tarea. Al terminar, todas se fusionaron en `main` y se borraron el 2026-10-10 para dejar el repositorio ordenado (DEC-144): **su contenido completo está en `main`**. Las ramas originales de cada equipo (`feature/java-core-api`, las de `ai-engine`, `feat/7-panel-minimo` y `feature/postman-docs-solo`) **se conservan sin cambios**. Tampoco se toca `feature/automatizacion-linkedin`, de otro integrante: entra a `main` con su propio Pull Request (DEC-148).
 
 Para recrear una rama retirada: `git branch <nombre> <commit>`.
 
