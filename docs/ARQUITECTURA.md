@@ -1,7 +1,7 @@
 # Arquitectura de InsightEdu Lab
 
 > **Qué es este documento:** la descripción de **cómo funciona hoy** el sistema: sus piezas, sus flujos, sus datos y sus reglas. Es la **fuente de verdad** sobre el funcionamiento.
-> **Actualizado:** 2026-10-09 · **Rama:** `main`
+> **Actualizado:** 2026-10-12 · **Rama:** `main`
 > Reemplaza a la propuesta de arquitectura 3 en PDF del 2026-10-02, que se conserva en [docs/historico/propuesta-3/](historico/propuesta-3/) como registro. Si algo de este documento choca con el código, manda el código, y hay que corregir este documento.
 
 ## Cómo leerlo
@@ -40,7 +40,7 @@ La institución del proyecto es ficticia: **CommunityLab**. Sus documentos (regl
 | N4 | FAQ y bot que responde dudas | El bot responde con el **Agente FAQ** (solo con respaldo en los PDF) y cada semana se arma un borrador de **FAQ** con las dudas repetidas | ✅ |
 | N5 | Dashboard de sentimiento, tendencias y alertas | Página **Dashboard** del panel | ✅ |
 | N6 | Aprobación humana antes de publicar | Página **Borradores** del panel, con inicio de sesión y casilla de consentimiento | ✅ |
-| N7 | Guardar los activos en OCI | Java sube cada borrador a `generados/` y cada aprobado a `aprobados/` | ✅ (confirmación del bucket pendiente: [ESTADO.md](ESTADO.md)) |
+| N7 | Guardar los activos en OCI | Java sube cada borrador a `generados/` y cada aprobado a `aprobados/` | ✅ |
 
 Fuera del MVP, por decisión del equipo: X/Twitter, newsletters, el resumen *Community Highlights* y Slack ([DECISIONES.md](DECISIONES.md), DEC-01 a DEC-03).
 
