@@ -79,4 +79,20 @@ class LinkedinServiceTest {
         assertThat(req.lifecycleState()).isEqualTo("PUBLISHED");
         assertThat(req.distribution().feedDistribution()).isEqualTo("MAIN_FEED");
     }
+
+    @Test
+    void siTextoSupera3000CaracteresRetornaErrorParaPermitirCorregirlo() {
+        LinkedinProperties props = new LinkedinProperties(true, "token", "urn:li:person:123", null);
+        LinkedinClient client = Mockito.mock(LinkedinClient.class);
+
+        LinkedinService service = new LinkedinService(client, props);
+
+        String textoMuyLargo = "A".repeat(3500);
+        LinkedinPostResponse resp = service.publicarBorrador(99L, textoMuyLargo);
+
+        assertThat(resp.publicado()).isFalse();
+        assertThat(resp.mensaje()).contains("excede el límite máximo de 3000 caracteres");
+        assertThat(resp.mensaje()).contains("3500");
+        Mockito.verifyNoInteractions(client);
+    }
 }

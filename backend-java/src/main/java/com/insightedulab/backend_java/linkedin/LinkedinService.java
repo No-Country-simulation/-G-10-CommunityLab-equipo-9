@@ -13,6 +13,8 @@ public class LinkedinService {
 
     private static final Logger log = LoggerFactory.getLogger(LinkedinService.class);
 
+    public static final int MAX_CARACTERES_LINKEDIN = 3000;
+
     private final LinkedinClient cliente;
     private final LinkedinProperties propiedades;
 
@@ -37,6 +39,15 @@ public class LinkedinService {
         if (texto == null || texto.isBlank()) {
             log.warn("El borrador {} no contiene texto para publicar en LinkedIn", borradorId);
             return new LinkedinPostResponse(false, false, null, "Texto de post vacío");
+        }
+
+        if (texto.length() > MAX_CARACTERES_LINKEDIN) {
+            String mensajeError = String.format(
+                    "El texto del borrador %d excede el límite máximo de %d caracteres de LinkedIn (longitud actual: %d). Modifícalo antes de publicar.",
+                    borradorId, MAX_CARACTERES_LINKEDIN, texto.length()
+            );
+            log.warn(mensajeError);
+            return new LinkedinPostResponse(false, false, null, mensajeError);
         }
 
         // 1. Modo real: credenciales configuradas

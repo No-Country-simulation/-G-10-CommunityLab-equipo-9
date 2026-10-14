@@ -39,7 +39,7 @@ public class LinkedinClient {
         ResponseEntity<Void> respuesta = http.post()
                 .uri(destino)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + propiedades.accessToken())
-                .header("LinkedIn-Version", "202401")
+                .header("LinkedIn-Version", "202503")
                 .header("X-Restli-Protocol-Version", "2.0.0")
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(request)

@@ -108,7 +108,10 @@ public class CuraduriaService {
             String textoParaPublicar = (resultado.textoFinal() != null && !resultado.textoFinal().isBlank())
                     ? resultado.textoFinal()
                     : resultado.textoIa();
-            linkedinService.publicarBorrador(id, textoParaPublicar);
+            // Ejecución en segundo plano para no demorar la respuesta de aprobación en el panel web
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                linkedinService.publicarBorrador(id, textoParaPublicar);
+            });
         }
 
         return resultado;

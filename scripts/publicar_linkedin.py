@@ -102,7 +102,7 @@ def main():
         data=json.dumps(payload).encode("utf-8"),
         headers={
             "Authorization": f"Bearer {token}",
-            "LinkedIn-Version": "202401",
+            "LinkedIn-Version": "202503",
             "X-Restli-Protocol-Version": "2.0.0",
             "Content-Type": "application/json",
         },
