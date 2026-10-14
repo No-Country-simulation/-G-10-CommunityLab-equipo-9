@@ -101,6 +101,17 @@ def lineas_oci(oci: dict | None, estado_borrador: str) -> list[str]:
     return lineas
 
 
+def tema_oscuro() -> bool:
+    """
+    T12: True si el navegador muestra el tema oscuro (st.context.theme, Streamlit 1.46 o más nuevo).
+    Sin dato (por ejemplo, en las pruebas), el claro: es el que trae Streamlit por defecto.
+    """
+    try:
+        return st.context.theme.type == "dark"
+    except AttributeError:
+        return False
+
+
 def mostrar_texto(texto: str | None) -> None:
     """Un texto de un alumno o de la IA, tal cual y sin interpretar (ni HTML ni markdown)."""
     st.code(texto if texto else "(sin texto)", language=None, wrap_lines=True)

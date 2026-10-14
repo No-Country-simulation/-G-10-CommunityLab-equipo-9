@@ -1,6 +1,8 @@
 package com.insightedulab.backend_java.controller;
 
 import com.insightedulab.backend_java.dashboard.DashboardService;
+import com.insightedulab.backend_java.dashboard.VistasDashboard.Comunidad;
+import com.insightedulab.backend_java.dashboard.VistasDashboard.Contenido;
 import com.insightedulab.backend_java.dashboard.VistasDashboard.Desercion;
 import com.insightedulab.backend_java.dashboard.VistasDashboard.DudasSinResponder;
 import com.insightedulab.backend_java.dashboard.VistasDashboard.Frustracion;
@@ -19,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 
 /**
- * Puertas de solo lectura del dashboard (T08, DEC-122, PANEL_JAVA_v1.md §7).
+ * Puertas de solo lectura del dashboard (T08, DEC-122, y T12, DEC-153, PANEL_JAVA_v1.md §7).
  * Solo las puede usar el cliente "panel" (ApiKeyFilter y, además, cada método: DEC-70).
  * El período va en días (desde y hasta incluidos, AAAA-MM-DD); sin fechas, los últimos 30 días.
  */
@@ -47,18 +49,20 @@ public class DashboardController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
             @RequestParam(required = false) String agrupar,
-            @RequestParam(defaultValue = "false") boolean excluirOtro) {
+            @RequestParam(defaultValue = "false") boolean excluirOtro,
+            @RequestParam(required = false) String rol) {
         ClientePermitido.exigir(ClientePermitido.PANEL, cliente);
-        return dashboard.sentimiento(desde, hasta, agrupar, excluirOtro);
+        return dashboard.sentimiento(desde, hasta, agrupar, excluirOtro, rol);
     }
 
     @GetMapping("/temas")
     public Temas temas(@RequestAttribute(name = ApiKeyFilter.ATRIBUTO_CLIENTE, required = false) String cliente,
                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
-                       @RequestParam(defaultValue = "false") boolean excluirOtro) {
+                       @RequestParam(defaultValue = "false") boolean excluirOtro,
+                       @RequestParam(required = false) String rol) {
         ClientePermitido.exigir(ClientePermitido.PANEL, cliente);
-        return dashboard.temas(desde, hasta, excluirOtro);
+        return dashboard.temas(desde, hasta, excluirOtro, rol);
     }
 
     @GetMapping("/desercion")
@@ -86,5 +90,21 @@ public class DashboardController {
             @RequestParam(defaultValue = "false") boolean excluirOtro) {
         ClientePermitido.exigir(ClientePermitido.PANEL, cliente);
         return dashboard.dudasSinResponder(desde, hasta, horas, excluirOtro);
+    }
+
+    @GetMapping("/comunidad")
+    public Comunidad comunidad(@RequestAttribute(name = ApiKeyFilter.ATRIBUTO_CLIENTE, required = false) String cliente,
+                               @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+                               @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
+        ClientePermitido.exigir(ClientePermitido.PANEL, cliente);
+        return dashboard.comunidad(desde, hasta);
+    }
+
+    @GetMapping("/contenido")
+    public Contenido contenido(@RequestAttribute(name = ApiKeyFilter.ATRIBUTO_CLIENTE, required = false) String cliente,
+                               @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+                               @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
+        ClientePermitido.exigir(ClientePermitido.PANEL, cliente);
+        return dashboard.contenido(desde, hasta);
     }
 }

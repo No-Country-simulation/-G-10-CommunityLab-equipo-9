@@ -146,6 +146,9 @@ services:
       PANEL_USUARIOS: ${PANEL_USUARIOS:-}
       # Dentro de Docker, Java se encuentra por el nombre de su servicio. El panel nunca habla con la base ni con la IA
       PANEL_JAVA_URL: http://api-java:8080
+      # T12 (DEC-154): minutos que tarda Marketing en encontrar y redactar una historia a mano. Es el supuesto de
+      # "Horas ahorradas" en el Dashboard
+      PANEL_MINUTOS_POR_HISTORIA: ${PANEL_MINUTOS_POR_HISTORIA:-30}
     ports:
       - "127.0.0.1:8501:8501"
     depends_on:

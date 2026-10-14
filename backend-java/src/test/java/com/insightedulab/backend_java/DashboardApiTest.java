@@ -62,6 +62,8 @@ class DashboardApiTest {
     static final String CLAVE_PANEL = CuraduriaApiTest.CLAVE_PANEL;
     private static final ZoneId BOGOTA = ZoneId.of("America/Bogota");
     private static final String SCRIPT = "<script>alert(1)</script> ¿cómo instalo python?";
+    private static final String SERVIDOR = "1554157903701741700";
+    private static final String CANAL = "1554158212742127821";
 
     @MockitoBean NlpDataClient ia;  // el dashboard no usa la IA: que ninguna prueba la llame de verdad
     @Autowired DashboardService dashboard;
@@ -255,11 +257,201 @@ class DashboardApiTest {
         assertThat(dudas.get(0).get("derivada").asBoolean()).isFalse();
         assertThat(dudas.get(0).get("autorNombre").asText()).isEqualTo("Caro");
         assertThat(dudas.get(0).get("tema").asText()).isEqualTo("herramientas_entorno");
+        // T12: con el servidor y el canal, el panel arma el enlace a Discord
+        assertThat(dudas.get(0).get("servidorId").asText()).isEqualTo(SERVIDOR);
+        assertThat(dudas.get(0).get("canalId").asText()).isEqualTo(CANAL);
         assertThat(dudas.get(1).get("discordId").asText()).isEqualTo(derivada);
         assertThat(dudas.get(1).get("derivada").asBoolean()).isTrue();
 
         // Con 1 hora, la reciente también entra
         assertThat(pedir("/api/v1/dashboard/dudas-sin-responder?horas=1").get("total").asLong()).isEqualTo(3);
+    }
+
+    // ── T12, caso 1: filtro de rol en sentimiento y temas ──
+
+    @Test
+    void sinRolEsIgualQueAntesYConAlumnosSeQuitanLosMentores() throws Exception {
+        etiquetado("ana", Instant.parse("2026-10-01T15:00:00Z"), "COMENTARIO", "POSITIVO", "empleo");
+        etiquetado(AutorTipo.persona, AutorRol.mentor, "andres", Instant.parse("2026-10-01T16:00:00Z"),
+                "COMENTARIO", "NEGATIVO", "comunidad");
+        String rango = "desde=2026-10-01&hasta=2026-10-01";
+
+        JsonNode sinRol = pedir("/api/v1/dashboard/sentimiento?" + rango);
+        JsonNode todos = pedir("/api/v1/dashboard/sentimiento?" + rango + "&rol=todos");
+        JsonNode alumnos = pedir("/api/v1/dashboard/sentimiento?" + rango + "&rol=alumnos");
+
+        assertThat(todos).isEqualTo(sinRol);  // la respuesta de siempre, sin campos nuevos
+        assertThat(cantidades(sinRol.get("puntos").get(0))).containsEntry("POSITIVO", 1L).containsEntry("NEGATIVO", 1L);
+        assertThat(cantidades(alumnos.get("puntos").get(0))).containsEntry("POSITIVO", 1L).containsEntry("NEGATIVO", 0L);
+
+        assertThat(temas(pedir("/api/v1/dashboard/temas?" + rango)).keySet()).containsExactlyInAnyOrder("empleo", "comunidad");
+        assertThat(pedir("/api/v1/dashboard/temas?" + rango + "&rol=todos"))
+                .isEqualTo(pedir("/api/v1/dashboard/temas?" + rango));
+        assertThat(temas(pedir("/api/v1/dashboard/temas?" + rango + "&rol=alumnos")).keySet()).containsExactly("empleo");
+    }
+
+    // ── T12, caso 2: vista Comunidad ──
+
+    @Test
+    void comunidadCuentaAlumnosActivosElBotYLasDerivadasPorTema() throws Exception {
+        // hasta = 14 oct: los 7 días son 8..14 oct y los 30 días, 15 sep..14 oct (en hora de Bogotá)
+        mensaje("ana", Instant.parse("2026-10-13T15:00:00Z"));
+        mensaje("beto", Instant.parse("2026-10-01T15:00:00Z"));
+        mensaje("elena", Instant.parse("2026-10-08T04:00:00Z"));  // 7 oct a las 23:00 en Bogotá: fuera de los 7 días
+        mensaje("caro", Instant.parse("2026-09-01T15:00:00Z"));   // fuera de los 30 días, pero es alumna
+        mensaje("dani", Instant.parse("2026-10-20T15:00:00Z"));   // después de "hasta": no cuenta
+        etiquetado(AutorTipo.persona, AutorRol.mentor, "andres", Instant.parse("2026-10-13T15:00:00Z"),
+                "COMENTARIO", "NEUTRO", "comunidad");
+        etiquetado(AutorTipo.botPropio, AutorRol.miembro, "bot", Instant.parse("2026-10-13T15:00:00Z"),
+                "OTRO", null, null);
+        // El bot: 2 respondidas (una de un mentor), 3 derivadas y 1 que llegó por lote. Tarda 2, 4, 10, 20 y 30 s
+        Instant t = Instant.parse("2026-10-02T15:00:00Z");
+        dudaDelBot(AutorRol.miembro, "ana", t, "RESPONDIDA", 2, "contenido_curso");
+        dudaDelBot(AutorRol.mentor, "andres", t.plusSeconds(60), "RESPONDIDA", 4, "contenido_curso");
+        dudaDelBot(AutorRol.miembro, "beto", t.plusSeconds(120), "DERIVADA", 10, "evaluaciones");
+        dudaDelBot(AutorRol.miembro, "ana", t.plusSeconds(180), "DERIVADA", 20, "evaluaciones");
+        dudaDelBot(AutorRol.miembro, "beto", t.plusSeconds(240), "DERIVADA", 30, "proyectos");
+        dudaDelBot(AutorRol.miembro, "ana", t.plusSeconds(300), null, 0, "empleo");
+        dudaDelBot(AutorRol.miembro, "caro", Instant.parse("2026-09-01T16:00:00Z"), "DERIVADA", 5, "empleo");  // fuera
+
+        JsonNode r = pedir("/api/v1/dashboard/comunidad?desde=2026-10-01&hasta=2026-10-14");
+
+        JsonNode alumnos = r.get("alumnos");
+        assertThat(alumnos.get("total").asLong()).isEqualTo(4);  // ana, beto, elena y caro
+        assertThat(alumnos.get("activos7Dias").asLong()).isEqualTo(1);
+        assertThat(alumnos.get("activos30Dias").asLong()).isEqualTo(3);
+        assertThat(alumnos.get("dudas").asLong()).isEqualTo(5);  // las de alumnos del período, sin la del mentor
+        JsonNode bot = r.get("bot");
+        assertThat(bot.get("respondidas").asLong()).isEqualTo(2);
+        assertThat(bot.get("derivadas").asLong()).isEqualTo(3);
+        assertThat(bot.get("sinPasarPorElBot").asLong()).isEqualTo(1);
+        assertThat(bot.get("segundosMediana").asDouble()).isEqualTo(10.0);
+        JsonNode derivadas = r.get("derivadasPorTema");
+        assertThat(derivadas).hasSize(2);
+        assertThat(derivadas.get(0).get("tema").asText()).isEqualTo("evaluaciones");
+        assertThat(derivadas.get(0).get("cantidad").asLong()).isEqualTo(2);
+        assertThat(derivadas.get(1).get("tema").asText()).isEqualTo("proyectos");
+    }
+
+    @Test
+    void comunidadSinDatosDaCerosYMedianaNula() throws Exception {
+        JsonNode r = pedir("/api/v1/dashboard/comunidad?desde=2026-10-01&hasta=2026-10-14");
+
+        assertThat(r.get("alumnos").get("total").asLong()).isZero();
+        assertThat(r.get("bot").get("respondidas").asLong()).isZero();
+        assertThat(r.get("bot").get("segundosMediana").isNull()).isTrue();
+        assertThat(r.get("derivadasPorTema")).isEmpty();
+    }
+
+    // ── T12, caso 3: vista Contenido ──
+
+    @Test
+    void contenidoMedianasAprobacionEmbudoSemanasYPendientes() throws Exception {
+        // Período 1..14 oct. Cuatro logros en el período: 3 publicables y 1 no; uno viejo (20 sep) con su post
+        long l0 = logro("ana", Instant.parse("2026-09-20T15:00:00Z"), "GENERADO");
+        long l1 = logro("ana", Instant.parse("2026-10-01T15:00:00Z"), "GENERADO");
+        long l2 = logro("beto", Instant.parse("2026-10-02T15:00:00Z"), "GENERADO");
+        long l3 = logro("caro", Instant.parse("2026-10-03T15:00:00Z"), "GENERADO");
+        logro("dani", Instant.parse("2026-10-04T15:00:00Z"), "NO_PUBLICABLE");
+        etiquetado(AutorTipo.persona, AutorRol.mentor, "andres", Instant.parse("2026-10-05T15:00:00Z"),
+                "COMENTARIO", "NEUTRO", "comunidad");
+        etiquetado(AutorTipo.botPropio, AutorRol.miembro, "bot", Instant.parse("2026-10-05T16:00:00Z"), "OTRO", null, null);
+
+        // Posts aprobados en el período: 10, 20, 30 y 100 s (par: la mediana es 25)
+        aprobado(l1, "POST_LINKEDIN", Instant.parse("2026-10-05T17:00:00Z"), 10);
+        // 12 oct a las 03:00 UTC es el domingo 11 en Bogotá: cuenta en la semana del 5 oct
+        aprobado(l2, "POST_LINKEDIN", Instant.parse("2026-10-12T03:00:00Z"), 20);
+        aprobado(l3, "POST_LINKEDIN", Instant.parse("2026-10-13T15:00:00Z"), 30);
+        aprobado(l0, "POST_LINKEDIN", Instant.parse("2026-10-02T15:00:00Z"), 100);
+        aprobado(l0, "POST_LINKEDIN", Instant.parse("2026-09-25T15:00:00Z"), 999);  // fuera del período
+        // Casos de éxito revisados en el período: 5, 51 (rechazado) y 7 s (impar: la mediana es 7)
+        aprobado(l1, "CASO_EXITO", Instant.parse("2026-10-05T18:00:00Z"), 5);
+        rechazado(l2, "CASO_EXITO", Instant.parse("2026-10-06T15:00:00Z"), 51);
+        aprobado(l0, "CASO_EXITO", Instant.parse("2026-10-07T15:00:00Z"), 7);
+        // Pendientes hoy: un caso de éxito y una FAQ, la más antigua
+        long caso = borrador(l3, "CASO_EXITO", Instant.parse("2026-10-08T15:00:00Z"));
+        long faq = borrador(null, "FAQ", Instant.parse("2026-10-03T15:00:00Z"));
+        // OCI: 2 subidos y 1 pendiente
+        jdbc.update("""
+                INSERT INTO subidas_oci (borrador_id, carpeta, estado, ruta, subido_en)
+                VALUES (?, 'generados', 'SUBIDO', 'generados/x.json', now()), (?, 'generados', 'SUBIDO', 'generados/y.json', now())""",
+                caso, faq);
+        jdbc.update("INSERT INTO subidas_oci (borrador_id, carpeta) VALUES (?, 'aprobados')", caso);
+
+        JsonNode r = pedir("/api/v1/dashboard/contenido?desde=2026-10-01&hasta=2026-10-14");
+
+        JsonNode porRevisar = r.get("porRevisar");
+        assertThat(porRevisar.get("total").asLong()).isEqualTo(2);
+        assertThat(porRevisar.get("porTipo").get("POST_LINKEDIN").asLong()).isZero();
+        assertThat(porRevisar.get("porTipo").get("CASO_EXITO").asLong()).isEqualTo(1);
+        assertThat(porRevisar.get("porTipo").get("FAQ").asLong()).isEqualTo(1);
+        assertThat(porRevisar.get("masAntiguo").asText()).isEqualTo("2026-10-03T15:00:00Z");
+
+        Map<String, JsonNode> revision = new LinkedHashMap<>();
+        r.get("revision").forEach(f -> revision.put(f.get("tipo").asText(), f));
+        assertThat(revision.keySet()).containsExactly("POST_LINKEDIN", "CASO_EXITO", "FAQ");
+        assertThat(revision.get("POST_LINKEDIN").get("medianaSeg").asDouble()).isEqualTo(25.0);
+        assertThat(revision.get("POST_LINKEDIN").get("n").asLong()).isEqualTo(4);
+        assertThat(revision.get("CASO_EXITO").get("medianaSeg").asDouble()).isEqualTo(7.0);
+        assertThat(revision.get("CASO_EXITO").get("n").asLong()).isEqualTo(3);
+        assertThat(revision.get("FAQ").get("medianaSeg").isNull()).isTrue();
+        assertThat(revision.get("FAQ").get("n").asLong()).isZero();
+
+        assertThat(r.get("aprobacion").get("aprobados").asLong()).isEqualTo(6);
+        assertThat(r.get("aprobacion").get("rechazados").asLong()).isEqualTo(1);
+
+        JsonNode embudo = r.get("embudo");
+        assertThat(embudo.get("logros").asLong()).isEqualTo(4);
+        assertThat(embudo.get("publicables").asLong()).isEqualTo(3);
+        assertThat(embudo.get("noPublicables").asLong()).isEqualTo(1);
+        assertThat(embudo.get("conPostAprobado").asLong()).isEqualTo(3);
+        assertThat(r.get("mensajesDePersonas").asLong()).isEqualTo(5);  // los 4 logros y el mentor, sin el bot
+
+        Map<String, Long> semanas = new LinkedHashMap<>();
+        r.get("aprobadosPorSemana").forEach(s -> semanas.put(s.get("inicio").asText(), s.get("cantidad").asLong()));
+        assertThat(semanas).containsExactly(Map.entry("2026-09-28", 1L), Map.entry("2026-10-05", 4L),
+                Map.entry("2026-10-12", 1L));
+
+        // Del logro a la aprobación del post: 98, 228, 240 y 288 horas
+        assertThat(r.get("logroAAprobacion").get("medianaHoras").asDouble()).isEqualTo(234.0);
+        assertThat(r.get("logroAAprobacion").get("n").asLong()).isEqualTo(4);
+        assertThat(r.get("activosOci").asLong()).isEqualTo(2);
+    }
+
+    @Test
+    void contenidoSinDatosDaCerosYMedianasNulas() throws Exception {
+        JsonNode r = pedir("/api/v1/dashboard/contenido?desde=2026-10-01&hasta=2026-10-14");
+
+        assertThat(r.get("porRevisar").get("total").asLong()).isZero();
+        assertThat(r.get("porRevisar").get("porTipo").get("FAQ").asLong()).isZero();
+        assertThat(r.get("porRevisar").get("masAntiguo").isNull()).isTrue();
+        r.get("revision").forEach(f -> {
+            assertThat(f.get("medianaSeg").isNull()).isTrue();
+            assertThat(f.get("n").asLong()).isZero();
+        });
+        assertThat(r.get("aprobacion").get("aprobados").asLong()).isZero();
+        assertThat(r.get("embudo").get("logros").asLong()).isZero();
+        assertThat(r.get("aprobadosPorSemana")).hasSize(3);
+        r.get("aprobadosPorSemana").forEach(s -> assertThat(s.get("cantidad").asLong()).isZero());
+        assertThat(r.get("logroAAprobacion").get("medianaHoras").isNull()).isTrue();
+        assertThat(r.get("logroAAprobacion").get("n").asLong()).isZero();
+        assertThat(r.get("mensajesDePersonas").asLong()).isZero();
+        assertThat(r.get("activosOci").asLong()).isZero();
+    }
+
+    // ── T12, caso 4: frustración solo con los mensajes del período (DEC-157) ──
+
+    @Test
+    void dosNegativosViejosYUnoRecienteYaNoSonAlerta() throws Exception {
+        etiquetado("beto", Instant.parse("2026-08-01T15:00:00Z"), "COMENTARIO", "NEGATIVO", "comunidad");
+        etiquetado("beto", Instant.parse("2026-08-02T15:00:00Z"), "COMENTARIO", "NEGATIVO", "comunidad");
+        etiquetado("beto", Instant.parse("2026-09-28T15:00:00Z"), "COMENTARIO", "NEGATIVO", "comunidad");
+
+        // Antes de T12, sus últimos 3 (de cualquier fecha) eran negativos y saltaba la alerta
+        assertThat(pedir("/api/v1/dashboard/frustracion?desde=2026-09-01&hasta=2026-09-30").get("personas")).isEmpty();
+        // Con un período que incluye los tres, sí
+        assertThat(nombres(pedir("/api/v1/dashboard/frustracion?desde=2026-07-15&hasta=2026-09-30").get("personas")))
+                .containsExactly("Beto");
     }
 
     // ── Totales ──
@@ -298,26 +490,30 @@ class DashboardApiTest {
         assertThat(pedir("/api/v1/dashboard/desercion").get("personas")).isEmpty();
         assertThat(pedir("/api/v1/dashboard/frustracion").get("personas")).isEmpty();
         assertThat(pedir("/api/v1/dashboard/dudas-sin-responder").get("total").asLong()).isZero();
+        assertThat(pedir("/api/v1/dashboard/comunidad").get("alumnos").get("total").asLong()).isZero();
     }
 
     // ── Caso 6: claves ──
 
-    @Test
-    void sinClaveEs401() throws Exception {
-        assertThat(estado("/api/v1/dashboard/totales", null)).isEqualTo(401);
+    @ParameterizedTest
+    @ValueSource(strings = {"totales", "comunidad", "contenido"})
+    void sinClaveEs401(String ruta) throws Exception {
+        assertThat(estado("/api/v1/dashboard/" + ruta, null)).isEqualTo(401);
     }
 
     @ParameterizedTest
     @ValueSource(strings = {CLAVE_BOT, CLAVE_INGESTA})
     void lasClavesDelBotYDeLaIngestaNoAbrenElDashboard(String clave) throws Exception {
-        for (String ruta : List.of("totales", "sentimiento", "temas", "desercion", "frustracion", "dudas-sin-responder")) {
+        for (String ruta : List.of("totales", "sentimiento", "temas", "desercion", "frustracion", "dudas-sin-responder",
+                "comunidad", "contenido")) {
             assertThat(estado("/api/v1/dashboard/" + ruta, clave)).as(ruta).isEqualTo(403);
         }
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"/api/v1/dashboard;x=1/totales", "/api/v1/dashboar%64/totales", "/api//v1/dashboard/totales",
-            "/api/v1/dashboard/dudas-sin-responder;x=1"})
+            "/api/v1/dashboard/dudas-sin-responder;x=1", "/api/v1/dashboard;x=1/comunidad",
+            "/api/v1/dashboar%64/contenido", "/api//v1/dashboard/contenido"})
     void laClaveDelBotNoEntraConUnaRutaDisfrazada(String ruta) throws Exception {
         assertThat(estado(ruta, CLAVE_BOT)).as(ruta).isEqualTo(403);
     }
@@ -328,6 +524,8 @@ class DashboardApiTest {
         assertThatThrownBy(() -> controlador.totales("bot", null, null)).isInstanceOf(ProhibidoException.class);
         assertThatThrownBy(() -> controlador.dudasSinResponder(null, null, null, null, false))
                 .isInstanceOf(ProhibidoException.class);
+        assertThatThrownBy(() -> controlador.comunidad("bot", null, null)).isInstanceOf(ProhibidoException.class);
+        assertThatThrownBy(() -> controlador.contenido("ingesta", null, null)).isInstanceOf(ProhibidoException.class);
     }
 
     // ── Caso 7: parámetros inválidos ──
@@ -342,6 +540,13 @@ class DashboardApiTest {
             "/api/v1/dashboard/desercion?dias=0",
             "/api/v1/dashboard/desercion?dias=1000",
             "/api/v1/dashboard/dudas-sin-responder?horas=-1",
+            "/api/v1/dashboard/sentimiento?rol=mentores",
+            "/api/v1/dashboard/temas?rol=ALUMNOS",
+            "/api/v1/dashboard/comunidad?desde=2026-10-05&hasta=2026-10-01",
+            "/api/v1/dashboard/comunidad?desde=2025-01-01&hasta=2026-10-01",
+            "/api/v1/dashboard/contenido?desde=2026-10-05&hasta=2026-10-01",
+            "/api/v1/dashboard/contenido?desde=2025-01-01&hasta=2026-10-01",
+            "/api/v1/dashboard/contenido?hasta=manana",
     })
     void unParametroInvalidoEs422(String ruta) throws Exception {
         assertThat(estado(ruta, CLAVE_PANEL)).as(ruta).isEqualTo(422);
@@ -420,6 +625,45 @@ class DashboardApiTest {
         return id;
     }
 
+    /** Una duda que el bot respondió o derivó segundos después (o que llegó por lote, con estado null). */
+    private void dudaDelBot(AutorRol rol, String autor, Instant fecha, String estado, int segundos, String tema) {
+        String id = guardar(AutorTipo.persona, rol, autor, fecha, "duda", null);
+        jdbc.update("""
+                UPDATE mensajes SET estado_clasificacion = 'OK', intencion = 'PREGUNTA_FAQ', sentimiento = 'NEUTRO',
+                       tema = ?, confianza = 0.9, respuesta_estado = ?,
+                       respondido_en = CASE WHEN CAST(? AS text) IS NULL THEN NULL ELSE fecha + make_interval(secs => ?) END
+                 WHERE discord_id = ?""", tema, estado, estado, segundos, id);
+    }
+
+    /** Un logro (TESTIMONIO, OK) con su resultado de generación. Devuelve el id del mensaje. */
+    private long logro(String autor, Instant fecha, String generacion) {
+        String id = etiquetado(autor, fecha, "TESTIMONIO", "MUY_POSITIVO", "empleo");
+        jdbc.update("UPDATE mensajes SET generacion_estado = ? WHERE discord_id = ?", generacion, id);
+        return jdbc.queryForObject("SELECT id FROM mensajes WHERE discord_id = ?", Long.class, id);
+    }
+
+    /** Un borrador pendiente creado en esa fecha. Devuelve su id. */
+    private long borrador(Long mensajeId, String tipo, Instant creadoEn) {
+        return jdbc.queryForObject("""
+                INSERT INTO borradores (mensaje_id, tipo, texto_ia, creado_en) VALUES (?, ?, 'x', ?) RETURNING id""",
+                Long.class, mensajeId, tipo, java.sql.Timestamp.from(creadoEn));
+    }
+
+    private void aprobado(long mensajeId, String tipo, Instant aprobadoEn, int segundos) {
+        long id = borrador(mensajeId, tipo, aprobadoEn.minus(Duration.ofHours(1)));
+        jdbc.update("""
+                UPDATE borradores SET estado = 'APROBADO', texto_final = 'x', consentimiento_confirmado = true,
+                       aprobado_por = 'harrison', aprobado_en = ?, tiempo_curaduria_seg = ? WHERE id = ?""",
+                java.sql.Timestamp.from(aprobadoEn), segundos, id);
+    }
+
+    private void rechazado(long mensajeId, String tipo, Instant rechazadoEn, int segundos) {
+        long id = borrador(mensajeId, tipo, rechazadoEn.minus(Duration.ofHours(1)));
+        jdbc.update("""
+                UPDATE borradores SET estado = 'RECHAZADO', rechazado_por = 'harrison', rechazado_en = ?,
+                       tiempo_curaduria_seg = ? WHERE id = ?""", java.sql.Timestamp.from(rechazadoEn), segundos, id);
+    }
+
     private void respuesta(String autor, AutorTipo tipo, AutorRol rol, String respondeA) {
         guardar(tipo, rol, autor, Instant.now().minus(Duration.ofDays(1)), "respuesta", respondeA);
     }
@@ -431,10 +675,10 @@ class DashboardApiTest {
         caja.put("id", id);
         caja.put("textoOriginal", texto);
         caja.put("respondeA", respondeA);
-        caja.put("canal", Map.of("id", "1554158212742127821", "nombre", "dudas"));
+        caja.put("canal", Map.of("id", CANAL, "nombre", "dudas"));
         caja.put("autor", Map.of("id", "sim-" + autor, "nombreVisible", nombre, "tipo", tipo.name(), "rol", rol.name()));
-        upsert.upsert(new DatosMensaje(id, "1554158212742127821", "sim-" + autor, tipo, rol, true, fecha, respondeA,
-                texto, caja, "1.0", "1554157903701741700"));
+        upsert.upsert(new DatosMensaje(id, CANAL, "sim-" + autor, tipo, rol, true, fecha, respondeA,
+                texto, caja, "1.0", SERVIDOR));
         return id;
     }
 }

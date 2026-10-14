@@ -15,4 +15,16 @@ gatherUsageStats = false
 [client]
 # Ante un error, el navegador ve un mensaje genérico; el detalle va solo al registro del contenedor
 showErrorDetails = "none"
-toolbarMode = "minimal"
+# T12 (DEC-156): "viewer" esconde las opciones de desarrollador (volver a correr, borrar la caché, publicar) y deja
+# las de quien mira, entre ellas el tema. Con "minimal" el menú entero desaparece, y con él el selector de tema
+toolbarMode = "viewer"
+
+# T12 (DEC-156): tema claro y oscuro. Quien usa el panel elige en el menú ⋮ → Settings → "Choose app theme";
+# por defecto sigue el del sistema. Los colores de los gráficos los elige paginas/dashboard.py según el tema activo
+[theme.light]
+primaryColor = "#4f46e5"
+borderColor = "#d5d3cc"
+
+[theme.dark]
+primaryColor = "#818cf8"
+borderColor = "#3b3e46"
