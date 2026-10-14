@@ -109,6 +109,7 @@
 				<configuration>
 					<systemPropertyVariables>
 						<oci.habilitada>false</oci.habilitada>
+						<linkedin.habilitada>false</linkedin.habilitada>
 					</systemPropertyVariables>
 				</configuration>
 			</plugin>

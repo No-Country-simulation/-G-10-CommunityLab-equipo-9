@@ -45,9 +45,11 @@ public class CuraduriaService {
     private static final Logger log = LoggerFactory.getLogger(CuraduriaService.class);
 
     private final CuraduriaRepository repo;
+    private final com.insightedulab.backend_java.linkedin.LinkedinService linkedinService;
 
-    public CuraduriaService(CuraduriaRepository repo) {
+    public CuraduriaService(CuraduriaRepository repo, com.insightedulab.backend_java.linkedin.LinkedinService linkedinService) {
         this.repo = repo;
+        this.linkedinService = linkedinService;
     }
 
     public ListaBorradores listar(String estado, String tipo, Integer limite) {
@@ -100,7 +102,19 @@ public class CuraduriaService {
         }
         log.info("Borrador {} ({}) aprobado por {} en {} s{}", id, estado.tipo(), usuario, tiempo,
                 texto != null ? ", con edición" : "");
-        return detalle(id);
+        DetalleBorrador resultado = detalle(id);
+
+        if (com.insightedulab.backend_java.model.enums.TipoBorrador.POST_LINKEDIN.name().equals(estado.tipo()) && linkedinService != null) {
+            String textoParaPublicar = (resultado.textoFinal() != null && !resultado.textoFinal().isBlank())
+                    ? resultado.textoFinal()
+                    : resultado.textoIa();
+            // Ejecución en segundo plano para no demorar la respuesta de aprobación en el panel web
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                linkedinService.publicarBorrador(id, textoParaPublicar);
+            });
+        }
+
+        return resultado;
     }
 
     public DetalleBorrador rechazar(long id, String usuario, PedidoRechazar pedido) {

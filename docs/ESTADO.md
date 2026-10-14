@@ -1,12 +1,12 @@
 # Estado del proyecto y cómo continuar
 
 > **Qué es este documento:** qué está hecho, qué falta y cómo seguir trabajando sin romper lo que existe.
-> **Actualizado:** 2026-10-12 · **Rama:** `main` · **Entrega de la hackatón:** 2026-10-26
+> **Actualizado:** 2026-10-14 · **Rama:** `main` · **Entrega de la hackatón:** 2026-10-26
 > Cómo funciona el sistema: [ARQUITECTURA.md](ARQUITECTURA.md). Por qué se decidió cada cosa: [DECISIONES.md](DECISIONES.md).
 
 ## 1. En una frase
 
-**El MVP funciona de punta a punta en una computadora local**: los mensajes entran por el bot y por lotes, se clasifican, el bot responde dudas con la documentación oficial, se redactan borradores de LinkedIn, casos de éxito y una FAQ semanal, Marketing los aprueba en un panel con dashboard y todo se guarda en OCI. **Falta desplegarlo en un servidor** y programar la ingesta cada hora.
+**El MVP funciona de punta a punta en una computadora local**: los mensajes entran por el bot y por lotes, se clasifican, el bot responde dudas con la documentación oficial, se redactan borradores de LinkedIn, casos de éxito y una FAQ semanal, Marketing los aprueba en un panel con dashboard, todo se guarda en OCI y, si se enciende, los posts aprobados se publican solos en LinkedIn. **Falta desplegarlo en un servidor** y programar la ingesta cada hora.
 
 ## 2. Objetivos del proyecto
 
@@ -16,7 +16,7 @@
 |---|---|---|---|
 | OE1 | Capturar los mensajes **en vivo** (bot) y **por lotes** (cada hora), sin duplicados | N1 | 🟡 Las dos capturas funcionan y no duplican. Falta que la ingesta corra sola cada hora en el servidor |
 | OE2 | Etiquetar cada mensaje con intención, sentimiento y tema, sin perder mensajes si la IA falla | N2 | ✅ |
-| OE3 | Un borrador de post de LinkedIn y un caso de éxito por cada logro, con la voz de la marca | N3 | ✅ |
+| OE3 | Un borrador de post de LinkedIn y un caso de éxito por cada logro, con la voz de la marca | N3 | ✅ Además, el post aprobado se puede publicar solo en LinkedIn (DEC-149; apagado por defecto) |
 | OE4 | Responder dudas en vivo con los PDF y convertir las repetidas en una FAQ | N4 | ✅ |
 | OE5 | Dashboard con sentimiento, temas y alertas | N5 | ✅ |
 | OE6 | Panel con inicio de sesión para revisar, editar, aprobar o rechazar, con consentimiento | N6 | ✅ |
@@ -34,6 +34,8 @@ Si falta tiempo, lo último que se recorta es OE1, OE3 y OE6.
 | 2 | ✅ **Hecho (2026-10-12):** el dueño del bucket confirmó que están `generados/` y `aprobados/`, que los archivos no tienen datos de Discord, y que la PAR es de solo escritura y vence después de la entrega (DEC-129) | Cierra OE7 | — |
 | 3 | **Desplegar y ensayar la demo**: una VM gratis de Oracle Cloud, Caddy con HTTPS y un subdominio de DuckDNS, la ingesta cada hora con `cron`, respaldos diarios, claves nuevas del servidor y un guion de demo de 10 minutos | Cierra OE1, OE8 y OE9 | La propuesta completa está en [historico/tareas/T10-despliegue-demo.md](historico/tareas/T10-despliegue-demo.md), y las decisiones en DEC-137 a DEC-140 |
 | 4 | ✅ **Hecho (2026-10-12):** la PAR de OCI vence después de la entrega. Si la demo se corre más tarde, hay que revisarla de nuevo | Si vence, las subidas pasan a `ERROR` | [OPERACION.md](OPERACION.md) §12 |
+| 5 | **Antes de las pruebas finales y de la demo, encender LinkedIn**: acordar la cuenta (perfil o página), conseguir un token vigente, hacer una publicación de prueba y apagarlo al terminar | Viene apagado (DEC-149): sin este paso, aprobar un post no publica nada | [OPERACION.md](OPERACION.md) §13 |
+| 6 | **PDF de preguntas frecuentes de CommunityLab**: convertir el manual de servicio al cliente en un PDF corto y probarlo con `scripts/revisar_buscador_faq.py` | El bot podría responder dudas que hoy deriva a un mentor (clases grabadas, estudiar trabajando, preguntas técnicas) | [README de pdfs_en_revision](../agents/agent_faq/data/pdfs_en_revision/README.md) (DEC-152) |
 
 ### Mejoras posibles (🟡), si sobra tiempo
 
@@ -60,7 +62,7 @@ Los **riesgos aceptados** (⚠️) están en [DECISIONES.md](DECISIONES.md): por
 
 ## 5. Ramas de trabajo retiradas
 
-La integración se hizo con una rama por tarea. Al terminar, todas se fusionaron en `main` y se borraron el 2026-10-10 para dejar el repositorio ordenado (DEC-144): **su contenido completo está en `main`**. Las ramas originales de cada equipo (`feature/java-core-api`, las de `ai-engine`, `feat/7-panel-minimo` y `feature/postman-docs-solo`) **se conservan sin cambios**. Tampoco se toca `feature/automatizacion-linkedin`, de otro integrante: entra a `main` con su propio Pull Request (DEC-148).
+La integración se hizo con una rama por tarea. Al terminar, todas se fusionaron en `main` y se borraron el 2026-10-10 para dejar el repositorio ordenado (DEC-144): **su contenido completo está en `main`**. Las ramas originales de cada equipo (`feature/java-core-api`, las de `ai-engine`, `feat/7-panel-minimo` y `feature/postman-docs-solo`) **se conservan sin cambios**. `feature/automatizacion-linkedin`, de otros integrantes, tampoco se toca: con el permiso de sus autores, su trabajo entró a `main` a través de `integracion/linkedin` (DEC-149), y la rama original se conserva sin cambios (DEC-148).
 
 Para recrear una rama retirada: `git branch <nombre> <commit>`.
 

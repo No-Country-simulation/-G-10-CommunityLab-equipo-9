@@ -1,7 +1,7 @@
 # Arquitectura de InsightEdu Lab
 
 > **Qué es este documento:** la descripción de **cómo funciona hoy** el sistema: sus piezas, sus flujos, sus datos y sus reglas. Es la **fuente de verdad** sobre el funcionamiento.
-> **Actualizado:** 2026-10-12 · **Rama:** `main`
+> **Actualizado:** 2026-10-14 · **Rama:** `main`
 > Reemplaza a la propuesta de arquitectura 3 en PDF del 2026-10-02, que se conserva en [docs/historico/propuesta-3/](historico/propuesta-3/) como registro. Si algo de este documento choca con el código, manda el código, y hay que corregir este documento.
 
 ## Cómo leerlo
@@ -36,7 +36,7 @@ La institución del proyecto es ficticia: **CommunityLab**. Sus documentos (regl
 |---|---|---|---|
 | N1 | Capturar la actividad sin esfuerzo manual | El **bot** envía cada mensaje en vivo y la **ingesta por lotes** rescata lo que el bot no vio. Java guarda una fila por mensaje, sin duplicados | ✅ (falta programar la ingesta cada hora en el servidor: [ESTADO.md](ESTADO.md)) |
 | N2 | Identificar al instante logros y dudas | La IA etiqueta cada mensaje con **intención, sentimiento y tema** | ✅ |
-| N3 | Posts de LinkedIn con la voz de la marca | El **Agente-Mod** decide si un logro es publicable y redacta un post y un caso de éxito | ✅ |
+| N3 | Posts de LinkedIn con la voz de la marca | El **Agente-Mod** decide si un logro es publicable y redacta un post y un caso de éxito. Si se enciende, Java publica en LinkedIn el post que Marketing aprueba (§4.9) | ✅ |
 | N4 | FAQ y bot que responde dudas | El bot responde con el **Agente FAQ** (solo con respaldo en los PDF) y cada semana se arma un borrador de **FAQ** con las dudas repetidas | ✅ |
 | N5 | Dashboard de sentimiento, tendencias y alertas | Página **Dashboard** del panel | ✅ |
 | N6 | Aprobación humana antes de publicar | Página **Borradores** del panel, con inicio de sesión y casilla de consentimiento | ✅ |
@@ -57,7 +57,8 @@ Fuera del MVP, por decisión del equipo: X/Twitter, newsletters, el resumen *Com
  (Marketing, CM)       │      │                                                          │
                        │      ├──► postgres (registro oficial)                           │
                        └──────┼──────────────────────────────────────────────────────────┘
-                              └──► OCI Object Storage (generados/ y aprobados/)
+                              ├──► OCI Object Storage (generados/ y aprobados/)
+                              └──► LinkedIn (opcional y apagado por defecto: publica los posts aprobados)
 ```
 
 | Regla | Qué significa en la práctica |
@@ -73,7 +74,7 @@ Fuera del MVP, por decisión del equipo: X/Twitter, newsletters, el resumen *Com
 | Servicio | Carpeta | Tecnología | Qué hace | Puerto en la PC |
 |---|---|---|---|---|
 | `postgres` | — | PostgreSQL 17 | Guarda mensajes, etiquetas, borradores, FAQ semanales y subidas a OCI | Ninguno (privado) |
-| `api-java` | `backend-java/` | Java 21, Spring Boot 3.4, Flyway | La puerta única: recibe lotes y mensajes en vivo, llama a la IA, corre las tareas de fondo, atiende al panel y sube a OCI | `127.0.0.1:8008` |
+| `api-java` | `backend-java/` | Java 21, Spring Boot 3.4, Flyway | La puerta única: recibe lotes y mensajes en vivo, llama a la IA, corre las tareas de fondo, atiende al panel, sube a OCI y, si se enciende, publica en LinkedIn | `127.0.0.1:8008` |
 | `ia` | `agents/` | Python 3.12, FastAPI, LangGraph, Gemini | Clasifica mensajes (Etiquetador), responde dudas (Agente FAQ, con búsqueda en los PDF) y redacta borradores y la FAQ semanal (Agente-Mod) | `127.0.0.1:8000` |
 | `bot` | `agents/bot_discord/` | Python, discord.py | Escucha `#dudas` y `#logros`, envía cada mensaje a Java y cumple la orden que recibe | Ninguno (sale hacia Discord y Java) |
 | `panel` | `panel/` | Python, Streamlit | Inicio de sesión, curaduría de borradores, errores y dashboard. Habla solo con Java | `127.0.0.1:8501` |
@@ -168,7 +169,7 @@ Una persona entra al panel con **su usuario y su contraseña**. Las contraseñas
 - **editar y aprobar:** un post o un caso de éxito **solo se aprueba si se marca la casilla de consentimiento**. La regla está en el panel, en Java y en la base (V6). La FAQ no la necesita;
 - **rechazar**, con un motivo opcional.
 
-Se registran quién aprobó o rechazó, cuándo y cuánto tardó la revisión. Si dos personas aprueban a la vez, gana la primera y la otra recibe 409. La página **Errores** reintenta los mensajes y logros que quedaron en `ERROR`.
+Se registran quién aprobó o rechazó, cuándo y cuánto tardó la revisión. Si dos personas aprueban a la vez, gana la primera y la otra recibe 409. Si la publicación en LinkedIn está encendida, aprobar un post de LinkedIn también lo publica (§4.9). La página **Errores** reintenta los mensajes y logros que quedaron en `ERROR`.
 
 Contrato: [PANEL_JAVA_v1.md](contratos/PANEL_JAVA_v1.md). Código: `panel/` y `backend-java/.../curaduria/`.
 
@@ -196,6 +197,21 @@ Cada 30 segundos, Java sube a un bucket de Oracle Cloud:
 Usa una **URL PAR** de solo escritura (`OCI_PAR_URL`), que es una credencial y nunca aparece en los registros. Cada archivo es un JSON armado con Jackson, con el borrador y sus datos, **sin datos de Discord del alumno**. Si OCI falla, reintenta con espera creciente; al quinto fallo, `ERROR`. Generar y aprobar nunca dependen de OCI.
 
 Código: `backend-java/.../oci/`. Cómo crear y cambiar la PAR: [OPERACION.md](OPERACION.md) §12.
+
+### 4.9 Publicación en LinkedIn (opcional, DEC-149)
+
+Cuando Marketing aprueba un **post de LinkedIn** en el panel, Java puede publicarlo en LinkedIn con la API oficial (`POST https://api.linkedin.com/rest/posts`, en público). **Viene apagada** (`LINKEDIN_HABILITADA=false`) y se enciende a propósito para una prueba o para la demo ([OPERACION.md](OPERACION.md) §13).
+
+| Regla | Detalle |
+|---|---|
+| Qué se publica | Solo los `POST_LINKEDIN` **ya aprobados**, que exigen la casilla de consentimiento (D6), con el texto final que dejó Marketing. Los casos de éxito y la FAQ no se publican solos: van a OCI (`aprobados/`) para la web o una presentación |
+| Cuándo | En segundo plano, justo después de aprobar: el panel no espera a LinkedIn, y un fallo de LinkedIn nunca deshace la aprobación |
+| Quién publica | La cuenta del token `LINKEDIN_ACCESS_TOKEN`, como el autor `LINKEDIN_AUTHOR_URN` (un perfil o una página de empresa) |
+| Modos | **Apagado** (por defecto: no hace nada), **simulado** (encendido sin token: solo deja un aviso en el registro) y **real** (encendido con token y autor) |
+| Límites | ⚠️ Un post de más de 3.000 caracteres no se publica y el panel no lo avisa; si LinkedIn falla, queda solo en el registro y no se reintenta (DEC-151) |
+| Registros | El post publicado (`urn:li:share:…`) o el error. Nunca el texto ni el token |
+
+Código: `backend-java/.../linkedin/` y `curaduria/CuraduriaService.java`. Detalle del módulo: [LINKEDIN_AUTOMATIZACION.md](LINKEDIN_AUTOMATIZACION.md).
 
 ---
 
@@ -251,6 +267,7 @@ Todas las piezas usan el mismo formato de error: `{codigo, mensaje, errores, idC
 | **Claves por cliente** | Cada pieza tiene su clave en la cabecera `X-Api-Key` (`API_KEY_INGESTA`, `API_KEY_BOT`, `API_KEY_PANEL`, `API_KEY_IA`), comparada en tiempo constante. **Cada clave abre solo su puerta:** la del bot, solo `/api/v1/mensajes/en-vivo`; la de la ingesta, solo `/api/v1/lotes`; la del panel, solo sus puertas. La ruta se compara normalizada y cada controlador vuelve a revisar el cliente |
 | **La IA es privada** | Solo Java la llama, con `API_KEY_IA`. No tiene puerto público |
 | **Inicio de sesión del panel** | Usuario y contraseña por persona (scrypt con sal), pausa por fallo, bloqueo tras 5 fallos y vencimiento a las 8 h sin uso. Los textos se muestran escapados (sin HTML) |
+| **LinkedIn** | Apagado por defecto. Su token (`LINKEDIN_ACCESS_TOKEN`) es una credencial: vive solo en el `.env` y nunca aparece en un registro. Las pruebas de Java lo apagan desde el `pom.xml`, así que nunca publican |
 | **Secretos** | Viven en `.env`, que nunca va a git ni a las imágenes de Docker. Las claves internas se generan con `scripts/generar_api_key.py` y los usuarios con `scripts/crear_usuario_panel.py`, sin mostrarlas |
 | **Puertos** | Solo en `127.0.0.1`. La base de datos y la IA nunca se publican |
 | **CORS** | Cerrado: el panel llama a Java desde el servidor, no desde el navegador |
@@ -265,7 +282,7 @@ Todas las piezas usan el mismo formato de error: `{codigo, mensaje, errores, idC
 | Proveedor | **Un solo proveedor: Google Gemini.** Modelo por defecto: `gemini-3.5-flash-lite` (`GEMINI_MODEL`). El Agente-Mod puede usar otro con `MOD_MODEL_NAME`. Este modelo ignora `temperature` |
 | Tiempos (de adentro hacia afuera) | Cada llamada al LLM: 20 s · tope en vivo: 25 s · Java → IA: 30 s · bot → Java: 40 s. El Agente-Mod tiene 25 s; la FAQ semanal tiene un tope de 120 s y Java la espera 150 s |
 | Búsqueda en los PDF (Agente FAQ) | Embeddings `intfloat/multilingual-e5-small` y reordenador `cross-encoder/ms-marco-MiniLM-L-6-v2`, descargados al construir la imagen (la IA arranca sin internet). Una respuesta con fidelidad media cuenta como **no encontrada** |
-| El índice de los PDF | Está construido y guardado en `agents/agent_faq/data/vectorstore/faiss_pdfs/`. Si se agregan o cambian PDF en `data/pdfs/`, hay que reconstruirlo: 🔎 borrar `faiss_pdfs/` y volver a construir la imagen `ia`; al arrancar, la IA lo arma de nuevo (sin probar) |
+| El índice de los PDF | Está construido y guardado en git, en `agents/agent_faq/data/vectorstore/faiss_pdfs/`. Si se agregan o cambian PDF en `data/pdfs/`, hay que reconstruirlo: 🧪 borrar `faiss_pdfs/` y volver a construir la imagen `ia`; al arrancar, la IA lo arma de nuevo. Antes de guardarlo, `scripts/revisar_buscador_faq.py` comprueba que el PDF nuevo no tape a los oficiales ([OPERACION.md](OPERACION.md) §14). Un PDF que todavía no está listo va a `data/pdfs_en_revision/`, que la IA no lee (DEC-152) |
 | Lo que la IA nunca hace | Guardar el estado del sistema, publicar nada o hablar con la base de datos |
 
 ---
@@ -289,7 +306,7 @@ Las cuatro corren en paralelo (4 hilos), cada una con su propia reserva en la ba
 |---|---|
 | Las puertas HTTP de Java | `backend-java/src/main/java/com/insightedulab/backend_java/controller/` |
 | Las claves y los permisos | `…/seguridad/` |
-| Cada flujo de Java | `…/clasificacion/`, `…/envivo/`, `…/generacion/`, `…/faqsemanal/`, `…/curaduria/`, `…/dashboard/` y `…/oci/` |
+| Cada flujo de Java | `…/clasificacion/`, `…/envivo/`, `…/generacion/`, `…/faqsemanal/`, `…/curaduria/`, `…/dashboard/`, `…/oci/` y `…/linkedin/` |
 | Las migraciones | `backend-java/src/main/resources/db/migration/` |
 | Las puertas de la IA | `agents/orquestador/api.py` (`/v1/procesar`, `/v1/generar`, `/v1/faq` y `/health`) |
 | La clasificación | `agents/orquestador/grafo_v1.py` y `clasificadores/etiquetador.py` |
@@ -298,7 +315,7 @@ Las cuatro corren en paralelo (4 hilos), cada una con su propia reserva en la ba
 | El bot | `agents/bot_discord/` |
 | El panel | `panel/` (`app.py`, `paginas/`, `auth.py` y `cliente_java.py`) |
 | La ingesta y el contrato v1 | `ingestion/discord/` |
-| Los scripts de claves y usuarios | `scripts/` |
+| Los scripts de claves y usuarios, la revisión del buscador y las pruebas de LinkedIn | `scripts/` |
 
 Las pruebas viven junto a cada pieza: `backend-java/src/test/`, `agents/orquestador/tests/`, `agents/bot_discord/tests/`, `panel/tests/` e `ingestion/discord/tests/`. Cómo correrlas: [AGENTS.md](../AGENTS.md).
 
@@ -315,6 +332,8 @@ InsightEdu Lab se construyó **sobre piezas que el equipo ya había desarrollado
 | Panel | `feat/7-panel-minimo` | Jhon Patrick | Se conservó su diseño y se conectó a Java, con inicio de sesión, curaduría y dashboard |
 | Ingesta y contrato v1 | `feature/discord-ingestion` | Harrison Tutalcha | Se reutilizó su conversión al contrato v1 también en el bot |
 | Integración en esta arquitectura | `feature/integracion-arquitectura-3` | El equipo, con asistencia de IA | Agente-Mod, FAQ semanal y la conexión de todas las piezas |
+| Publicación en LinkedIn | `feature/automatizacion-linkedin` | MaxxyGuti3rr3z, cevallosgabriel | Se integró con `integracion/linkedin`: apagada por defecto, apagada en las pruebas de Java y sin el texto del post en el registro (DEC-149) |
+| Manual de servicio al cliente | Directo en `main` | Juan Sebastián Rodríguez | En revisión, fuera del índice del bot, hasta convertirlo en preguntas frecuentes de CommunityLab (DEC-152) |
 
 La traza detallada de cómo se integró cada pieza (fichas de trabajo, informes y decisiones con su contexto) está en [docs/historico/](historico/).
 
@@ -326,3 +345,4 @@ La traza detallada de cómo se integró cada pieza (fichas de trabajo, informes 
 - No hay roles ni permisos distintos por usuario en el panel; todos los usuarios pueden aprobar.
 - No se leen hilos ni foros de Discord, y la IA no sube sus registros a OCI.
 - El dashboard muestra "dudas sin responder" contando solo las respuestas del bot y las hechas con "Responder" de Discord.
+- La publicación en LinkedIn no guarda en la base si un post se publicó, no reintenta y no avisa en el panel si un post pasó de 3.000 caracteres (DEC-151).
