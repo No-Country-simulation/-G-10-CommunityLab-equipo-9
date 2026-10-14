@@ -41,8 +41,8 @@ services:
       OCI_PAR_URL: ${OCI_PAR_URL:-}
       # T09: false apaga la subida de borradores a OCI aunque haya PAR
       OCI_HABILITADA: ${OCI_HABILITADA:-true}
-      # Publicación directa en LinkedIn (automatización de posts)
-      LINKEDIN_HABILITADA: ${LINKEDIN_HABILITADA:-true}
+      # Publicación directa en LinkedIn (DEC-149). Apagada por defecto: se enciende a propósito (OPERACION.md §13)
+      LINKEDIN_HABILITADA: ${LINKEDIN_HABILITADA:-false}
       LINKEDIN_ACCESS_TOKEN: ${LINKEDIN_ACCESS_TOKEN:-}
       LINKEDIN_AUTHOR_URN: ${LINKEDIN_AUTHOR_URN:-}
       LINKEDIN_API_URL: ${LINKEDIN_API_URL:-https://api.linkedin.com/rest/posts}

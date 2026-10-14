@@ -1,7 +1,7 @@
 # AGENTS.md — guía para asistentes de IA
 
 > Para cualquier asistente de IA o agente de código (de cualquier proveedor) que trabaje en este repositorio. También sirve a una persona que llega por primera vez.
-> **Rama:** `main` · **Actualizado:** 2026-10-12
+> **Rama:** `main` · **Actualizado:** 2026-10-14
 
 ## 1. El proyecto en tres líneas
 
@@ -40,14 +40,14 @@
 | `agents/bot_discord/` | Bot de Discord en vivo | discord.py |
 | `panel/` | Panel web: inicio de sesión, curaduría y dashboard | Streamlit |
 | `ingestion/discord/` | Ingesta por lotes y **contrato v1** (`contract.py`, `transform.py`) | Python, httpx, pydantic |
-| `scripts/` | Generar claves y usuarios del panel sin mostrarlos | Python |
+| `scripts/` | Generar claves y usuarios del panel sin mostrarlos; revisar el buscador del Agente FAQ (`revisar_buscador_faq.py`); probar LinkedIn (ver la regla **LinkedIn**) | Python |
 | `compose.yml` | Los 5 servicios de Docker | Docker Compose |
 
 ## 4. Reglas que no se rompen
 
 | Regla | Detalle |
 |---|---|
-| **Secretos** | Nunca leer, imprimir, copiar a un chat ni subir a git un archivo `.env`, una clave, un token de Discord, una URL PAR de OCI ni una contraseña. Para revisar un `.env`, mostrar solo los nombres de las variables. Las claves se crean con `scripts/generar_api_key.py` y los usuarios con `scripts/crear_usuario_panel.py` |
+| **Secretos** | Nunca leer, imprimir, copiar a un chat ni subir a git un archivo `.env`, una clave, un token de Discord o de LinkedIn, una URL PAR de OCI ni una contraseña. Para revisar un `.env`, mostrar solo los nombres de las variables. Las claves se crean con `scripts/generar_api_key.py` y los usuarios con `scripts/crear_usuario_panel.py` |
 | **Discord** | **Nunca ejecutar `ingestion/discord/simulate_students.py`**: publica mensajes falsos y los duplica. **Nunca dos bots encendidos** con el mismo token o en el mismo canal: cada mensaje se respondería dos veces |
 | **Migraciones** | Una migración de Flyway ya aplicada **nunca se edita**. Cada cambio de base va en un archivo nuevo; el siguiente es `V9__…` |
 | **Contratos** | Solo crecen con cambios que **agregan**. Cambiar o quitar un campo exige una versión nueva y avisar a todas las piezas. El contrato v1 tiene una sola implementación: `ingestion/discord/contract.py` |
@@ -56,6 +56,8 @@
 | **Red** | Los puertos se publican solo en `127.0.0.1`. La base de datos y la IA nunca quedan abiertas a internet; en un servidor, solo el panel, con HTTPS |
 | **Datos personales** | Los borradores usan solo el **primer nombre** del alumno, y publicarlo exige la casilla de consentimiento. Los registros nunca llevan textos de alumnos: solo IDs y números |
 | **Respuestas del bot** | El bot responde solo si el Agente FAQ encontró **respaldo en los PDF**; si no, deriva a un mentor. Nada fuera de Discord se publica sin aprobación |
+| **LinkedIn** | La publicación automática viene **apagada** (`LINKEDIN_HABILITADA=false`). Encendida y con token, **cada post aprobado se publica de verdad y en público**: solo se enciende a propósito ([OPERACION.md](docs/OPERACION.md) §13). Las pruebas de Java la apagan desde el `pom.xml`; no quitar esa línea. `scripts/publicar_linkedin.py` publica sin aprobación si el `.env` tiene token: no correrlo para probar |
+| **PDF del Agente FAQ** | Agregar un PDF a `agents/agent_faq/data/pdfs/` exige rehacer el índice y pasar `scripts/revisar_buscador_faq.py` ([OPERACION.md](docs/OPERACION.md) §14). Un PDF genérico puede tapar a los documentos oficiales (DEC-152) |
 | **Pruebas** | Ningún cambio está terminado sin pruebas que pasen, ejecutadas de verdad: las de la pieza tocada y las que ya existían |
 | **Ramas** | `main` es del equipo: **nunca se hace commit directo en `main`**. Cada cambio va en una rama nueva desde `main` y entra con un Pull Request. **No modificar ni borrar ramas ajenas**: las originales de los equipos (`feature/java-core-api`, las de `ai-engine`, `feat/7-panel-minimo` y `feature/postman-docs-solo`), `feature/automatizacion-linkedin` y cualquier otra rama de otra persona. Si una rama ajena necesita un cambio, se le pide a su autor |
 

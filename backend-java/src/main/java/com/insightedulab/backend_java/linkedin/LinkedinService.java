@@ -68,7 +68,8 @@ public class LinkedinService {
         String idSimulado = "urn:li:share:simulado-" + borradorId;
         log.info("📢 [LinkedIn SIMULADO] Borrador {} aprobado. Post listo para publicar:", borradorId);
         log.info("   Autor: {}", (propiedades.authorUrn() != null && !propiedades.authorUrn().isBlank()) ? propiedades.authorUrn() : "urn:li:person:simulado");
-        log.info("   Texto ({} caracteres): {}", texto.length(), texto.replace("\n", " "));
+        // Solo el largo: los registros nunca llevan textos de alumnos (AGENTS.md §4)
+        log.info("   Texto: {} caracteres", texto.length());
         log.info("   (Para publicar en vivo, completa LINKEDIN_ACCESS_TOKEN y LINKEDIN_AUTHOR_URN en tu .env)");
 
         return new LinkedinPostResponse(true, true, idSimulado, "Publicación simulada exitosamente (faltan credenciales en .env)");

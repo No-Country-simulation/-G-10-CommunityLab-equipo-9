@@ -1,7 +1,7 @@
 # Operación — levantar InsightEdu Lab con Docker
 
-> **Estado:** v0.5 · **Fecha:** 2026-10-09 · **Rama:** `main`
-> Cubre los servicios que ya están en `compose.yml`: base de datos, API Java, IA, bot de Discord (T05) y panel (T07, T08), y la subida de borradores a OCI (T09, sección 12). La ingesta por lotes todavía se corre a mano (ver el [README](../README.md) §8.3); programarla en un servidor está pendiente ([ESTADO.md](ESTADO.md)). Cómo funciona cada pieza: [ARQUITECTURA.md](ARQUITECTURA.md). Las menciones a T01–T10 remiten a la traza de [historico/tareas/](historico/tareas/).
+> **Estado:** v0.6 · **Fecha:** 2026-10-14 · **Rama:** `main`
+> Cubre los servicios que ya están en `compose.yml`: base de datos, API Java, IA, bot de Discord (T05) y panel (T07, T08), la subida de borradores a OCI (T09, sección 12), la publicación en LinkedIn (sección 13) y cómo agregar un PDF al Agente FAQ (sección 14). La ingesta por lotes todavía se corre a mano (ver el [README](../README.md) §8.3); programarla en un servidor está pendiente ([ESTADO.md](ESTADO.md)). Cómo funciona cada pieza: [ARQUITECTURA.md](ARQUITECTURA.md). Las menciones a T01–T10 remiten a la traza de [historico/tareas/](historico/tareas/).
 
 Todos los comandos se ejecutan **desde la raíz del repositorio**, en PowerShell.
 
@@ -28,6 +28,9 @@ Abrir `.env` y completar:
 | `FAQ_SEMANAL_DIAS` | No | T06b · Cuántos días hacia atrás se juntan las dudas para la FAQ. `7` por defecto |
 | `OCI_PAR_URL` | No | T09 · La URL PAR **nueva** del bucket de OCI (solo escritura y con vencimiento). **Es una credencial: no se pega en un chat.** Cómo crearla: sección 12. Sin ella, la API arranca igual pero no sube nada a OCI |
 | `OCI_HABILITADA` | No | T09 · `true` por defecto. Con `false`, Java no sube borradores a OCI aunque haya PAR |
+| `LINKEDIN_HABILITADA` | No | DEC-149 · **`false` por defecto**: aprobar un post no publica nada. Con `true`, cada post de LinkedIn aprobado **se publica de verdad** si hay token y autor (sin ellos, solo se simula en el registro). Cómo encenderla: sección 13 |
+| `LINKEDIN_ACCESS_TOKEN` | No | DEC-149 · El token de LinkedIn de la cuenta que publica. **Es una credencial: no se pega en un chat** |
+| `LINKEDIN_AUTHOR_URN` | No | DEC-149 · Quién publica: `urn:li:person:<id>` (un perfil) o `urn:li:organization:<id>` (una página de empresa), sin punto final |
 | `API_KEY_INGESTA` | Sí, para recibir lotes | **No se escribe a mano.** Desde la raíz, `python scripts/generar_api_key.py` la crea al azar y la escribe aquí y en `ingestion/discord/.env` (`BACKEND_API_KEY`), sin mostrarla. Sin ella, la API Java rechaza todo con 401, salvo `/actuator/health` |
 | `API_KEY_IA` | Sí, para clasificar | **No se escribe a mano.** `python scripts/generar_api_key.py --cliente ia` la crea y la escribe aquí, sin mostrarla. La usan los dos servicios: la API Java la envía y la IA la exige en `/v1/procesar`. Sin ella, los mensajes se quedan en `PENDIENTE` |
 | `API_KEY_BOT` | Sí, para el bot | **No se escribe a mano.** `python scripts/generar_api_key.py --cliente bot`. El bot la envía y la API Java la exige en `/api/v1/mensajes/en-vivo`, **su única puerta** (DEC-70) |
@@ -329,3 +332,69 @@ La tarea los toma de a 10 cada 30 segundos y los archivos conservan el mismo nom
 **Apagar la subida**: `OCI_HABILITADA=false` en el `.env` y `docker compose up -d api-java`. Los borradores se siguen creando y aprobando; cuando se vuelva a encender (con una PAR), se sube todo lo que faltó.
 
 **Lo que esta tarea no hace**: no borra ni actualiza archivos del bucket (la PAR es de solo escritura), no lee desde OCI y no sube los registros de la IA (DEC-130).
+
+## 13. Publicar en LinkedIn (DEC-149)
+
+Cuando Marketing aprueba un **post de LinkedIn** en el panel, Java puede publicarlo solo en LinkedIn. **Viene apagado.** Los casos de éxito y la FAQ nunca se publican solos: quedan en OCI (`aprobados/`) para la web o una presentación.
+
+| Modo | Cómo se activa | Qué pasa al aprobar un post |
+|---|---|---|
+| **Apagado** (por defecto) | `LINKEDIN_HABILITADA=false`, o sin la variable | Nada. El registro dice `Publicación en LinkedIn deshabilitada por configuración` |
+| **Simulado** | `LINKEDIN_HABILITADA=true`, sin token o sin autor | No sale nada de la PC. El registro dice `[LinkedIn SIMULADO]` y el largo del texto (nunca el texto) |
+| **Real** | `LINKEDIN_HABILITADA=true`, con token y autor | **Se publica en público**, en segundo plano: el panel no espera a LinkedIn. El registro dice `Post publicado en LinkedIn exitosamente. ID: urn:li:share:…` |
+
+⚠️ En modo real **cada aprobación publica al instante y no se deshace desde el panel**: un post publicado se borra en LinkedIn.
+
+### Antes de una prueba real o de la demo
+
+| Paso | Qué hacer |
+|---|---|
+| 1 | Acordar con el **dueño de la cuenta** en qué perfil o página se publica, y avisarle cuándo. La publicación es pública |
+| 2 | Conseguir un token vigente de esa cuenta. 🔎 Los tokens de LinkedIn vencen (suelen durar unos 60 días): si la prueba da `401`, hace falta uno nuevo |
+| 3 | Escribir en el `.env` de la raíz, **directo en el archivo y nunca a través de un chat**: `LINKEDIN_HABILITADA=true`, `LINKEDIN_ACCESS_TOKEN=…` y `LINKEDIN_AUTHOR_URN=urn:li:person:<id>` (o `urn:li:organization:<id>`). Ojo: es `person`, no `persom`, y sin punto final |
+| 4 | Aplicar el cambio: `docker compose up -d api-java` |
+| 5 | Comprobar que llegaron **sin mostrar los valores**: `docker compose exec api-java sh -c 'for v in LINKEDIN_HABILITADA LINKEDIN_ACCESS_TOKEN LINKEDIN_AUTHOR_URN; do eval "x=\${$v}"; if [ -n "$x" ]; then echo "$v: con valor"; else echo "$v: VACIA"; fi; done'` |
+| 6 | **Primera publicación de prueba**: en **Borradores**, elegir un post pendiente, reemplazar todo su texto por uno neutro (por ejemplo, *"Prueba técnica de InsightEdu Lab: publicación automática desde el panel. Este post se borrará en unos minutos."*), marcar el consentimiento y aprobar |
+| 7 | Ver la respuesta: `docker compose logs api-java \| Select-String "LinkedIn"`. Si dice `publicado exitosamente`, el dueño de la cuenta lo ve en su perfil y lo borra |
+
+🧪 Así se probó el 2026-10-13, en el perfil de un integrante y con su permiso: el borrador 14 se publicó en 1,4 s (`urn:li:share:7515972755511603201`).
+
+### Durante la demo
+
+- Aprobar solo posts revisados y con el consentimiento confirmado: cada uno se publica en el momento.
+- Un post de más de **3.000 caracteres** se aprueba, pero **no se publica**, y el panel no lo avisa (⚠️ DEC-151). El registro dice `excede el límite máximo de 3000 caracteres`. Los posts de la guía de voz rondan los 1.000 caracteres.
+- **No** correr `scripts/publicar_linkedin.py`: publica sin aprobación (DEC-150).
+
+### Después
+
+1. En el `.env`: `LINKEDIN_HABILITADA=false`, y borrar o comentar el token.
+2. `docker compose up -d api-java`.
+3. Borrar en LinkedIn los posts de prueba.
+
+### Cuando algo falla
+
+| El registro dice… | Causa probable | Solución |
+|---|---|---|
+| `deshabilitada por configuración` | `LINKEDIN_HABILITADA` no es `true` | Corregir el `.env` y `docker compose up -d api-java` |
+| `[LinkedIn SIMULADO]` | Falta el token o el autor | Revisar las dos variables (paso 5) |
+| `Error al publicar … 401` | 🔎 Token vencido o inválido | Pedir un token nuevo al dueño de la cuenta |
+| `Error al publicar … 403` o `422` | 🔎 El token no tiene permiso para publicar, o el autor está mal escrito o no corresponde a ese token | Revisar el autor (`person`, sin punto) y que el token sea de esa misma cuenta |
+
+**Lo que no hace**: no guarda en la base si un post se publicó (solo queda en el registro), no reintenta si LinkedIn falla y no publica casos de éxito ni la FAQ. Las pruebas de Java **nunca** publican: el `pom.xml` apaga LinkedIn, igual que OCI.
+
+**Los scripts de prueba** (DEC-150): `scripts/publicar_linkedin.py` muestra el JSON que se enviaría, pero **si el `.env` tiene token y autor, publica en el acto**. `scripts/insertar_borrador_prueba.sql` escribe un borrador directo en la base, sin pasar por Java y con una alumna inventada: solo para una base de pruebas. Detalle del módulo: [LINKEDIN_AUTOMATIZACION.md](LINKEDIN_AUTOMATIZACION.md).
+
+## 14. Agregar o cambiar un PDF del Agente FAQ
+
+El bot responde **solo** con los PDF de `agents/agent_faq/data/pdfs/` (DEC-19). El buscador usa un índice ya armado (`agents/agent_faq/data/vectorstore/faiss_pdfs/`), que está **guardado en git** y se copia a la imagen de la IA. Por eso, copiar un PDF a la carpeta no alcanza: hay que rehacer el índice.
+
+| Paso | Comando o acción | Qué debería pasar |
+|---|---|---|
+| 1 | Copiar el PDF a `agents/agent_faq/data/pdfs/`, con un nombre que siga la numeración (`12_…`) | — |
+| 2 | `Remove-Item -Recurse -Force agents\agent_faq\data\vectorstore\faiss_pdfs` | Borra el índice viejo. La IA lo arma de nuevo al arrancar |
+| 3 | `docker compose up -d --no-deps --build ia` | Esperar a que `docker compose ps` muestre `ia` como `(healthy)` (1 o 2 minutos) |
+| 4 | `docker compose cp scripts/revisar_buscador_faq.py ia:/tmp/revisar_buscador_faq.py` y luego `docker compose exec -e PYTHONIOENCODING=utf-8 ia python /tmp/revisar_buscador_faq.py` | Prueba el buscador sin gastar Gemini: las preguntas que responden los documentos oficiales los siguen encontrando primero, y el PDF nuevo no ocupa más del 35 % del índice. Debe terminar con `Resultado: todo OK`. Si el PDF trae otros temas, se ajustan las preguntas del script |
+| 5 | `docker compose cp ia:/app/agents/agent_faq/data/vectorstore/faiss_pdfs agents/agent_faq/data/vectorstore/` | Copia el índice nuevo a la carpeta del repositorio |
+| 6 | `git add -f agents/agent_faq/data/pdfs/<el PDF> agents/agent_faq/data/vectorstore/faiss_pdfs` | El `.gitignore` ignora `agents/*/data/`: por eso va `-f` |
+
+Si no se rehace el índice, el bot sigue sin ver el PDF nuevo. Un PDF que todavía no está listo va a `agents/agent_faq/data/pdfs_en_revision/`, que la IA no lee (DEC-152).
