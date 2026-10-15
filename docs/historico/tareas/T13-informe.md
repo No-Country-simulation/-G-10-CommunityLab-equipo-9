@@ -5,7 +5,7 @@
 | Fecha | 2026-10-15 |
 | Modelo de Claude usado | Opus 5.5 |
 | Rama | `tarea/T13-borradores` |
-| Commits | Parte A (Java y contrato), Parte B (panel) y Parte C (documentación): los hace Harrison con los comandos de la sección 7 |
+| Commits | `d1c3790` (Parte A: Java y contrato), `5ecc982` (Parte B: panel), `77494a8` (Parte C: documentación) y el de este informe al día |
 
 ## 1. Resumen
 
@@ -164,4 +164,14 @@ Para validar con Harrison; si las valida, van como DEC-162 en adelante.
 
 ## 7. Comandos que ejecutó Harrison
 
-Se completa con los commits de las partes A, B y C, el `git push` y la prueba real.
+Desde la raíz del repositorio, el 2026-10-15:
+
+| # | Comando | Resultado |
+|---|---|---|
+| 1 | `git add backend-java docs/contratos/PANEL_JAVA_v1.md` y `git commit -m "feat(java): …"` | `d1c3790`, 13 archivos |
+| 2 | `git add panel` y `git commit -m "feat(panel): …"` | `5ecc982`, 13 archivos |
+| 3 | `git add AGENTS.md docs` y `git commit -m "docs: …"` | `77494a8`, 8 archivos |
+| 4 | `git log --oneline -3` después de cada commit | Cada commit quedó en su lugar, sin mezclarse |
+| 5 | `git push` | `2e8e088..77494a8  tarea/T13-borradores -> tarea/T13-borradores` |
+
+La prueba real (sección 5 de la ficha) queda pendiente: la corre Harrison después de esta tarea.
