@@ -3,6 +3,7 @@ package com.insightedulab.backend_java.controller;
 import com.insightedulab.backend_java.curaduria.CuraduriaService;
 import com.insightedulab.backend_java.curaduria.VistasPanel.ListaErrores;
 import com.insightedulab.backend_java.curaduria.VistasPanel.Reintento;
+import com.insightedulab.backend_java.curaduria.VistasPanel.ReintentoFaq;
 import com.insightedulab.backend_java.seguridad.ApiKeyFilter;
 import com.insightedulab.backend_java.seguridad.ClientePermitido;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Lo que quedó en ERROR y el botón de reintentar del panel (T07, DEC-111).
+ * Lo que quedó en ERROR y el botón de reintentar del panel (T07, DEC-111; la FAQ semanal, T13 y DEC-161).
  * Solo lo puede usar el cliente "panel" (DEC-70). Reintentar exige X-Usuario.
  */
 @RestController
@@ -49,5 +50,15 @@ public class ErroresController {
             @PathVariable long mensajeId) {
         ClientePermitido.exigir(ClientePermitido.PANEL, cliente);
         return curaduria.reintentarGeneracion(mensajeId, usuario);
+    }
+
+    /** T13: la semana vuelve a la cola y se arma enseguida, en segundo plano. semana: 2026-W41 */
+    @PostMapping("/faq/{semana}/reintentar")
+    public ReintentoFaq reintentarFaq(
+            @RequestAttribute(name = ApiKeyFilter.ATRIBUTO_CLIENTE, required = false) String cliente,
+            @RequestHeader(name = BorradorController.CABECERA_USUARIO, required = false) String usuario,
+            @PathVariable String semana) {
+        ClientePermitido.exigir(ClientePermitido.PANEL, cliente);
+        return curaduria.reintentarFaq(semana, usuario);
     }
 }
