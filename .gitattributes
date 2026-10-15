@@ -2,3 +2,4 @@
 # aunque se clonen en Windows (con CRLF, Linux no los interpreta bien).
 Dockerfile text eol=lf
 *.sh text eol=lf
+*.pdf binary
