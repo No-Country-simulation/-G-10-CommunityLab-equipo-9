@@ -18,7 +18,7 @@
 | OE2 | Etiquetar cada mensaje con intención, sentimiento y tema, sin perder mensajes si la IA falla | N2 | ✅ |
 | OE3 | Un borrador de post de LinkedIn y un caso de éxito por cada logro, con la voz de la marca | N3 | ✅ Además, el post aprobado se puede publicar solo en LinkedIn (DEC-149; apagado por defecto) |
 | OE4 | Responder dudas en vivo con los PDF y convertir las repetidas en una FAQ | N4 | ✅ |
-| OE5 | Dashboard con sentimiento, temas y alertas | N5 | ✅ |
+| OE5 | Dashboard con sentimiento, temas y alertas | N5 | ✅ Desde T12, con una vista por rol (Comunidad y Contenido), la franja "Lo que hizo InsightEdu", la n en cada porcentaje y tema claro y oscuro, con el diseño del prototipo (DEC-153 a DEC-158) |
 | OE6 | Panel con inicio de sesión para revisar, editar, aprobar o rechazar, con consentimiento | N6 | ✅ |
 | OE7 | Guardar en OCI los activos generados y los aprobados | N7 | ✅ El 2026-10-09 se subieron 31 archivos sin errores, y el 2026-10-12 el dueño del bucket lo confirmó en su consola |
 | OE8 | Todo con un comando, seguro y con pruebas | Transversal | 🟡 5 de 6 servicios en Docker, con claves por cliente, inicio de sesión y pruebas automáticas en cada pieza. Falta la ingesta como servicio |
@@ -45,8 +45,7 @@ Si falta tiempo, lo último que se recorta es OE1, OE3 y OE6.
 | Bot y Agente FAQ | Guardar la fuente que citó la IA (hoy se guarda el primer fragmento encontrado); no mostrar "escribiendo…" en `#logros`; liberar el hilo del Agente FAQ cuando se agota el tope |
 | Agente-Mod | Exigir el largo que pide la guía de voz (los textos salen cortos); no mencionar reacciones que todavía no existen; probar otro modelo con `MOD_MODEL_NAME`; un botón "volver a generar" en el panel |
 | FAQ semanal | Tutoriales y tips; un botón para reintentar una FAQ en `ERROR` |
-| Panel | Mantener la sesión al recargar la página; avisar si dos personas editan el mismo borrador |
-| Dashboard | Mostrar el tiempo de curaduría (hoy se mide desde que se abre el borrador); que la alerta de frustración ignore mensajes muy viejos |
+| Panel | Mantener la sesión al recargar la página; avisar si dos personas editan el mismo borrador. (Las dos mejoras del dashboard, mostrar el tiempo de revisión y que la frustración ignore los mensajes viejos, se hicieron en T12) |
 | Operación | Registros de la IA en nivel INFO; sus registros en OCI; integración continua (pruebas automáticas en cada PR) |
 
 Los **riesgos aceptados** (⚠️) están en [DECISIONES.md](DECISIONES.md): por ejemplo, una URL PAR vieja en el historial público de git (DEC-41) y la regla de "respondida" del bot (DEC-79).

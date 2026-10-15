@@ -138,3 +138,29 @@ def test_el_dashboard_envia_fechas_iso_y_booleanos_de_java_sin_usuario():
         assert p.method == "GET"
         assert p.headers["X-Api-Key"] == CLAVE
         assert "X-Usuario" not in p.headers  # solo lectura
+
+
+def test_el_dashboard_por_rol_envia_rol_solo_para_alumnos_y_usa_las_puertas_nuevas():
+    from datetime import date
+
+    import pytest
+
+    cliente, pedidos = _cliente(_ok({}))
+    desde, hasta = date(2026, 9, 15), date(2026, 10, 14)
+
+    cliente.dashboard_sentimiento(desde, hasta, "semana", False, "alumnos")
+    cliente.dashboard_temas(desde, hasta, False, "alumnos")
+    cliente.dashboard_temas(desde, hasta, False)  # sin rol: el pedido de siempre
+    cliente.dashboard_comunidad(desde, hasta)
+    cliente.dashboard_contenido(desde, hasta)
+
+    sentimiento, temas, temas_todos, comunidad, contenido = pedidos
+    assert dict(sentimiento.url.params)["rol"] == "alumnos"
+    assert dict(temas.url.params)["rol"] == "alumnos"
+    assert "rol" not in dict(temas_todos.url.params)
+    assert comunidad.url.path == "/api/v1/dashboard/comunidad"
+    assert contenido.url.path == "/api/v1/dashboard/contenido"
+    assert dict(contenido.url.params) == {"desde": "2026-09-15", "hasta": "2026-10-14"}
+    with pytest.raises(ValueError):
+        cliente.dashboard_temas(desde, hasta, False, "mentores")
+    assert len(pedidos) == 5  # el rol desconocido no llega a Java

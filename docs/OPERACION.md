@@ -225,27 +225,39 @@ En el panel, una persona de Marketing entra con **su usuario y su contraseña**,
 **Consulta de solo lectura** (para revisar las aprobaciones en la base):
 `docker compose exec postgres psql -U insightedu -d insightedu -P pager=off -c "SELECT id, tipo, estado, aprobado_por, aprobado_en, tiempo_curaduria_seg, consentimiento_confirmado, rechazado_por, motivo_rechazo, (texto_final IS NOT NULL AND texto_final <> texto_ia) AS editado FROM borradores ORDER BY id;"`
 
-## 11. Dashboard (T08)
+## 11. Dashboard (T08 y T12)
 
-En el mismo panel, la página **Dashboard** muestra el clima de la comunidad, los temas del momento y **a quién ayudar**. No usa IA ni gasta Gemini: todo sale de las etiquetas que ya guardó la clasificación. Java calcula y el panel dibuja ([contratos/PANEL_JAVA_v1.md §7](contratos/PANEL_JAVA_v1.md#7-dashboard-t08)).
+En el mismo panel, la página **Dashboard** tiene **una vista por rol** (DEC-153): **Comunidad**, para el Community Manager, y **Contenido**, para Marketing. No usa IA ni gasta Gemini: todo sale de las etiquetas que ya guardaron la clasificación y el bot. Java calcula y el panel dibuja ([contratos/PANEL_JAVA_v1.md §7](contratos/PANEL_JAVA_v1.md#7-dashboard-t08)).
 
 | Para… | Cómo |
 |---|---|
-| Levantarlo (después de actualizar el código) | `docker compose up -d --build api-java panel`. Java aplica la `V7` (un índice) al encender |
+| Levantarlo (después de actualizar el código) | `docker compose up -d --build api-java panel`. T12 no tiene migración nueva |
 | Abrirlo | Entrar al panel (`http://127.0.0.1:8501`) y elegir **Dashboard** en la barra de la izquierda |
-| Cambiar el período | El selector **Período** (por defecto, los últimos 30 días). Hay que elegir las dos fechas |
-| Ver por día o por semana | **Ver por**. Las semanas empiezan el lunes |
-| Dejar afuera las preguntas que no son del curso | **Excluir el tema «otro»** |
-| Ajustar las alertas | **Deserción: días sin escribir** (14 por defecto, DEC-119) y **Dudas sin responder después de (horas)** (24 por defecto) |
+| Cambiar de vista | **Vista**: *Comunidad* o *Contenido*. Cada una pide a Java solo lo suyo |
+| Cambiar el período | **Período**: 7, 30 (por defecto) o 90 días hasta hoy, o **Elegir fechas** (solo entonces aparece el calendario; hay que elegir las dos fechas) |
+| Ajustar las alertas (vista Comunidad) | **Ajustes de las alertas**: días sin escribir para la posible deserción (14 por defecto, DEC-119) y horas para una duda sin respuesta (24 por defecto) |
+| Cambiar el tema (claro u oscuro) | Menú **⋮** (arriba a la derecha) → **Settings** → elegir el tema. Por defecto sigue el del sistema operativo. Los gráficos cambian de colores con el tema (DEC-156) |
+| Cambiar el supuesto de las horas ahorradas | `PANEL_MINUTOS_POR_HISTORIA` en el `.env` (30 por defecto) y `docker compose up -d panel` |
+
+**Cómo leerlo.** Cada porcentaje o índice lleva su **n** (cuántos datos hay detrás) y los tiempos son **medianas** (DEC-155): con pocos datos, mirar primero la n. Los datos de prueba se muestran tal como están.
 
 | Indicador | Cómo se calcula |
 |---|---|
-| Resumen | Mensajes de personas en el período, personas activas, dudas y logros ya clasificados, mensajes sin clasificar y borradores pendientes **hoy** |
-| Clima de la comunidad | Cuántos mensajes de cada sentimiento hubo por día o por semana (solo mensajes de personas clasificados `OK`) |
-| Temas en tendencia | Cuántos mensajes de cada tema hubo en el período y en el período anterior del mismo largo |
-| Posible deserción | Alumnos (no mentores) cuyo último mensaje tiene más días que el umbral, **contados desde hoy** |
-| Posible frustración | Alumnos con un mensaje `MUY_NEGATIVO` en el período, o con 2 negativos entre sus últimos 3 mensajes (DEC-121) |
-| Dudas sin responder | Dudas de alumnos con más horas que el umbral, que el bot no respondió y a las que **ninguna otra persona contestó con "Responder" de Discord** (DEC-123). Una duda derivada a un mentor sigue aquí hasta que alguien la conteste |
+| **Franja (las dos vistas):** horas ahorradas a Marketing (estimado) | (minutos por historia − mediana de revisión de los posts del período) × logros del período con su post aprobado. **Es una estimación** (DEC-154): supone `PANEL_MINUTOS_POR_HISTORIA` minutos por historia encontrada y redactada a mano, y el panel lo dice junto al número |
+| **Franja:** historias encontradas solas | Logros del período que la IA marcó como publicables, junto a los mensajes de personas y los logros del período |
+| Clima de los alumnos | (% positivos + muy positivos) − (% negativos + muy negativos), de −100 a +100, solo de alumnos; debajo, el de toda la comunidad. Compara con el período anterior del mismo largo **solo si ese período tiene mensajes** |
+| Dudas que respondió el bot | Respondidas / (respondidas + derivadas): sobre las dudas que vio el bot. Debajo, la mediana de segundos que tardó, cuántas derivó y cuántas llegaron por lote sin pasar por él |
+| Dudas sin respuesta | Dudas de alumnos con más horas que el umbral, que el bot no respondió y a las que **ninguna otra persona contestó con "Responder" de Discord** (DEC-123). Una duda derivada a un mentor sigue aquí hasta que alguien la conteste. **"Abrir en Discord"** lleva al mensaje |
+| Alumnos que necesitan apoyo | Posible deserción: alumnos cuyo último mensaje tiene más días que el umbral, **contados desde hoy** (si el servidor está quieto, este número sube). Posible frustración: un mensaje `MUY_NEGATIVO` en el período, o 2 negativos entre sus últimos 3 mensajes **del período** (DEC-121, DEC-157) |
+| Clima por semana | Barras divergentes: los negativos a la izquierda del 0, los positivos a la derecha y el neutro partido al medio. Cada fila suma 100 % y lleva su índice y su n; **Ver los números** abre la tabla. Con 7 días, va por día |
+| Alumnos activos | Alumnos con al menos un mensaje en los 7 y en los 30 días que terminan en la fecha final, sobre todos los que escribieron alguna vez |
+| De qué hablan los alumnos · Qué falta en los documentos | Mensajes de alumnos por tema · dudas que el bot derivó a un mentor, por tema: lo que conviene sumar a los PDF |
+| Por revisar | Borradores pendientes **hoy**, por tipo, y cuántos días espera el más antiguo |
+| Tiempo de revisión · Tasa de aprobación | Mediana de segundos de revisión de lo aprobado o rechazado en el período, por tipo · aprobados / (aprobados + rechazados) |
+| Del logro al post aprobado | Mediana desde el mensaje del logro hasta la aprobación de su post, de los posts aprobados en el período |
+| De logro a contenido aprobado | Embudo: logros del período → publicables según la IA (con el %) → con su post aprobado (con el %). Los no publicables los decidió la IA antes de redactar (DEC-53) |
+| Contenido aprobado por semana · Listos para publicar | Lo aprobado por semana de aprobación · los aprobados más recientes, con dónde se usa cada tipo y su texto final para copiar |
+| Archivos guardados en OCI (barra lateral) | Subidas a OCI en `SUBIDO`, sin importar el período |
 
 ⚠️ **Para que una duda cuente como atendida, el mentor tiene que usar "Responder" en Discord** sobre el mensaje del alumno. Si escribe en el canal sin responder, el sistema no sabe a qué duda contestó.
 

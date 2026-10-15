@@ -80,12 +80,13 @@ class ClienteJava:
     def dashboard_totales(self, desde: date, hasta: date) -> dict:
         return self._pedir("GET", "/api/v1/dashboard/totales", params=_periodo(desde, hasta))
 
-    def dashboard_sentimiento(self, desde: date, hasta: date, agrupar: str, excluir_otro: bool) -> dict:
-        params = {**_periodo(desde, hasta), "agrupar": agrupar, "excluirOtro": _booleano(excluir_otro)}
+    def dashboard_sentimiento(self, desde: date, hasta: date, agrupar: str, excluir_otro: bool,
+                              rol: str = "todos") -> dict:
+        params = {**_periodo(desde, hasta), "agrupar": agrupar, "excluirOtro": _booleano(excluir_otro), **_rol(rol)}
         return self._pedir("GET", "/api/v1/dashboard/sentimiento", params=params)
 
-    def dashboard_temas(self, desde: date, hasta: date, excluir_otro: bool) -> dict:
-        params = {**_periodo(desde, hasta), "excluirOtro": _booleano(excluir_otro)}
+    def dashboard_temas(self, desde: date, hasta: date, excluir_otro: bool, rol: str = "todos") -> dict:
+        params = {**_periodo(desde, hasta), "excluirOtro": _booleano(excluir_otro), **_rol(rol)}
         return self._pedir("GET", "/api/v1/dashboard/temas", params=params)
 
     def dashboard_desercion(self, dias: int) -> dict:
@@ -97,6 +98,14 @@ class ClienteJava:
     def dashboard_dudas(self, desde: date, hasta: date, horas: int, excluir_otro: bool) -> dict:
         params = {**_periodo(desde, hasta), "horas": int(horas), "excluirOtro": _booleano(excluir_otro)}
         return self._pedir("GET", "/api/v1/dashboard/dudas-sin-responder", params=params)
+
+    # T12: una puerta por vista del dashboard (DEC-153)
+
+    def dashboard_comunidad(self, desde: date, hasta: date) -> dict:
+        return self._pedir("GET", "/api/v1/dashboard/comunidad", params=_periodo(desde, hasta))
+
+    def dashboard_contenido(self, desde: date, hasta: date) -> dict:
+        return self._pedir("GET", "/api/v1/dashboard/contenido", params=_periodo(desde, hasta))
 
     # ── Común ──
 
@@ -115,6 +124,13 @@ class ClienteJava:
 
 def _periodo(desde: date, hasta: date) -> dict:
     return {"desde": desde.isoformat(), "hasta": hasta.isoformat()}
+
+
+def _rol(rol: str) -> dict:
+    """Sin "rol" cuando es "todos": así el pedido queda igual que antes de T12."""
+    if rol not in ("todos", "alumnos"):
+        raise ValueError(f"Rol desconocido: {rol}")
+    return {} if rol == "todos" else {"rol": rol}
 
 
 def _booleano(valor: bool) -> str:

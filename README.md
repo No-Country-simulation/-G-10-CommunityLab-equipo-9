@@ -197,7 +197,7 @@ El último comando debería decir `Java recibió el lote …`, con `nuevos` (las
 
 ### 8.4 · El dashboard
 
-En el panel, página **Dashboard:** verás los totales, el sentimiento por día, los temas y las alertas.
+En el panel, página **Dashboard:** elige la vista **Comunidad** (clima de los alumnos, el bot, dudas sin respuesta y a quién escribir) o **Contenido** (lo pendiente, la revisión, el embudo de los logros y lo listo para publicar). Cómo leerlo: [OPERACION.md §11](docs/OPERACION.md).
 - Baja el umbral de **deserción** a pocos días para ver aparecer personas.
 - La duda de Kotlin aparece en "dudas sin responder" después de 24 horas. Para verla ya, pon las horas en 0.
 

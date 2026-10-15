@@ -5,6 +5,8 @@
 > **Agregado en T08** (DEC-122, solo agrega): las puertas de solo lectura del dashboard, en la [sección 7](#7-dashboard-t08). Nada de lo anterior cambió.
 >
 > **Agregado en T09** (solo agrega): el campo `oci` en la respuesta de [ver un borrador](#22-ver-un-borrador) (puerta 2, y las que devuelven el mismo borrador): si ya está guardado en OCI. Nada de lo anterior cambió.
+>
+> **Agregado en T12** (DEC-153 a DEC-157, solo agrega): el parámetro opcional `rol` en sentimiento y temas, `servidorId` y `canalId` en cada duda sin responder, y dos puertas nuevas, `comunidad` y `contenido`, en la [sección 7](#7-dashboard-t08). Ningún campo cambió de nombre ni de significado. La única regla que cambió es la de la frustración (DEC-157): sus "últimos 3 mensajes" ahora son solo los del período.
 
 ## 0. Sobre este documento
 
@@ -288,7 +290,7 @@ Java **no** responde cabeceras CORS: se quitó `CorsConfig`, que aceptaba cualqu
 
 ## 7. Dashboard (T08)
 
-Seis puertas **de solo lectura** para la página "Dashboard" (N5, DEC-119 a DEC-123). Usan la misma clave `panel` (las protege el prefijo `/api/v1/dashboard`, con la ruta normalizada y la segunda revisión en el controlador). **No** piden `X-Usuario`: no cambian nada.
+Ocho puertas **de solo lectura** para la página "Dashboard" (N5, DEC-119 a DEC-123): seis de T08 y dos de T12 (`comunidad` y `contenido`, DEC-153), una para cada vista del dashboard por rol. Usan la misma clave `panel` (las protege el prefijo `/api/v1/dashboard`, con la ruta normalizada y la segunda revisión en el controlador). **No** piden `X-Usuario`: no cambian nada.
 
 **Java calcula y el panel solo dibuja** (DEC-123). No usan IA: todo sale de las etiquetas que ya guardaron la clasificación (T04) y el bot (T05).
 
@@ -305,6 +307,7 @@ Seis puertas **de solo lectura** para la página "Dashboard" (N5, DEC-119 a DEC-
 | `desde`, `hasta` | Días `AAAA-MM-DD`, **los dos incluidos**, en hora de Bogotá (`dashboard.zona`). Hasta 366 días | Los últimos 30 días, hasta hoy |
 | `agrupar` | `dia` o `semana` (las semanas empiezan el lunes y se nombran por su lunes) | `dia` |
 | `excluirOtro` | `true` o `false`: deja afuera los mensajes con el tema `otro` (preguntas que no son del curso) | `false` |
+| `rol` (T12, solo sentimiento y temas) | `todos` (todas las personas) o `alumnos` (solo `autor_rol = miembro`, sin mentores ni staff) | `todos`: la respuesta es **idéntica** a la de antes de T12 |
 
 Un período al revés, de más de 366 días o con una fecha mal escrita, o un valor fuera de rango, da **422** (`DATO_INVALIDO`, con el campo). Sin clave, 401; con la clave de otro cliente, 403 (§4).
 
@@ -314,18 +317,24 @@ Un período al revés, de más de 366 días o con una fecha mal escrita, o un va
 |---|---|
 | Solo mensajes **clasificados `OK`** (no `PENDIENTE` ni `ERROR`) y de **personas** (no bots) | Sentimiento, temas, frustración y dudas |
 | Solo **alumnos** (`autor_rol = miembro`): un mentor no "deserta" ni necesita ayuda | Las 3 alertas |
-| Todos los mensajes de personas, de cualquier estado | Totales (`mensajes`, `personasActivas`) y deserción (escribir es actividad) |
+| Todos los mensajes de personas, de cualquier estado | Totales (`mensajes`, `personasActivas`), deserción y alumnos activos (escribir es actividad) |
+| Con `rol=alumnos`, solo alumnos | Sentimiento y temas (T12: la vista Comunidad separa a los alumnos de los mentores, DEC-155) |
+| Las dudas de **todas las personas** que vio el bot | El bot en `comunidad`: el bot responde igual a un alumno que a un mentor |
+| Los borradores que revisa Marketing (`POST_LINKEDIN`, `CASO_EXITO` y `FAQ`; nunca `RESPUESTA_BOT`) | `contenido` |
+| Los tiempos se resumen con la **mediana** (no el promedio), y cada mediana trae su `n`. Sin datos, la mediana es `null` (no 0) | `comunidad` y `contenido` (DEC-155) |
 
 ### 7.3 Las puertas
 
 | Puerta | Parámetros | Qué devuelve |
 |---|---|---|
 | `GET /api/v1/dashboard/totales` | `desde`, `hasta` | Para la cabecera: mensajes de personas, personas activas, dudas y logros (`OK`), mensajes sin clasificar en el período, y borradores pendientes **hoy** (sin `RESPUESTA_BOT`) |
-| `GET /api/v1/dashboard/sentimiento` | `desde`, `hasta`, `agrupar`, `excluirOtro` | Un punto por día o por semana, **también los vacíos**, con la cantidad de cada uno de los 5 sentimientos (0 si no hay) |
-| `GET /api/v1/dashboard/temas` | `desde`, `hasta`, `excluirOtro` | Por tema: cuántos en el período (`actual`), cuántos en el período anterior de igual largo (`anterior`) y `variacion = actual − anterior`. Ordenado de mayor a menor `actual` |
+| `GET /api/v1/dashboard/sentimiento` | `desde`, `hasta`, `agrupar`, `excluirOtro`, `rol` | Un punto por día o por semana, **también los vacíos**, con la cantidad de cada uno de los 5 sentimientos (0 si no hay) |
+| `GET /api/v1/dashboard/temas` | `desde`, `hasta`, `excluirOtro`, `rol` | Por tema: cuántos en el período (`actual`), cuántos en el período anterior de igual largo (`anterior`) y `variacion = actual − anterior`. Ordenado de mayor a menor `actual` |
 | `GET /api/v1/dashboard/desercion` | `dias` (1 a 365; **14** por defecto, DEC-119) | Los alumnos cuyo último mensaje tiene más de `dias` días **contados desde hoy** (no depende del período): nombre visible, fecha del último mensaje, días sin escribir y cuántos mensajes escribió. El que lleva más tiempo, primero. Hasta 200 |
-| `GET /api/v1/dashboard/frustracion` | `desde`, `hasta` | DEC-121: los alumnos con un `MUY_NEGATIVO` **en el período**, o con 2 negativos (`NEGATIVO` o `MUY_NEGATIVO`) entre sus **últimos 3 mensajes `OK`** hasta el fin del período. `motivos`: `MUY_NEGATIVO` y/o `DOS_DE_TRES`. **Sin textos.** Hasta 200 |
-| `GET /api/v1/dashboard/dudas-sin-responder` | `desde`, `hasta`, `horas` (0 a 2160; **24** por defecto), `excluirOtro` | Las `PREGUNTA_FAQ` de alumnos, del período, con más de `horas` horas y **no atendidas** (DEC-123): el bot no la respondió (`RESPONDIDA`) y ninguna **persona distinta del autor** le contestó con "Responder" de Discord (`respondeA`). Una `DERIVADA` sigue sin responder. Con el texto de la duda (hasta 1000 caracteres), para que el CM la conteste. `total` puede ser mayor que la lista (tope de 200). La más antigua primero |
+| `GET /api/v1/dashboard/frustracion` | `desde`, `hasta` | DEC-121: los alumnos con un `MUY_NEGATIVO` **en el período**, o con 2 negativos (`NEGATIVO` o `MUY_NEGATIVO`) entre sus **últimos 3 mensajes `OK` del período** (DEC-157: un negativo de antes del período ya no cuenta). `motivos`: `MUY_NEGATIVO` y/o `DOS_DE_TRES`. **Sin textos.** Hasta 200 |
+| `GET /api/v1/dashboard/dudas-sin-responder` | `desde`, `hasta`, `horas` (0 a 2160; **24** por defecto), `excluirOtro` | Las `PREGUNTA_FAQ` de alumnos, del período, con más de `horas` horas y **no atendidas** (DEC-123): el bot no la respondió (`RESPONDIDA`) y ninguna **persona distinta del autor** le contestó con "Responder" de Discord (`respondeA`). Una `DERIVADA` sigue sin responder. Con el texto de la duda (hasta 1000 caracteres), para que el CM la conteste, y (T12) `servidorId` y `canalId`, para armar el enlace `https://discord.com/channels/<servidorId>/<canalId>/<discordId>`. `total` puede ser mayor que la lista (tope de 200). La más antigua primero |
+| `GET /api/v1/dashboard/comunidad` (T12) | `desde`, `hasta` | **Vista Comunidad.** `alumnos`: cuántos alumnos escribieron alguna vez hasta el fin del período (`total`) cuántos escribieron en los 7 y en los 30 días que terminan en `hasta` (`activos7Dias`, `activos30Dias`), y sus `PREGUNTA_FAQ` del período (`dudas`). `bot`: las `PREGUNTA_FAQ` del período que el bot respondió (`respondidas`), las que derivó a un mentor (`derivadas`), las que llegaron por lote sin pasar por él (`sinPasarPorElBot`) y la mediana de segundos del mensaje a su decisión (`segundosMediana`). `derivadasPorTema`: las derivadas del período por tema, de mayor a menor: lo que falta en los documentos |
+| `GET /api/v1/dashboard/contenido` (T12) | `desde`, `hasta` | **Vista Contenido.** `porRevisar`: los borradores pendientes **hoy** (no dependen del período), por tipo (los tres, también en 0) y la fecha del más antiguo. `revision`: por tipo, la mediana de `tiempoCuraduriaSeg` de lo aprobado o rechazado en el período, con su `n`. `aprobacion`: aprobados y rechazados en el período. `embudo`: los logros del período (por la fecha de su mensaje), cuántos son publicables según la IA, cuántos no y cuántos tienen su post aprobado. `aprobadosPorSemana`: lo aprobado en el período por semana de aprobación (por su lunes, en hora de Bogotá, también las semanas en 0). `logroAAprobacion`: la mediana de horas del mensaje del logro a la aprobación de su post, de los posts aprobados en el período, con su `n`. `mensajesDePersonas`: los mensajes de personas del período. `activosOci`: los archivos ya guardados en OCI (subidas `SUBIDO`, sin importar el período) |
 
 ### 7.4 Ejemplos
 
@@ -406,9 +415,72 @@ GET /api/v1/dashboard/dudas-sin-responder?horas=24
   "dudas": [
     { "mensajeId": 17, "discordId": "1554205178671009863", "fecha": "2026-09-28T18:56:30Z",
       "tema": "herramientas_entorno", "derivada": false, "canal": "dudas", "autorNombre": "Ana Pérez",
-      "texto": "no me deja instalar python, ¿qué hago?" }
+      "texto": "no me deja instalar python, ¿qué hago?",
+      "servidorId": "1554157903701741700", "canalId": "1554158212742127821" }
   ]
 }
 ```
+
+Con `rol=alumnos` (T12), sentimiento y temas devuelven la misma forma, contando solo a los alumnos:
+
+```
+GET /api/v1/dashboard/sentimiento?desde=2026-09-28&hasta=2026-10-11&agrupar=semana&rol=alumnos
+```
+```json
+{
+  "periodo": { "desde": "2026-09-28", "hasta": "2026-10-11" },
+  "agrupar": "semana",
+  "excluirOtro": false,
+  "puntos": [
+    { "inicio": "2026-09-28", "cantidades": { "MUY_POSITIVO": 9, "POSITIVO": 4, "NEUTRO": 15, "NEGATIVO": 3, "MUY_NEGATIVO": 1 } },
+    { "inicio": "2026-10-05", "cantidades": { "MUY_POSITIVO": 1, "POSITIVO": 0, "NEUTRO": 2, "NEGATIVO": 0, "MUY_NEGATIVO": 0 } }
+  ]
+}
+```
+
+```
+GET /api/v1/dashboard/comunidad?desde=2026-09-15&hasta=2026-10-14
+```
+```json
+{
+  "periodo": { "desde": "2026-09-15", "hasta": "2026-10-14" },
+  "alumnos": { "total": 9, "activos7Dias": 2, "activos30Dias": 9, "dudas": 18 },
+  "bot": { "respondidas": 4, "derivadas": 6, "sinPasarPorElBot": 17, "segundosMediana": 6.1 },
+  "derivadasPorTema": [
+    { "tema": "contenido_curso", "cantidad": 2 },
+    { "tema": "evaluaciones", "cantidad": 1 }
+  ]
+}
+```
+
+```
+GET /api/v1/dashboard/contenido?desde=2026-09-15&hasta=2026-10-14
+```
+```json
+{
+  "periodo": { "desde": "2026-09-15", "hasta": "2026-10-14" },
+  "porRevisar": { "total": 3, "porTipo": { "POST_LINKEDIN": 0, "CASO_EXITO": 2, "FAQ": 1 },
+                  "masAntiguo": "2026-10-05T17:31:41.604Z" },
+  "revision": [
+    { "tipo": "POST_LINKEDIN", "medianaSeg": 62.0, "n": 9 },
+    { "tipo": "CASO_EXITO", "medianaSeg": 5.0, "n": 7 },
+    { "tipo": "FAQ", "medianaSeg": 1000.0, "n": 1 }
+  ],
+  "aprobacion": { "aprobados": 16, "rechazados": 1 },
+  "embudo": { "logros": 16, "publicables": 9, "noPublicables": 7, "conPostAprobado": 9 },
+  "aprobadosPorSemana": [
+    { "inicio": "2026-09-14", "cantidad": 0 },
+    { "inicio": "2026-09-21", "cantidad": 0 },
+    { "inicio": "2026-09-28", "cantidad": 4 },
+    { "inicio": "2026-10-05", "cantidad": 9 },
+    { "inicio": "2026-10-12", "cantidad": 3 }
+  ],
+  "logroAAprobacion": { "medianaHoras": 146.0, "n": 9 },
+  "mensajesDePersonas": 64,
+  "activosOci": 36
+}
+```
+
+Sin datos, los conteos vienen en 0 y las medianas en `null` (no es un error).
 
 Los textos y los nombres llegan **tal cual**: el panel los muestra escapados (como en §2.2).

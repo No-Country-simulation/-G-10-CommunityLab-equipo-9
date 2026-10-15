@@ -175,16 +175,19 @@ Contrato: [PANEL_JAVA_v1.md](contratos/PANEL_JAVA_v1.md). Código: `panel/` y `b
 
 ### 4.7 Dashboard
 
-La página **Dashboard** pide a Java seis consultas de solo lectura (`/api/v1/dashboard/…`):
-- los **totales**;
-- el **sentimiento** por día o por semana;
-- los **temas** en tendencia, comparados con el período anterior;
-- tres **alertas** para saber a quién ayudar:
-  - **deserción:** no escribe hace N días (14 por defecto, ajustable);
-  - **frustración:** un mensaje `MUY_NEGATIVO`, o 2 negativos entre sus últimos 3;
-  - **dudas sin responder:** ni el bot ni otra persona respondieron.
+La página **Dashboard** tiene **una vista por rol** (DEC-153). Las dos empiezan con la franja **"Lo que hizo InsightEdu en este período"**: las horas ahorradas a Marketing (una estimación, con su supuesto escrito junto al número, DEC-154) y las historias que la IA encontró sola.
 
-Solo cuentan los mensajes `OK`, y las alertas consideran solo a los alumnos. Todo se calcula en hora de Bogotá.
+| Vista | Para | Qué muestra |
+|---|---|---|
+| **Comunidad** | El Community Manager | El clima de los alumnos (un índice de −100 a +100 y barras divergentes por semana), cuántas dudas respondió el bot, las dudas sin respuesta (con un botón **"Abrir en Discord"**), los alumnos que necesitan apoyo (posible deserción y posible frustración), los alumnos activos, de qué hablan y **qué falta en los documentos** (las dudas que el bot derivó, por tema) |
+| **Contenido** | Marketing | Cuánto hay por revisar, el tiempo de revisión, la tasa de aprobación, cuánto tarda un logro en ser un post aprobado, el embudo logro → publicable → aprobado, lo aprobado por semana y lo **listo para publicar**, con el texto para copiar |
+
+Java calcula y el panel dibuja (DEC-123), con ocho consultas de solo lectura (`/api/v1/dashboard/…`): una por vista (`comunidad` y `contenido`, T12) y las seis de T08 (totales, sentimiento, temas, deserción, frustración y dudas sin responder). Las alertas son:
+- **deserción:** no escribe hace N días (14 por defecto, ajustable);
+- **frustración:** un mensaje `MUY_NEGATIVO` en el período, o 2 negativos entre sus últimos 3 mensajes **del período** (DEC-157);
+- **dudas sin responder:** ni el bot ni otra persona respondieron.
+
+Reglas (DEC-155): solo cuentan los mensajes `OK`; la vista Comunidad separa a los alumnos de los mentores (`rol=alumnos`); cada porcentaje o índice lleva su **n**, y los tiempos se resumen con la **mediana**. Todo se calcula en hora de Bogotá. El panel tiene **tema claro y oscuro** (menú ⋮ → Settings), y los gráficos cambian de paleta con el tema (DEC-156). Los archivos guardados en OCI se ven en la barra lateral.
 
 Código: `panel/paginas/dashboard.py` y `backend-java/.../dashboard/`.
 
