@@ -5,7 +5,7 @@
 | Fecha | 2026-10-14 |
 | Modelo de Claude usado | Opus 5.5 |
 | Rama | `tarea/T12-dashboard` |
-| Commits | `913c96e` (Partes A y B juntas: Java, contrato y panel), `9d0f46a` (Parte C: documentación) y el de este informe. Ver §7 |
+| Commits | `913c96e` (Partes A y B juntas: Java, contrato y panel), `9d0f46a` (Parte C: documentación), `aeacf05` (rediseño), `f7292d9` (DEC-158 e informe) y los de la corrección del tema. Ver §7 |
 
 ## 1. Resumen
 
@@ -17,8 +17,8 @@ Java tiene dos puertas nuevas de solo lectura (`/dashboard/comunidad` y `/dashbo
 |---|---|---|
 | Las dos vistas muestran los KPI de la sección 2, en el orden de la decisión 3, con la n visible y el supuesto de P1 escrito | ✅ | `test_comunidad_muestra_franja_tarjetas_y_secciones_en_orden_con_su_n` y su par de Contenido comprueban el orden; `test_p1_muestra_el_supuesto…` la frase exacta. 🧪 Capturas de las dos vistas con datos reales (§4.4) |
 | Las puertas nuevas solo agregan, solo abren con la clave `panel` y están en `PANEL_JAVA_v1.md` con ejemplos | ✅ | `DashboardApiTest`: 401 sin clave, 403 con `bot` e `ingesta` y con rutas disfrazadas, segunda capa del controlador. `sinRolEsIgualQueAntes…`: sin `rol` la respuesta es idéntica a `rol=todos`. Contrato §7.1 a §7.4 |
-| El tema claro y oscuro funciona desde el menú de Streamlit, y los gráficos se leen en los dos | ⚠️ parcial | `test_la_paleta_de_los_graficos_cambia_con_el_tema` y `test_las_tarjetas_cambian_con_el_tema`. 🧪 Capturas con el navegador en modo oscuro: todo se lee (§4.4). Falta cambiarlo desde el menú ⋮ → Settings (prueba de Harrison) |
-| Las pruebas de Java y de Python pasan, y la prueba real coincide con los valores de hoy | ⚠️ parcial | Java 243/0/0 y panel 66 passed (§4). Valores comparados con SQL de solo lectura sobre la base real (§4.3). La prueba real de la ficha §5 la corre Harrison |
+| El tema claro y oscuro funciona desde el menú de Streamlit, y los gráficos se leen en los dos | ✅ | `test_los_colores_no_dependen_del_tema_y_las_paletas_estan_en_la_configuracion`. 🧪 Capturas cambiando el tema **sin recargar**, de claro a oscuro y de oscuro a claro: tarjetas, franja, gráficos y textos cambian solos (§4.4). Harrison encontró que la primera versión no cambiaba (§5) |
+| Las pruebas de Java y de Python pasan, y la prueba real coincide con los valores de hoy | ⚠️ parcial | Java 243/0/0 y panel 63 passed (§4). Valores comparados con SQL de solo lectura sobre la base real (§4.3). La prueba real de la ficha §5 la corre Harrison |
 | DEC-153 a DEC-157, ARQUITECTURA, OPERACION y ESTADO al día | ✅ | `docs/DECISIONES.md` (más DEC-121, DEC-124 y DEC-158, del rediseño), ARQUITECTURA §4.7, OPERACION §11, ESTADO (OE5 y mejoras) |
 | El informe está completo y no se tocó nada fuera del alcance | ✅ | Este archivo. Lo único extra: una línea del README §8.4 que describía el dashboard viejo (§3) |
 
@@ -34,9 +34,9 @@ Java tiene dos puertas nuevas de solo lectura (`/dashboard/comunidad` y `/dashbo
 | `docs/contratos/PANEL_JAVA_v1.md` | Nota de T12, `rol`, reglas nuevas, las dos puertas, los campos de las dudas y 4 ejemplos | Parte A, punto 7 |
 | `panel/paginas/dashboard.py` | Rehecha con el diseño del prototipo: pestañas Comunidad / Contenido que solo ejecutan la abierta, píldoras 7-30-90 y "Elegir fechas", ajustes al lado, franja P1 y P4, 4 tarjetas, gráficos de Altair sin cuadrícula, "A quién ayudar hoy" en 3 tarjetas con "Abrir en Discord", "Listos para publicar" con la fila elegida y su texto para copiar, P5 en la barra lateral, sin "Sin clasificar" | Parte B, puntos 8 y 9; DEC-158 |
 | `panel/cliente_java.py` | `rol` (solo se envía si es `alumnos`), `dashboard_comunidad` y `dashboard_contenido` | Parte B, punto 11 |
-| `panel/ui.py` | `tema_oscuro()` con `st.context.theme` | Parte B, punto 10 |
-| `panel/.streamlit/config.toml` | `[theme.light]`, `[theme.dark]` y `toolbarMode = "viewer"` | Parte B, punto 10 (DEC-156) |
-| `panel/tests/test_dashboard.py` y `test_cliente.py` | 20 pruebas de la página (reemplazan las 6 de T08) y 1 del cliente | Ficha §5 |
+| `panel/ui.py` | Sin cambios al final: `tema_oscuro()` se agregó y después se quitó, porque el tema no se puede leer desde Python (§5) | — |
+| `panel/.streamlit/config.toml` | `[theme.light]` y `[theme.dark]`, con los colores del sentimiento en `chartCategoricalColors`, y `toolbarMode = "viewer"` | Parte B, punto 10 (DEC-156) |
+| `panel/tests/test_dashboard.py` y `test_cliente.py` | 17 pruebas de la página (reemplazan las 6 de T08) y 1 del cliente | Ficha §5 |
 | `compose.yml` y `.env.example` | `PANEL_MINUTOS_POR_HISTORIA`, 30 por defecto | Parte B, punto 11 |
 | `docs/DECISIONES.md`, `ARQUITECTURA.md`, `OPERACION.md`, `ESTADO.md` | DEC-153 a DEC-158, DEC-121 y DEC-124 actualizadas; §4.7; §11 (cómo leerlo, el supuesto de P1 y cómo cambiar el tema); OE5 y mejoras | Parte C |
 | `README.md` | §8.4: una línea que describía el dashboard de T08 | Quedaba falsa |
@@ -46,7 +46,7 @@ Java tiene dos puertas nuevas de solo lectura (`/dashboard/comunidad` y `/dashbo
 | Comando ejecutado | Resultado (🧪) |
 |---|---|
 | Java, el de [OPERACION.md §5](../../OPERACION.md) (`mvn test` en Docker contra `insightedu_test`) | **243 pruebas, 0 fallas, 0 errores** (eran 225). `DashboardApiTest`: 44 |
-| Panel, en la imagen `insightedu-panel` con `pytest` instalado (en el Python de Windows no hay Streamlit) | Antes: **51 passed**. Después del rediseño: **66 passed** |
+| Panel, en la imagen `insightedu-panel` con `pytest` instalado (en el Python de Windows no hay Streamlit) | Antes: **51 passed**. Al final: **63 passed** |
 | `docker compose config --quiet` | Sin errores |
 
 ### 4.1 Comandos
@@ -87,7 +87,9 @@ Consultas de solo lectura con el período por defecto (2026-09-15 a 2026-10-14),
 
 ### 4.4 Capturas del diseño
 
-Para comparar con el prototipo sin la contraseña de Harrison, se levantó una **copia aparte** del panel nuevo dentro de la red de Docker (sin puertos publicados, sin tocar los contenedores de Harrison), con un usuario de captura que solo existía en esa copia, y un Chromium sin pantalla (Playwright) sacó capturas de las dos vistas a 1440 px, con el navegador en modo claro y en modo oscuro. 🧪 Las dos vistas siguen el orden y el estilo del prototipo, y en oscuro todo se lee, también los gráficos. Lo que se corrigió al mirarlas: el texto del embudo se cortaba, los gráficos tenían un fondo distinto del de su tarjeta y la lista "2 posts y 4 casos y 1 FAQ" repetía la "y".
+Para comparar con el prototipo sin la contraseña de Harrison, se levantó una **copia aparte** del panel nuevo dentro de la red de Docker (sin puertos publicados, sin tocar los contenedores de Harrison), con un usuario de captura que solo existía en esa copia, y un Chromium sin pantalla (Playwright) sacó capturas de las dos vistas a 1440 px, con el navegador en modo claro y en modo oscuro. 🧪 Las dos vistas siguen el orden y el estilo del prototipo. Lo que se corrigió al mirarlas: el texto del embudo se cortaba, los gráficos tenían un fondo distinto del de su tarjeta y la lista "2 posts y 4 casos y 1 FAQ" repetía la "y".
+
+Después de la prueba de Harrison se repitieron las capturas **cambiando el tema sin recargar** (Playwright cambia la preferencia del sistema, que Streamlit sigue por defecto, igual que el menú ⋮ → Settings): de claro a oscuro en Comunidad y de oscuro a claro en Contenido. 🧪 Tarjetas, franja, colores del sentimiento, textos de los gráficos y botones cambian solos.
 
 ## 5. Decisiones que se tomaron
 
@@ -103,13 +105,15 @@ Para comparar con el prototipo sin la contraseña de Harrison, se levantó una *
 | Sin migración `V9` | Un índice nuevo: las consultas usan los índices de `fecha`, `estado` y `mensaje_id`, y las tablas son chicas. T13 queda libre para su `V9` | No |
 | **Rediseño (DEC-158):** franja, tarjetas y títulos en bloques `st.html` con los colores del prototipo para cada tema, y los textos de alumnos con `st.text` | Los componentes estándar (`st.metric`, gráficos con ejes): con ellos el diseño quedaba lejos del prototipo aprobado. Poner los textos de alumnos en HTML escapado: AGENTS.md lo prohíbe y no hace falta | No |
 | Pestañas con `st.tabs(on_change="rerun")` | Un selector de botones (la primera versión): las pestañas son las del prototipo y, así, solo se ejecuta la abierta | No |
+| **Colores sin depender del tema** (DEC-156): fondos semitransparentes, texto heredado, el sentimiento en `config.toml`, y un azul (`#3987e5`) y un gris (`#777a82`) que se leen en los dos fondos | Elegir la paleta con `st.context.theme`: 🧪 Streamlit no vuelve a correr la página al cambiar el tema, y todo quedaba en claro. Una sola paleta del sentimiento para los dos fondos: 🧪 el validador de paletas la rechaza (contraste y separación) | No |
+| Mejoras que pidió Harrison: "Abrir en Discord" como botón con borde e ícono, números de las tarjetas más chicos (30 px en lugar de 38) y la vista dividida en secciones con título ("Indicadores clave", "Cómo evoluciona la comunidad", "A quién ayudar hoy"; en Contenido, "Del logro a la publicación" y "Listos para publicar") | — | No |
 | "A quién escribir" sin "Abrir en Discord" por persona | Sumar el ID de Discord de la persona al contrato: Harrison lo descartó por el gasto | No |
 | Se quitaron "Ver por" y "Excluir el tema «otro»" de la página | Conservarlos: la ficha define los controles (vista, período, ajustes) y el tope de 4 tarjetas. Las puertas siguen aceptando esos parámetros | No |
 
 ## 6. Dudas, riesgos y pendientes
 
 1. **Prueba real pendiente** (ficha §5): `docker compose up -d --build api-java panel`, revisar las dos vistas, cambiar a oscuro desde ⋮ → Settings y probar "Abrir en Discord". No se vio la página en un navegador.
-2. **`st.context.theme` al cambiar de tema:** 📘 la documentación de Streamlit avisa que el tipo de tema puede ser incorrecto mientras cambia. Si al pasar a oscuro los gráficos siguen con la paleta clara, recargar la página (F5) debería arreglarlo. Revisarlo en la prueba real.
+2. ~~El tema no cambiaba las tarjetas ni los gráficos~~: resuelto sin depender del tema (§5, DEC-156).
 3. **El título "Panel de Curaduría B2B - CommunityLab"** sigue arriba de "Dashboard", porque lo pone `app.py` en todas las páginas (diseño de DEC-109). El prototipo lo lleva en la barra lateral: conviene moverlo en T13, cuando se rehaga la página Borradores con el mismo prototipo.
 4. **Deserción:** cuenta a todos los alumnos que escribieron alguna vez (contra hoy), y el total de alumnos se cuenta hasta el fin del período. Con un período en el pasado, "7 de 9" podría mezclar dos momentos. Con los atajos (que terminan hoy) coinciden.
 5. ~~Mediana del bot~~: Harrison la validó el 2026-10-14.
@@ -126,4 +130,6 @@ En `C:\Users\LENOVO\Documents\Cursos\No Country\Hackaton ONE 10\insightedu-lab`,
 | `git push` | La rama quedó al día con `origin` |
 | `docker compose up -d --build api-java panel` | 🧪 `api-java` y `panel` recreados y `healthy`. Desde el contenedor del panel, `comunidad`, `contenido` y las dudas con `servidorId` responden con los valores de §4.3 |
 | Prueba real en el navegador, primera versión | Harrison vio los KPI pero un diseño lejos del prototipo; se rehízo (§5) |
-| Prueba real del rediseño (ficha §5, pasos 2 a 5) | ⏳ Pendiente |
+| `git commit` del rediseño y de su documentación | `aeacf05` y `f7292d9` |
+| Prueba real del rediseño | Harrison: el diseño cumple y "Abrir en Discord" funciona; al pasar a oscuro, tarjetas y gráficos quedaban en claro. Se corrigió (§5) junto con sus tres mejoras |
+| Prueba real de la corrección del tema | ⏳ Pendiente |
