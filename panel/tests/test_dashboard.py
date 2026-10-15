@@ -145,29 +145,29 @@ def entorno(monkeypatch):
     yield
 
 
-def _dashboard(monkeypatch, java):
+def _dashboard(monkeypatch, java, vista="Comunidad"):
     monkeypatch.setattr(ui, "obtener_cliente", lambda: java)
     at = AppTest.from_file(APP, default_timeout=30)
     at.session_state["usuario"] = "harrison"
     at.session_state["ultimo_uso"] = time.monotonic()
     at.run()
     at.switch_page("paginas/dashboard.py")
+    return _correr(at, vista)
+
+
+def _correr(at, vista="Comunidad"):
+    # AppTest no tiene cómo hacer clic en una pestaña: se elige por su key en cada corrida
+    at.session_state["dash_vista"] = vista
     return at.run()
 
 
-def _contenido(monkeypatch, java):
-    at = _dashboard(monkeypatch, java)
-    java.pedidos.clear()
-    at.segmented_control(key="dash_vista").set_value("Contenido")
-    return at.run()
-
-
-def _metricas(at) -> dict:
-    return {m.label: m.value for m in at.metric}
+def _html(at) -> str:
+    """Todo el HTML de la página (franja, tarjetas y títulos), en un solo texto."""
+    return "\n".join(e.proto.body for e in at.get("html"))
 
 
 def _textos(at) -> list[str]:
-    return [c.value for c in at.caption] + [m.value for m in at.markdown]
+    return [t.value for t in at.text]
 
 
 def _graficos(at):
@@ -176,6 +176,11 @@ def _graficos(at):
 
 def _enlaces(at) -> list[str]:
     return [b.proto.url for b in at.get("link_button")]
+
+
+def _en_orden(texto: str, partes: list[str]) -> bool:
+    posiciones = [texto.find(p) for p in partes]
+    return -1 not in posiciones and posiciones == sorted(posiciones)
 
 
 # ── Vista Comunidad (la de inicio) ──
@@ -200,27 +205,29 @@ def test_comunidad_pide_solo_lo_suyo_con_los_parametros_por_defecto(monkeypatch)
     assert java.args("frustracion") == (desde, hoy)
     assert java.args("dudas") == (desde, hoy, 24, False)
     assert not java.nombres() & PEDIDOS_CONTENIDO
+    assert [t.label for t in at.tabs] == ["Comunidad", "Contenido"]
 
 
-def test_comunidad_muestra_las_tarjetas_con_su_n(monkeypatch):
+def test_comunidad_muestra_franja_tarjetas_y_secciones_en_orden_con_su_n(monkeypatch):
     at = _dashboard(monkeypatch, DashboardSimulado())
 
-    metricas = _metricas(at)
-    # La franja (P1 y P4) y las 4 tarjetas, en ese orden (DEC-153)
-    assert [m.label for m in at.metric][:6] == [
-        "Horas ahorradas a Marketing (estimado)", "Historias encontradas solas", "Clima de los alumnos",
-        "Dudas que respondió el bot", "Dudas sin respuesta (más de 24 h)", "Alumnos que necesitan apoyo"]
-    assert metricas["Clima de los alumnos"] == "+29"   # (14 − 4) / 35
-    assert metricas["Dudas que respondió el bot"] == "40 %"
-    assert metricas["Dudas sin respuesta (más de 24 h)"] == "2"
-    assert metricas["Alumnos que necesitan apoyo"] == "1 de 9"
-    textos = _textos(at)
-    assert any("n = 35 mensajes de alumnos" in t for t in textos)
-    assert any("Toda la comunidad (también mentores): +34 (n = 38)" in t for t in textos)
-    assert any("Sin datos del período anterior para comparar." in t for t in textos)
-    assert any("4 de 10 dudas que vio el bot (n = 10)" in t and "6 s (mediana)" in t for t in textos)
-    assert any("De 18 dudas de alumnos del período" in t for t in textos)
-    assert "Sin clasificar" not in metricas  # T12: se quitó de la vista
+    html = _html(at)
+    # DEC-153: franja → 4 tarjetas → gráficos → listas
+    assert _en_orden(html, ["Lo que hizo InsightEdu en los últimos 30 días", "Clima de los alumnos<",
+                            "Dudas que respondió el bot", "Dudas sin respuesta (más de 24 h)",
+                            "Alumnos que necesitan apoyo", "Clima de los alumnos por semana", "Alumnos activos",
+                            "De qué hablan los alumnos", "A quién ayudar hoy", "Esperan respuesta (2)",
+                            "A quién escribir (2)", "Qué falta en los documentos (3)"])
+    assert ">+29<" in html  # (14 − 4) / 35
+    assert "n = 35 mensajes con sentimiento" in html
+    assert "Toda la comunidad, con mentores: +34 (n = 38)." in html
+    assert "Sin datos del período anterior para comparar." in html
+    assert ">40 %<" in html
+    assert "4 de 10 dudas que vio el bot (n = 10) · respondió en 6 s (mediana)" in html
+    assert "6 se derivaron a un mentor. Otras 17 llegaron por lote" in html
+    assert "de 18 dudas de alumnos del período" in html
+    assert "de 9 · posible deserción" in html
+    assert "Sin clasificar" not in html  # T12: se quitó de la vista
 
 
 def test_comunidad_compara_con_el_periodo_anterior_cuando_tiene_datos(monkeypatch):
@@ -229,25 +236,37 @@ def test_comunidad_compara_con_el_periodo_anterior_cuando_tiene_datos(monkeypatc
 
     at = _dashboard(monkeypatch, java)
 
-    clima = next(m for m in at.metric if m.label == "Clima de los alumnos")
-    assert clima.proto.delta.startswith("+0 frente al período anterior (n = 35)")
-    assert not any("Sin datos del período anterior" in t for t in _textos(at))
+    assert "+0 frente al período anterior (n = 35)." in _html(at)
+    assert "Sin datos del período anterior" not in _html(at)
 
 
-def test_comunidad_dibuja_tres_graficos_y_las_listas(monkeypatch):
+def test_comunidad_dibuja_tres_graficos_y_la_tabla_del_clima(monkeypatch):
     at = _dashboard(monkeypatch, DashboardSimulado())
 
     assert not at.exception
     assert len(_graficos(at)) == 3  # clima, alumnos activos y temas
-    tablas = [d.value for d in at.dataframe]
-    clima = tablas[0]
+    clima = at.dataframe[0].value
     assert clima["n"].tolist() == [32, 3]
     assert clima["Índice"].tolist() == ["+28", "+33"]
-    a_quien = next(t for t in tablas if "Alumno" in t.columns)
-    assert a_quien["Alumno"].tolist() == ["<b>Camila</b>", "Diego"]  # como datos, no como HTML
-    assert a_quien["Motivo"].tolist() == ["Lleva 16 días sin escribir", "Un mensaje muy negativo"]
-    falta = next(t for t in tablas if "Dudas derivadas" in t.columns)
-    assert falta["Tema"].tolist() == ["Contenido del curso", "Evaluaciones"]
+    html = _html(at)
+    assert "Muy negativo" in html and "Muy positivo" in html  # la leyenda, arriba del gráfico
+    assert "Contenido del curso es el tema más frecuente: 9 de 13 mensajes." in html
+
+
+def test_a_quien_ayudar_muestra_los_casos_con_textos_escapados(monkeypatch):
+    at = _dashboard(monkeypatch, DashboardSimulado())
+
+    textos = _textos(at)
+    # Los textos y los nombres de los alumnos van con st.text, nunca dentro del HTML (DEC-158)
+    assert any(SCRIPT in t for t in textos)
+    assert "<b>Camila</b> · posible deserción" in textos
+    assert "Diego · posible frustración" in textos
+    html = _html(at)
+    assert "<script>alert" not in html and "&lt;script&gt;" not in html
+    assert "Camila" not in html and "Diego" not in html and "Ana ·" not in html
+    assert "16 días sin escribir · 4 mensajes en total" in html
+    assert "Un mensaje muy negativo en el período" in html
+    assert not any("<script>" in m.value or "<b>Camila" in m.value for m in at.markdown)
 
 
 def test_abrir_en_discord_lleva_al_mensaje(monkeypatch):
@@ -257,24 +276,15 @@ def test_abrir_en_discord_lleva_al_mensaje(monkeypatch):
     assert _enlaces(at) == ["https://discord.com/channels/1554157903701741700/1554158212742127821/1554205178671009863"]
 
 
-def test_una_duda_con_html_se_muestra_escapada(monkeypatch):
-    at = _dashboard(monkeypatch, DashboardSimulado())
-
-    assert any(c.value == SCRIPT for c in at.code)
-    assert any("derivada a un mentor" in t.value for t in at.text)
-    assert not any("<script>" in m.value or "<b>Camila" in m.value for m in at.markdown)
-    assert not any("<script>" in c.value for c in at.caption)
-
-
 def test_los_atajos_y_los_ajustes_envian_sus_valores(monkeypatch):
     java = DashboardSimulado()
     at = _dashboard(monkeypatch, java)
     hoy = datetime.now(ui.ZONA).date()
 
-    at.segmented_control(key="dash_atajo").set_value("7 días")
+    at.pills(key="dash_atajo").set_value("7 días")
     at.number_input(key="dash_dias").set_value(3)
     at.number_input(key="dash_horas").set_value(48)
-    at = at.run()
+    at = _correr(at)
 
     assert not at.exception
     desde = hoy - timedelta(days=6)
@@ -282,10 +292,13 @@ def test_los_atajos_y_los_ajustes_envian_sus_valores(monkeypatch):
     assert java.todos("sentimiento")[-3][2] == "dia"  # con 7 días, el clima va por día
     assert java.args("desercion") == (3,)
     assert java.args("dudas") == (desde, hoy, 48, False)
-    assert "Dudas sin respuesta (más de 48 h)" in _metricas(at)
+    html = _html(at)
+    assert "Dudas sin respuesta (más de 48 h)" in html
+    assert "Lo que hizo InsightEdu en los últimos 7 días" in html
+    assert "Clima de los alumnos por día" in html
 
-    at.segmented_control(key="dash_atajo").set_value("90 días")
-    at = at.run()
+    at.pills(key="dash_atajo").set_value("90 días")
+    at = _correr(at)
     assert java.args("contenido") == (hoy - timedelta(days=89), hoy)
 
 
@@ -294,32 +307,32 @@ def test_elegir_fechas_muestra_el_calendario_y_un_periodo_a_medio_elegir_no_pide
     at = _dashboard(monkeypatch, java)
     assert not at.date_input  # con un atajo, no hay calendario
 
-    at.segmented_control(key="dash_atajo").set_value("Elegir fechas")
-    at = at.run()
+    at.pills(key="dash_atajo").set_value("Elegir fechas")
+    at = _correr(at)
     at.date_input(key="dash_periodo").set_value((date(2026, 9, 1), date(2026, 9, 30)))
-    at = at.run()
+    at = _correr(at)
     assert java.args("comunidad") == (date(2026, 9, 1), date(2026, 9, 30))
+    assert "Lo que hizo InsightEdu del 1 sep al 30 sep" in _html(at)
 
     antes = len(java.pedidos)
     at.date_input(key="dash_periodo").set_value((date(2026, 9, 1),))
-    at = at.run()
+    at = _correr(at)
     assert "Elige la fecha final del período." in [i.value for i in at.info]
     assert len(java.pedidos) == antes
 
 
-# ── La franja de valor (P1 y P4) ──
+# ── La franja de valor (P1 y P4) y la barra lateral (P5) ──
 
 def test_p1_muestra_el_supuesto_con_los_minutos_por_defecto(monkeypatch):
     at = _dashboard(monkeypatch, DashboardSimulado())
 
+    html = _html(at)
     # (30 − 1 min de revisión) × 9 historias = 261 min = 4,35 h
-    assert _metricas(at)["Horas ahorradas a Marketing (estimado)"] == "≈ 4,3 h"
-    textos = _textos(at)
-    assert ("Estimado: supone 30 min por historia encontrada y redactada a mano, menos la revisión en el panel."
-            in textos)
-    assert any("mediana de 9 posts" in t and "× 9 logros con su post aprobado" in t for t in textos)
-    assert _metricas(at)["Historias encontradas solas"] == "9"
-    assert any("de 64 mensajes de personas y 16 logros" in t for t in textos)
+    assert ">≈ 4,3 h<" in html
+    assert "Estimado: supone 30 min por historia encontrada y redactada a mano, menos la revisión en el panel" in html
+    assert "mediana de 9 posts) · 9 historias aprobadas" in html
+    assert ">9 historias<" in html
+    assert "De 64 mensajes de personas y 16 logros, 9 eran publicables" in html
 
 
 def test_p1_usa_los_minutos_configurados(monkeypatch):
@@ -327,15 +340,16 @@ def test_p1_usa_los_minutos_configurados(monkeypatch):
 
     at = _dashboard(monkeypatch, DashboardSimulado())
 
-    assert _metricas(at)["Horas ahorradas a Marketing (estimado)"] == "≈ 6,6 h"  # (45 − 1) × 9 / 60
-    assert any(t.startswith("Estimado: supone 45 min por historia") for t in _textos(at))
+    assert ">≈ 6,6 h<" in _html(at)  # (45 − 1) × 9 / 60
+    assert "Estimado: supone 45 min por historia" in _html(at)
 
 
 def test_p5_va_en_la_barra_lateral(monkeypatch):
     at = _dashboard(monkeypatch, DashboardSimulado())
 
-    assert [m.value for m in at.sidebar.metric] == ["36"]
-    assert at.sidebar.metric[0].label == "Archivos guardados en OCI"
+    lateral = "\n".join(e.proto.body for e in at.sidebar.get("html"))
+    assert "Guardados en OCI" in lateral and "36 activos" in lateral
+    assert at.sidebar.text[0].value == "Sesión: harrison"  # debajo del usuario
 
 
 # ── Vista Contenido (Marketing) ──
@@ -343,7 +357,9 @@ def test_p5_va_en_la_barra_lateral(monkeypatch):
 def test_contenido_pide_solo_lo_suyo(monkeypatch):
     java = DashboardSimulado()
 
-    at = _contenido(monkeypatch, java)
+    _dashboard(monkeypatch, java)
+    java.pedidos.clear()
+    at = _dashboard(monkeypatch, java, vista="Contenido")
 
     assert not at.exception
     assert java.nombres() == {"contenido", "aprobados", "detalle"}
@@ -351,35 +367,40 @@ def test_contenido_pide_solo_lo_suyo(monkeypatch):
 
 
 def test_contenido_muestra_tarjetas_graficos_y_listos_para_publicar(monkeypatch):
-    at = _contenido(monkeypatch, DashboardSimulado())
+    at = _dashboard(monkeypatch, DashboardSimulado(), vista="Contenido")
 
-    metricas = _metricas(at)
-    assert metricas["Por revisar"] == "3"
-    assert metricas["Tiempo de revisión de un post"] == "60 s"
-    assert metricas["Tasa de aprobación"] == "94 %"
-    assert metricas["Del logro al post aprobado"] == "6,1 días"
-    textos = _textos(at)
-    assert any(t.startswith("2 casos de éxito y 1 FAQ. El más antiguo espera hace") for t in textos)
-    assert "Mediana, n = 9." in textos
-    assert any("Caso de éxito: 5 s (n = 7). FAQ: 1.000 s (n = 1)." in t for t in textos)
-    assert "16 aprobados de 17 revisados (n = 17)." in textos
-    assert any("7 no publicables" in t for t in textos)
+    assert not at.exception
+    html = _html(at)
+    assert _en_orden(html, ["Lo que hizo InsightEdu", "Por revisar", "Tiempo de revisión (mediana)",
+                            "Tasa de aprobación", "Del logro al contenido aprobado", "De logro a contenido aprobado",
+                            "Contenido aprobado por semana", "Listos para publicar"])
+    assert "2 casos de éxito y 1 FAQ" in html
+    assert "El más antiguo espera hace" in html
+    assert ">1 min<" in html and "por post de LinkedIn · n = 9" in html
+    assert "Caso de éxito: 5 s (n = 7) · FAQ: 16 min 40 s (n = 1)" in html
+    assert ">94 %<" in html and "16 de 17 borradores revisados (n = 17)" in html
+    assert ">6 días<" in html and "mediana · n = 9 posts" in html
+    assert "La IA vio publicables 9 de 16 logros, y Marketing aprobó 9." in html
+    assert "No publicables (7)" in html
+    assert "9 piezas la semana del 5 oct" in html
     assert len(_graficos(at)) == 2  # embudo y aprobados por semana
+    assert [p.proto.label for p in at.get("page_link")] == ["Ir a Borradores"]
     listos = at.dataframe[0].value
-    assert listos["Dónde se usa"].tolist() == ["LinkedIn", "#anuncios de Discord y la web"]
-    # El texto final, escapado y con el botón de copiar de st.code
+    assert listos["Dónde se publica"].tolist() == ["LinkedIn de CommunityLab", "Canal #anuncios y la web"]
+    assert listos["De quién"].tolist() == ["Camila", "Varias personas"]
+    # Sin fila elegida, el texto final del más reciente, escapado y con el botón de copiar de st.code
     assert any(c.value == "Texto final 12 <b>listo</b>" for c in at.code)
 
 
 def test_contenido_el_embudo_muestra_los_porcentajes(monkeypatch):
-    at = _contenido(monkeypatch, DashboardSimulado())
+    at = _dashboard(monkeypatch, DashboardSimulado(), vista="Contenido")
 
     datos = "".join(g.proto.spec for g in _graficos(at))
     for g in _graficos(at):
         for d in g.proto.datasets:
             datos += convert_arrow_bytes_to_pandas_df(d.data.data).to_string()
-    assert "9 · 56 % de los logros" in datos
-    assert "9 · 100 % de los publicables" in datos
+    assert "9 · 56 %" in datos
+    assert "9 · 100 %" in datos
 
 
 # ── Sin datos, fallas y tema ──
@@ -396,19 +417,17 @@ def test_sin_datos_lo_dice_y_no_se_rompe(monkeypatch):
     assert "No hay dudas sin respuesta en este período." in avisos
     assert "Todavía no escribió ningún alumno." in avisos
     assert len(_graficos(at)) == 0
-    metricas = _metricas(at)
-    assert metricas["Clima de los alumnos"] == "—"
-    assert metricas["Dudas que respondió el bot"] == "—"
-    assert metricas["Horas ahorradas a Marketing (estimado)"] == "≈ 0,0 h"
+    html = _html(at)
+    assert "Clima de los alumnos</div><div style=\"font-size: 38px; font-weight: 600; line-height: 1.1\">—" in html
+    assert ">≈ 0,0 h<" in html
 
-    at.segmented_control(key="dash_vista").set_value("Contenido")
-    at = at.run()
+    at = _correr(at, "Contenido")
     assert not at.exception
     avisos = [i.value for i in at.info]
     assert "No hay logros en este período." in avisos
     assert "No se aprobó nada en este período." in avisos
     assert "Todavía no hay borradores aprobados." in avisos
-    assert _metricas(at)["Tiempo de revisión de un post"] == "—"
+    assert "No hay nada pendiente." in _html(at)
 
 
 def test_si_un_dato_falla_los_demas_se_ven(monkeypatch):
@@ -421,13 +440,13 @@ def test_si_un_dato_falla_los_demas_se_ven(monkeypatch):
     avisos = [w.value for w in at.warning]
     assert len(avisos) == 3
     assert "No se pudo cargar la franja de valor: No se pudo procesar el pedido." in avisos
-    assert _metricas(at)["Clima de los alumnos"] == "+29"
-    assert any(c.value == SCRIPT for c in at.code)  # las dudas se ven igual
-    assert not at.sidebar.metric  # sin P5, pero sin error
+    assert ">+29<" in _html(at)
+    assert any(SCRIPT in t for t in _textos(at))  # las dudas se ven igual
+    assert not at.sidebar.get("html")  # sin P5, pero sin error
 
 
 @pytest.mark.parametrize("oscuro, esperado, ausente", [(False, "#184f95", "#8cc0fb"), (True, "#8cc0fb", "#184f95")])
-def test_la_paleta_cambia_con_el_tema(monkeypatch, oscuro, esperado, ausente):
+def test_la_paleta_de_los_graficos_cambia_con_el_tema(monkeypatch, oscuro, esperado, ausente):
     monkeypatch.setattr(ui, "tema_oscuro", lambda: oscuro)
 
     at = _dashboard(monkeypatch, DashboardSimulado())
@@ -435,3 +454,14 @@ def test_la_paleta_cambia_con_el_tema(monkeypatch, oscuro, esperado, ausente):
     spec = "".join(g.proto.spec for g in _graficos(at))
     assert esperado in spec
     assert ausente not in spec
+
+
+@pytest.mark.parametrize("oscuro, tarjeta", [(False, "#ffffff"), (True, "#12151c")])
+def test_las_tarjetas_cambian_con_el_tema(monkeypatch, oscuro, tarjeta):
+    monkeypatch.setattr(ui, "tema_oscuro", lambda: oscuro)
+
+    at = _dashboard(monkeypatch, DashboardSimulado())
+
+    estilos = [e.proto.body for e in at.get("html") if e.proto.body.lstrip().startswith("<style>")]
+    estilos += [e.proto.body for e in at.get("html")]
+    assert any(f"background: {tarjeta}" in b and "st-key-dash-tarjeta" in b for b in estilos)
