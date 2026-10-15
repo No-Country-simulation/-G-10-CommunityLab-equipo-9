@@ -18,7 +18,8 @@ Cada tarea tiene una **ficha** (la orden de trabajo, que escribe el chat princip
 | [T09](T09-oci.md) | OCI: los borradores generados van a `generados/` y los aprobados a `aprobados/`, en segundo plano, con JSON de Jackson y una PAR nueva (OE7) | T06, T06b, T07 | Sonnet 5.5 | ✅ Aprobada el 2026-10-05 (`c0f8f0d`), **con 2 pendientes** (ver abajo) · [informe](T09-informe.md) |
 | [T10](T10-despliegue-demo.md) | Despliegue en una VM gratis de Oracle Cloud (Caddy + DuckDNS, HTTPS), ingesta cada hora, respaldos, claves nuevas y guion de la demo (OE9) | T01 a T09 | Opus 5.5 | ⏸️ **En pausa** desde el 2026-10-09 (DEC-141): ficha lista, sin ejecutar. Ver [ESTADO.md](../../ESTADO.md) |
 | [T11](T11-limpieza-codigo.md) | Borrar el código que ya no se usa (orquestador viejo, `requirements.txt` de la raíz), sin cambiar comportamiento (DEC-145) | Documentación de cierre | Sonnet 5.5 (se usó Opus 5.5) | ✅ Aprobada el 2026-10-10 (`eb950ce`) · [informe](T11-informe.md) |
-| [T12](T12-dashboard.md) | Dashboard por rol: vista Comunidad (CM) y vista Contenido (Marketing), con los KPI elegidos, la franja de valor del producto y el tema claro y oscuro (OE5, OE6) | T08 | Opus 5.5 | 📝 Ficha lista (2026-10-14) |
+| [T12](T12-dashboard.md) | Dashboard por rol: vista Comunidad (CM) y vista Contenido (Marketing), con los KPI elegidos, la franja de valor del producto y el tema claro y oscuro (OE5, OE6) | T08 | Opus 5.5 | ✅ Fusionada en `main` el 2026-10-15 (PR #15, `89a7cb0`) · [informe](T12-informe.md) |
+| [T13](T13-borradores.md) | Borradores por logro: una tarjeta con el post y el caso de éxito, dónde se publica cada uno, un solo consentimiento; el estado en LinkedIn guardado (M12, `V9`) y el reintento de la FAQ en `ERROR` (OE6, OE3) | T07, T12 | Opus 5.5 | 📝 Ficha lista (2026-10-15) |
 
 Estados: 📝 ficha lista · 🔨 en curso · 🔍 en auditoría · ✅ aprobada o fusionada · ⏳ ficha pendiente
 
