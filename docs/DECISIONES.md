@@ -154,6 +154,7 @@ Las decisiones grandes del análisis se llaman **D1 a D8**; las de este registro
 | DEC-42 | 2026-10-03 | Puertos solo en `127.0.0.1`, la base sin puerto publicado y el panel como único servicio público (con clave) | S5 | ✅ | [compose.yml](../compose.yml), análisis §3 |
 | DEC-43 | 2026-10-03 | Nunca leer ni mostrar un `.env`: solo los nombres de sus variables | Proteger el token del bot, los webhooks y las claves | ✅ | CLAUDE.md §5 |
 | DEC-44 | 2026-10-03 | **D6:** una casilla de consentimiento obligatoria en el panel antes de aprobar un post con el nombre de un alumno | Usa datos personales | ✅ Hecho en T07 | Análisis §0 |
+| DEC-158 | 2026-10-14 | El Dashboard copia el diseño del prototipo con **bloques HTML** (`st.html`) para la franja, las tarjetas y los títulos. Esos bloques llevan **solo números y textos del propio panel**, siempre pasados por `html.escape`. Los nombres y los textos de los alumnos **nunca** van en HTML ni en markdown: siguen con `st.text`, `st.dataframe` o `st.code`, que los escapan | Con los componentes estándar de Streamlit el diseño quedaba lejos del prototipo aprobado. Así se acerca sin abrir la puerta a que un mensaje de Discord con HTML o un enlace engañoso se ejecute en el panel | ✅ Hecho en T12 | [T12-informe §5](historico/tareas/T12-informe.md), `panel/paginas/dashboard.py` |
 
 ## E · IA
 

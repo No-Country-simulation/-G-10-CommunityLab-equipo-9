@@ -18,7 +18,7 @@
 | OE2 | Etiquetar cada mensaje con intención, sentimiento y tema, sin perder mensajes si la IA falla | N2 | ✅ |
 | OE3 | Un borrador de post de LinkedIn y un caso de éxito por cada logro, con la voz de la marca | N3 | ✅ Además, el post aprobado se puede publicar solo en LinkedIn (DEC-149; apagado por defecto) |
 | OE4 | Responder dudas en vivo con los PDF y convertir las repetidas en una FAQ | N4 | ✅ |
-| OE5 | Dashboard con sentimiento, temas y alertas | N5 | ✅ Desde T12, con una vista por rol (Comunidad y Contenido), la franja "Lo que hizo InsightEdu", la n en cada porcentaje y tema claro y oscuro (DEC-153 a DEC-157) |
+| OE5 | Dashboard con sentimiento, temas y alertas | N5 | ✅ Desde T12, con una vista por rol (Comunidad y Contenido), la franja "Lo que hizo InsightEdu", la n en cada porcentaje y tema claro y oscuro, con el diseño del prototipo (DEC-153 a DEC-158) |
 | OE6 | Panel con inicio de sesión para revisar, editar, aprobar o rechazar, con consentimiento | N6 | ✅ |
 | OE7 | Guardar en OCI los activos generados y los aprobados | N7 | ✅ El 2026-10-09 se subieron 31 archivos sin errores, y el 2026-10-12 el dueño del bucket lo confirmó en su consola |
 | OE8 | Todo con un comando, seguro y con pruebas | Transversal | 🟡 5 de 6 servicios en Docker, con claves por cliente, inicio de sesión y pruebas automáticas en cada pieza. Falta la ingesta como servicio |
