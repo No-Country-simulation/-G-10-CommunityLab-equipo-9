@@ -249,7 +249,8 @@ def test_comunidad_dibuja_tres_graficos_y_la_tabla_del_clima(monkeypatch):
     assert clima["n"].tolist() == [32, 3]
     assert clima["Índice"].tolist() == ["+28", "+33"]
     html = _html(at)
-    assert "Muy negativo" in html and "Muy positivo" in html  # la leyenda, arriba del gráfico
+    spec = "".join(g.proto.spec for g in _graficos(at))
+    assert '"orient": "top"' in spec and "Muy negativo" in spec  # la leyenda, arriba del clima
     assert "Contenido del curso es el tema más frecuente: 9 de 13 mensajes." in html
 
 
@@ -418,7 +419,7 @@ def test_sin_datos_lo_dice_y_no_se_rompe(monkeypatch):
     assert "Todavía no escribió ningún alumno." in avisos
     assert len(_graficos(at)) == 0
     html = _html(at)
-    assert "Clima de los alumnos</div><div style=\"font-size: 38px; font-weight: 600; line-height: 1.1\">—" in html
+    assert "Clima de los alumnos</div><div style=\"font-size: 30px; font-weight: 600; line-height: 1.15\">—" in html
     assert ">≈ 0,0 h<" in html
 
     at = _correr(at, "Contenido")
@@ -445,23 +446,21 @@ def test_si_un_dato_falla_los_demas_se_ven(monkeypatch):
     assert not at.sidebar.get("html")  # sin P5, pero sin error
 
 
-@pytest.mark.parametrize("oscuro, esperado, ausente", [(False, "#184f95", "#8cc0fb"), (True, "#8cc0fb", "#184f95")])
-def test_la_paleta_de_los_graficos_cambia_con_el_tema(monkeypatch, oscuro, esperado, ausente):
-    monkeypatch.setattr(ui, "tema_oscuro", lambda: oscuro)
+def test_los_colores_no_dependen_del_tema_y_las_paletas_estan_en_la_configuracion(monkeypatch):
+    """
+    DEC-156: al cambiar el tema, Streamlit no vuelve a correr la página. Por eso la página no elige colores según
+    el tema: los del sentimiento los pone Streamlit desde config.toml, uno por tema.
+    """
+    import tomllib
 
     at = _dashboard(monkeypatch, DashboardSimulado())
-
     spec = "".join(g.proto.spec for g in _graficos(at))
-    assert esperado in spec
-    assert ausente not in spec
+    for color in ("#9b2626", "#184f95", "#f4877d", "#8cc0fb"):
+        assert color not in spec
 
-
-@pytest.mark.parametrize("oscuro, tarjeta", [(False, "#ffffff"), (True, "#12151c")])
-def test_las_tarjetas_cambian_con_el_tema(monkeypatch, oscuro, tarjeta):
-    monkeypatch.setattr(ui, "tema_oscuro", lambda: oscuro)
-
-    at = _dashboard(monkeypatch, DashboardSimulado())
-
-    estilos = [e.proto.body for e in at.get("html") if e.proto.body.lstrip().startswith("<style>")]
-    estilos += [e.proto.body for e in at.get("html")]
-    assert any(f"background: {tarjeta}" in b and "st-key-dash-tarjeta" in b for b in estilos)
+    config = tomllib.loads((Path(APP).parent / ".streamlit" / "config.toml").read_text(encoding="utf-8"))
+    assert config["theme"]["light"]["chartCategoricalColors"][:5] == ["#9b2626", "#e8726a", "#dcdad3", "#6da7ec",
+                                                                       "#184f95"]
+    assert config["theme"]["dark"]["chartCategoricalColors"][:5] == ["#f4877d", "#a5453e", "#3b3e46", "#3b6db3",
+                                                                      "#8cc0fb"]
+    assert config["client"]["toolbarMode"] == "viewer"  # deja el selector de tema en el menú

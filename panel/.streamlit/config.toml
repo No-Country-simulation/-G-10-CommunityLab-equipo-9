@@ -20,11 +20,15 @@ showErrorDetails = "none"
 toolbarMode = "viewer"
 
 # T12 (DEC-156): tema claro y oscuro. Quien usa el panel elige en el menú ⋮ → Settings → "Choose app theme";
-# por defecto sigue el del sistema. Los colores de los gráficos los elige paginas/dashboard.py según el tema activo
+# por defecto sigue el del sistema. Al cambiar el tema, Streamlit no vuelve a correr la página: por eso los colores
+# del sentimiento (de muy negativo a muy positivo, validados para el daltonismo en cada fondo) van aquí, y
+# Streamlit los cambia solo. paginas/dashboard.py usa los 5 primeros, en ese orden
 [theme.light]
 primaryColor = "#4f46e5"
 borderColor = "#d5d3cc"
+chartCategoricalColors = ["#9b2626", "#e8726a", "#dcdad3", "#6da7ec", "#184f95"]
 
 [theme.dark]
 primaryColor = "#818cf8"
 borderColor = "#3b3e46"
+chartCategoricalColors = ["#f4877d", "#a5453e", "#3b3e46", "#3b6db3", "#8cc0fb"]
