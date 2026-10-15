@@ -69,9 +69,9 @@ Los puertos escuchan solo en `127.0.0.1`: funcionan desde esta misma máquina y 
 
 ## 5. Base de datos y pruebas del backend
 
-**Las tablas las crea Flyway** cuando arranca `api-java`, con los archivos SQL de `backend-java/src/main/resources/db/migration/` (`V1__…` a `V8__…`). Hibernate solo comprueba que coincidan (`ddl-auto=validate`).
+**Las tablas las crea Flyway** cuando arranca `api-java`, con los archivos SQL de `backend-java/src/main/resources/db/migration/` (`V1__…` a `V9__…`). Hibernate solo comprueba que coincidan (`ddl-auto=validate`).
 
-⚠️ **Una migración ya aplicada nunca se edita.** Los cambios van en un archivo nuevo (el siguiente es `V9__…`).
+⚠️ **Una migración ya aplicada nunca se edita.** Los cambios van en un archivo nuevo (el siguiente es `V10__…`).
 
 **Pruebas de Java** (no hace falta instalar Java en Windows). Usan una base aparte, `insightedu_test`. La prueba se niega a correr si la base no termina en `_test`, para no borrar la base principal.
 
@@ -173,7 +173,7 @@ Cuánto gasta: una llamada a Gemini para agrupar las dudas, más 2 o 3 por cada 
 | `SIN_REPETIDAS` | Ninguna pregunta la hicieron 2 personas distintas. No se vuelve a intentar |
 | `ERROR` | Falló 3 veces (la IA caída, sin clave de Gemini o una respuesta inválida). No se vuelve a intentar solo |
 
-⚠️ Para que una semana en `ERROR` se vuelva a intentar: `docker compose exec postgres psql -U insightedu -d insightedu -c "UPDATE faq_semanas SET estado = NULL, intentos = 0, terminada_en = NULL WHERE estado = 'ERROR';"`. El reintento la toma en menos de 30 minutos.
+Para que una semana en `ERROR` se vuelva a intentar (T13, DEC-161): en el panel, página **Errores** → lista **"FAQ semanal en ERROR"** → **Reintentar**. Java la devuelve a la cola y la arma enseguida, en segundo plano: tarda hasta unos minutos y gasta una llamada a Gemini. Si sale bien, aparece en **Borradores**; si vuelve a fallar, sigue con los reintentos de siempre (cada 30 minutos, hasta 3 intentos). Ya no hace falta SQL.
 
 ## 10. Panel de curaduría (T07)
 
@@ -194,11 +194,13 @@ En el panel, una persona de Marketing entra con **su usuario y su contraseña**,
 
 | Para… | Cómo |
 |---|---|
-| Revisar un borrador | Página **Borradores**: elegir el estado (pendientes, aprobados o rechazados), el tipo y el borrador. A la izquierda, el mensaje original y por qué lo propuso la IA; a la derecha, el texto editable |
-| Aprobar un post o un caso de éxito | Marcar la casilla **"El alumno dio su consentimiento…"** (D6). Sin ella, el botón **Aprobar** queda apagado, y Java y la base tampoco lo aceptan |
-| Editar | Cambiar el texto y **Aprobar** (la edición viaja con la aprobación), o **Guardar edición** para dejarlo pendiente |
-| Rechazar | Abrir **Rechazar este borrador**, escribir el motivo (opcional) y **Rechazar** |
-| Reintentar lo que quedó en `ERROR` | Página **Errores**: un botón **Reintentar** por mensaje. La clasificación vuelve a la cola (se procesa en unos 30 s) y la generación también (unos 60 s; gasta una llamada a Gemini) |
+| Revisar un logro | Página **Borradores** (T13): arriba, **Por revisar (n)**, **Aprobados** o **Rechazados** (n son tarjetas, no borradores). A la izquierda, la cola: una tarjeta por logro (su post y su caso de éxito) y una por FAQ, del más antiguo al más nuevo; un clic la abre. A la derecha, el mensaje original, por qué lo propuso la IA y una pestaña por texto, con **dónde se publica**, el texto editable y su contador |
+| Aprobar un post o un caso de éxito | Marcar la casilla **"… dio su consentimiento para publicar su nombre y su historia. Vale para los dos textos."** (D6), una por logro. Sin ella, los botones **Aprobar** quedan apagados, y Java y la base tampoco lo aceptan. Cada texto se aprueba con **su** botón, en su pestaña; la tarjeta sale de la cola cuando no le queda nada pendiente |
+| Saber si aprobar el post lo publica | El botón del post lo dice antes: **"Aprobar post"** con la nota "La publicación en LinkedIn está apagada…" (o "modo simulado"), o **"Aprobar y publicar en LinkedIn"**, que pide confirmar ("Publicar ahora" o "Cancelar"). Ver la sección 13 |
+| Editar | Cambiar el texto y **Aprobar** (la edición viaja con la aprobación), o **Guardar edición** para dejarlo pendiente. Una edición sin guardar no se pierde al cambiar de pestaña o de tarjeta, pero sí al cerrar la sesión |
+| Copiar un texto | **Copiar texto** y el ícono de copiar en la esquina del cuadro |
+| Rechazar | **Rechazar…** (en la pestaña de ese texto), escribir el motivo (opcional) y **Rechazar el post** o **Rechazar el caso de éxito**. El otro texto no cambia |
+| Reintentar lo que quedó en `ERROR` | Página **Errores**: un botón **Reintentar** por mensaje o por semana. La clasificación vuelve a la cola (se procesa en unos 30 s) y la generación también (unos 60 s; gasta una llamada a Gemini). La FAQ semanal se arma enseguida, en segundo plano (hasta unos minutos; gasta una llamada a Gemini) |
 | Cerrar sesión | Botón **Cerrar sesión**, en la barra de la izquierda. La sesión también se cierra sola tras 8 horas sin uso |
 | Agregar a otra persona | `python scripts/crear_usuario_panel.py --usuario ana` y `docker compose up -d panel` |
 | Cambiar una contraseña | `python scripts/crear_usuario_panel.py --usuario harrison --reemplazar` y `docker compose up -d panel` |
@@ -208,8 +210,8 @@ En el panel, una persona de Marketing entra con **su usuario y su contraseña**,
 
 **Reglas que cuida Java:**
 - Solo se cambian los borradores `PENDIENTE`. Si otra persona aprobó o rechazó el mismo borrador un momento antes, el panel avisa "otra persona lo revisó" y no cambia nada.
-- Al aprobar se guardan quién (`aprobado_por`), cuándo (`aprobado_en`), cuánto tardó la revisión (`tiempo_curaduria_seg`, desde que se abrió el borrador) y el consentimiento (`consentimiento_confirmado`).
-- Aprobar **no publica nada**: solo cambia el estado en la base. Una tarea en segundo plano lo guarda en OCI (sección 12), y publicarlo en LinkedIn lo hace Marketing a mano.
+- Al aprobar se guardan quién (`aprobado_por`), cuándo (`aprobado_en`), cuánto tardó la revisión (`tiempo_curaduria_seg`: desde que se abrió la tarjeta, o desde el texto anterior revisado en ella) y el consentimiento (`consentimiento_confirmado`).
+- Aprobar cambia el estado en la base, y una tarea en segundo plano lo guarda en OCI (sección 12). Un post aprobado, además, se manda a LinkedIn **solo si la publicación está encendida** (sección 13); si está apagada, Marketing lo publica a mano.
 
 **Si algo falla:**
 
@@ -355,7 +357,9 @@ Cuando Marketing aprueba un **post de LinkedIn** en el panel, Java puede publica
 | **Simulado** | `LINKEDIN_HABILITADA=true`, sin token o sin autor | No sale nada de la PC. El registro dice `[LinkedIn SIMULADO]` y el largo del texto (nunca el texto) |
 | **Real** | `LINKEDIN_HABILITADA=true`, con token y autor | **Se publica en público**, en segundo plano: el panel no espera a LinkedIn. El registro dice `Post publicado en LinkedIn exitosamente. ID: urn:li:share:…` |
 
-⚠️ En modo real **cada aprobación publica al instante y no se deshace desde el panel**: un post publicado se borra en LinkedIn.
+⚠️ En modo real **cada aprobación publica al instante y no se deshace desde el panel**: un post publicado se borra en LinkedIn. Por eso, en modo real el botón del post dice **"Aprobar y publicar en LinkedIn"** y pide confirmar (T13, DEC-159).
+
+**Dónde se ve si un post se publicó** (T13, DEC-160): Java guarda el resultado en el borrador. En **Borradores**, filtro **Aprobados**, pestaña del post: "Publicado en LinkedIn el …" con el botón **Ver en LinkedIn**, "No publicado: la publicación en LinkedIn está apagada", "Simulado: LinkedIn está encendido sin token", "Falló: <motivo>" o "Sin dato" (aprobado antes de T13). En el **Dashboard → Contenido → Listos para publicar**, la columna **"En LinkedIn"** (Publicado · No: apagado · Simulado · Falló · Sin dato). Consulta de solo lectura: `docker compose exec postgres psql -U insightedu -d insightedu -P pager=off -c "SELECT id, aprobado_en, linkedin_estado, linkedin_post_id, linkedin_motivo FROM borradores WHERE tipo = 'POST_LINKEDIN' AND estado = 'APROBADO' ORDER BY id;"`
 
 ### Antes de una prueba real o de la demo
 
@@ -367,14 +371,14 @@ Cuando Marketing aprueba un **post de LinkedIn** en el panel, Java puede publica
 | 4 | Aplicar el cambio: `docker compose up -d api-java` |
 | 5 | Comprobar que llegaron **sin mostrar los valores**: `docker compose exec api-java sh -c 'for v in LINKEDIN_HABILITADA LINKEDIN_ACCESS_TOKEN LINKEDIN_AUTHOR_URN; do eval "x=\${$v}"; if [ -n "$x" ]; then echo "$v: con valor"; else echo "$v: VACIA"; fi; done'` |
 | 6 | **Primera publicación de prueba**: en **Borradores**, elegir un post pendiente, reemplazar todo su texto por uno neutro (por ejemplo, *"Prueba técnica de InsightEdu Lab: publicación automática desde el panel. Este post se borrará en unos minutos."*), marcar el consentimiento y aprobar |
-| 7 | Ver la respuesta: `docker compose logs api-java \| Select-String "LinkedIn"`. Si dice `publicado exitosamente`, el dueño de la cuenta lo ve en su perfil y lo borra |
+| 7 | Ver la respuesta en el panel (el post aprobado dice "Publicado en LinkedIn el …") o en el registro: `docker compose logs api-java \| Select-String "LinkedIn"`. Si dice `publicado exitosamente`, el dueño de la cuenta lo ve en su perfil y lo borra |
 
 🧪 Así se probó el 2026-10-13, en el perfil de un integrante y con su permiso: el borrador 14 se publicó en 1,4 s (`urn:li:share:7515972755511603201`).
 
 ### Durante la demo
 
 - Aprobar solo posts revisados y con el consentimiento confirmado: cada uno se publica en el momento.
-- Un post de más de **3.000 caracteres** se aprueba, pero **no se publica**, y el panel no lo avisa (⚠️ DEC-151). El registro dice `excede el límite máximo de 3000 caracteres`. Los posts de la guía de voz rondan los 1.000 caracteres.
+- Un post de más de **3.000 caracteres** no se deja aprobar: el contador se pone en rojo y avisa "LinkedIn acepta hasta 3.000 caracteres: acorta el post para aprobarlo" (DEC-160). Los posts de la guía de voz rondan los 1.000 caracteres.
 - **No** correr `scripts/publicar_linkedin.py`: publica sin aprobación (DEC-150).
 
 ### Después
@@ -392,7 +396,7 @@ Cuando Marketing aprueba un **post de LinkedIn** en el panel, Java puede publica
 | `Error al publicar … 401` | 🔎 Token vencido o inválido | Pedir un token nuevo al dueño de la cuenta |
 | `Error al publicar … 403` o `422` | 🔎 El token no tiene permiso para publicar, o el autor está mal escrito o no corresponde a ese token | Revisar el autor (`person`, sin punto) y que el token sea de esa misma cuenta |
 
-**Lo que no hace**: no guarda en la base si un post se publicó (solo queda en el registro), no reintenta si LinkedIn falla y no publica casos de éxito ni la FAQ. Las pruebas de Java **nunca** publican: el `pom.xml` apaga LinkedIn, igual que OCI.
+**Lo que no hace**: no reintenta si LinkedIn falla (podría publicar dos veces; el panel muestra el motivo y se publica a mano) y no publica casos de éxito ni la FAQ. Las pruebas de Java **nunca** publican: el `pom.xml` apaga LinkedIn, igual que OCI.
 
 **Los scripts de prueba** (DEC-150): `scripts/publicar_linkedin.py` muestra el JSON que se enviaría, pero **si el `.env` tiene token y autor, publica en el acto**. `scripts/insertar_borrador_prueba.sql` escribe un borrador directo en la base, sin pasar por Java y con una alumna inventada: solo para una base de pruebas. Detalle del módulo: [LINKEDIN_AUTOMATIZACION.md](LINKEDIN_AUTOMATIZACION.md).
 

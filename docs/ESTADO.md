@@ -1,7 +1,7 @@
 # Estado del proyecto y cómo continuar
 
 > **Qué es este documento:** qué está hecho, qué falta y cómo seguir trabajando sin romper lo que existe.
-> **Actualizado:** 2026-10-14 · **Rama:** `main` · **Entrega de la hackatón:** 2026-10-26
+> **Actualizado:** 2026-10-15 · **Rama:** `main` · **Entrega de la hackatón:** 2026-10-26
 > Cómo funciona el sistema: [ARQUITECTURA.md](ARQUITECTURA.md). Por qué se decidió cada cosa: [DECISIONES.md](DECISIONES.md).
 
 ## 1. En una frase
@@ -16,10 +16,10 @@
 |---|---|---|---|
 | OE1 | Capturar los mensajes **en vivo** (bot) y **por lotes** (cada hora), sin duplicados | N1 | 🟡 Las dos capturas funcionan y no duplican. Falta que la ingesta corra sola cada hora en el servidor |
 | OE2 | Etiquetar cada mensaje con intención, sentimiento y tema, sin perder mensajes si la IA falla | N2 | ✅ |
-| OE3 | Un borrador de post de LinkedIn y un caso de éxito por cada logro, con la voz de la marca | N3 | ✅ Además, el post aprobado se puede publicar solo en LinkedIn (DEC-149; apagado por defecto) |
+| OE3 | Un borrador de post de LinkedIn y un caso de éxito por cada logro, con la voz de la marca | N3 | ✅ Además, el post aprobado se puede publicar solo en LinkedIn (DEC-149; apagado por defecto), y desde T13 Java guarda si se publicó y el panel lo muestra (DEC-160) |
 | OE4 | Responder dudas en vivo con los PDF y convertir las repetidas en una FAQ | N4 | ✅ |
 | OE5 | Dashboard con sentimiento, temas y alertas | N5 | ✅ Desde T12, con una vista por rol (Comunidad y Contenido), la franja "Lo que hizo InsightEdu", la n en cada porcentaje y tema claro y oscuro, con el diseño del prototipo (DEC-153 a DEC-158) |
-| OE6 | Panel con inicio de sesión para revisar, editar, aprobar o rechazar, con consentimiento | N6 | ✅ |
+| OE6 | Panel con inicio de sesión para revisar, editar, aprobar o rechazar, con consentimiento | N6 | ✅ Desde T13, Borradores es una cola de logros con el diseño del prototipo: una tarjeta por logro, botones por texto, un consentimiento y el aviso de LinkedIn antes de aprobar (DEC-159) |
 | OE7 | Guardar en OCI los activos generados y los aprobados | N7 | ✅ El 2026-10-09 se subieron 31 archivos sin errores, y el 2026-10-12 el dueño del bucket lo confirmó en su consola |
 | OE8 | Todo con un comando, seguro y con pruebas | Transversal | 🟡 5 de 6 servicios en Docker, con claves por cliente, inicio de sesión y pruebas automáticas en cada pieza. Falta la ingesta como servicio |
 | OE9 | Desplegarlo y ensayar la demo | Transversal | ⏸️ Diseñado, en pausa (sección 3, punto 3) |
@@ -44,8 +44,8 @@ Si falta tiempo, lo último que se recorta es OE1, OE3 y OE6.
 | Clasificación | Guardar en la base la razón de un `ERROR` (hoy solo queda en el registro); medir la calidad del clasificador con un conjunto de mensajes etiquetados a mano |
 | Bot y Agente FAQ | Guardar la fuente que citó la IA (hoy se guarda el primer fragmento encontrado); no mostrar "escribiendo…" en `#logros`; liberar el hilo del Agente FAQ cuando se agota el tope |
 | Agente-Mod | Exigir el largo que pide la guía de voz (los textos salen cortos); no mencionar reacciones que todavía no existen; probar otro modelo con `MOD_MODEL_NAME`; un botón "volver a generar" en el panel |
-| FAQ semanal | Tutoriales y tips; un botón para reintentar una FAQ en `ERROR` |
-| Panel | Mantener la sesión al recargar la página; avisar si dos personas editan el mismo borrador. (Las dos mejoras del dashboard, mostrar el tiempo de revisión y que la frustración ignore los mensajes viejos, se hicieron en T12) |
+| FAQ semanal | Tutoriales y tips. (El botón para reintentar una FAQ en `ERROR` se hizo en T13, DEC-161) |
+| Panel | Mantener la sesión al recargar la página; avisar si dos personas editan el mismo borrador; guardar el **tipo de logro** ("Contratación", "Beca"…) para mostrarlo como etiqueta en la tarjeta de Borradores, como en el prototipo (hoy se lee en el motivo de la IA: la base no lo guarda, decisión 3 de T13). (Las dos mejoras del dashboard, mostrar el tiempo de revisión y que la frustración ignore los mensajes viejos, se hicieron en T12) |
 | Operación | Registros de la IA en nivel INFO; sus registros en OCI; integración continua (pruebas automáticas en cada PR) |
 
 Los **riesgos aceptados** (⚠️) están en [DECISIONES.md](DECISIONES.md): por ejemplo, una URL PAR vieja en el historial público de git (DEC-41) y la regla de "respondida" del bot (DEC-79).

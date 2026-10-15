@@ -9,7 +9,7 @@
 |---|---|---|
 | [dashboard-comunidad.dc.html](dashboard-comunidad.dc.html) | Dashboard · Comunidad (para el CM) | ✅ Hecho en T12 (`panel/paginas/dashboard.py`) |
 | [dashboard-contenido.dc.html](dashboard-contenido.dc.html) | Dashboard · Contenido (para Marketing) | ✅ Hecho en T12 |
-| [borradores.dc.html](borradores.dc.html) | Borradores: una tarjeta por logro | ⏳ **T13** |
+| [borradores.dc.html](borradores.dc.html) | Borradores: una tarjeta por logro | ✅ Hecho en T13 (`panel/paginas/borradores.py`), con los cambios de DEC-159 que dice la sección 2 |
 
 Son páginas "Design Component": HTML con estilos en línea y un bloque `<script type="text/x-dc">` al final, con los datos y el comportamiento (`renderVals()`). **No se abren en el navegador tal cual** (necesitan el motor del editor): se leen como referencia. Los `{{…}}` son valores que salen del script. Los enlaces entre pantallas usan los nombres viejos (`Main.dc.html`, `DashMarketing.dc.html`, `Borradores.dc.html`).
 
@@ -28,10 +28,10 @@ Los nombres de alumnos de los ejemplos son inventados. En las pantallas del dash
 | Detalle (derecha) | "Logro de Ana" con una etiqueta del tipo de logro ("Contratación"), el canal y la fecha; dos recuadros: **Mensaje original** y **Por qué la IA lo propuso** | El contexto para decidir |
 | Pestañas | **Post de LinkedIn** · **Caso de éxito**. Debajo de cada una, **"Dónde se publica"**: el LinkedIn de CommunityLab, o la web y las presentaciones a empresas | El caso de éxito no se publica en LinkedIn (el brief los pide como dos componentes) |
 | Texto | Un área de texto editable, con un contador debajo: "N palabras (la guía pide 90 a 160) · N de 3.000 caracteres de LinkedIn" en el post, y "N palabras (la guía pide 150 a 250) · sin emojis ni hashtags" en el caso. Botón **Copiar texto** | Las reglas de la guía de voz, a la vista |
-| Consentimiento | **Una sola casilla para los dos textos:** "Ana dio su consentimiento para publicar su nombre y su historia. **Vale para los dos textos.**" | 🧪 Hoy se aprueba el caso de éxito en 5 s (mediana) después del post: se revisan juntos |
-| Acciones | **Aprobar post y caso de éxito** (apagado hasta marcar la casilla, con el aviso "Para aprobar, marca la casilla de consentimiento"), **Guardar edición** y **Rechazar…** | Prevenir el error (D6) |
-| Después de aprobar | Un aviso verde: "Aprobados los dos textos de Ana", con un enlace a "Listos para publicar" del dashboard | Dar retroalimentación y el siguiente paso |
-| Estado en LinkedIn (M12) | En el post aprobado: publicado, no publicado (LinkedIn apagado) o falló. Hoy no se guarda (DEC-151): T13 suma la migración `V9` y una decisión que reemplaza a DEC-151 | La columna "En LinkedIn" del dashboard también lo usa |
+| Consentimiento | **Una sola casilla para los dos textos:** "Ana dio su consentimiento para publicar su nombre y su historia. **Vale para los dos textos.**" **Cambió en T13:** va **arriba de las pestañas**, porque los botones están dentro de cada pestaña y la casilla vale para las dos. Si el post ya se aprobó con consentimiento, viene marcada para el caso de éxito | 🧪 Hoy se aprueba el caso de éxito en 5 s (mediana) después del post: se revisan juntos |
+| Acciones | **Cambió en T13 (DEC-159): botones por texto.** En cada pestaña, **Aprobar** ("Aprobar post" o "Aprobar caso de éxito", apagado hasta marcar la casilla, con el aviso "Para aprobar, marca la casilla de consentimiento"), **Guardar edición** y **Rechazar…**, solo para ese texto. **El botón del post dice antes qué pasará en LinkedIn:** apagado o simulado, "Aprobar post" con una nota; encendido, **"Aprobar y publicar en LinkedIn"**, que pide confirmar. Un post de más de 3.000 caracteres no se deja aprobar | Prevenir el error (D6). Aprobar el post puede publicarlo en LinkedIn y el caso de éxito no: por eso se separan |
+| Después de aprobar | **Cambió en T13:** un aviso verde por texto ("Post aprobado. Falta revisar el caso de éxito."); la tarjeta sigue en la cola, con la pestaña del caso abierta. Cuando no queda nada: "Aprobados los dos textos de Ana", con el enlace "Verlos en Listos para publicar", que abre el dashboard en la pestaña Contenido | Dar retroalimentación y el siguiente paso |
+| Estado en LinkedIn (M12) | ✅ T13 (`V9`, DEC-160, reemplaza a DEC-151): en el post aprobado, "Publicado en LinkedIn el …" con **Ver en LinkedIn**, "No publicado: la publicación en LinkedIn está apagada", "Simulado…", "Falló: <motivo>" o "Sin dato" | La columna "En LinkedIn" del dashboard también lo usa |
 
 El prototipo de Borradores es anterior al tema oscuro: tiene los colores del tema claro escritos a mano. **No copiar esos colores**: usar los de T12 (sección 3).
 

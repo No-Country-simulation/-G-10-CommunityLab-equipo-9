@@ -45,13 +45,14 @@
 | :--- | :--- | :--- |
 | [`LinkedinProperties.java`](../backend-java/src/main/java/com/insightedulab/backend_java/linkedin/LinkedinProperties.java) | Creado | Lee la configuración desde `application.properties` y variables de entorno: `LINKEDIN_HABILITADA`, `LINKEDIN_ACCESS_TOKEN`, `LINKEDIN_AUTHOR_URN` y `LINKEDIN_API_URL`. Incluye el método `estaConfigurado()`. |
 | [`LinkedinPostRequest.java`](../backend-java/src/main/java/com/insightedulab/backend_java/linkedin/LinkedinPostRequest.java) | Creado | Representa el modelo JSON oficial exigido por la API de Posts de LinkedIn (`https://api.linkedin.com/rest/posts`) con autor (`author`), texto (`commentary`), visibilidad (`PUBLIC`), distribución (`MAIN_FEED`) y estado (`PUBLISHED`). |
-| [`LinkedinPostResponse.java`](../backend-java/src/main/java/com/insightedulab/backend_java/linkedin/LinkedinPostResponse.java) | Creado | DTO con el resultado de la publicación: `publicado` (boolean), `simulado` (boolean), `idPost` (URN o ID asignado) y `mensaje`. |
+| [`LinkedinPostResponse.java`](../backend-java/src/main/java/com/insightedulab/backend_java/linkedin/LinkedinPostResponse.java) | Creado | DTO con el resultado de la publicación. **Desde T13 (DEC-160):** `estado` (`PUBLICADO`, `SIMULADO`, `APAGADO` o `ERROR`), `idPost` (el URN, solo en `PUBLICADO`) y `motivo` (un texto fijo, solo en `ERROR`). Java lo guarda en el borrador (migración `V9`). |
 | [`LinkedinConfig.java`](../backend-java/src/main/java/com/insightedulab/backend_java/linkedin/LinkedinConfig.java) | Creado | Configuración de Spring que define el bean `RestClient` (`linkedinRestClient`) con tiempos de espera controlados (5s conexión, 15s lectura). |
 | [`LinkedinClient.java`](../backend-java/src/main/java/com/insightedulab/backend_java/linkedin/LinkedinClient.java) | Creado | Cliente HTTP encargado de la comunicación directa con LinkedIn. Inyecta los headers oficiales: `Authorization: Bearer <token>`, `LinkedIn-Version: 202503` y `X-Restli-Protocol-Version: 2.0.0`. Lee el header `x-restli-id` de la respuesta para obtener el URN del post creado. |
-| [`LinkedinService.java`](../backend-java/src/main/java/com/insightedulab/backend_java/linkedin/LinkedinService.java) | Creado | Servicio principal del negocio. Gestiona el modo real vs modo simulado. Si no hay token configurado, simula el post en los logs (solo su largo, nunca el texto) sin romper la ejecución. Si el texto pasa de 3.000 caracteres, no lo envía (DEC-151). Si LinkedIn falla por corte de red, captura el error sin frenar la aprobación en base de datos (resiliencia). |
-| [`CuraduriaService.java`](../backend-java/src/main/java/com/insightedulab/backend_java/curaduria/CuraduriaService.java) | Modificado | Inyecta `LinkedinService`. En el método `aprobar(...)`, cuando el borrador es de tipo `POST_LINKEDIN`, obtiene el texto final editado y llama a `linkedinService.publicarBorrador(id, textoParaPublicar)` **en segundo plano**, para que el panel no espere a LinkedIn. |
+| [`LinkedinService.java`](../backend-java/src/main/java/com/insightedulab/backend_java/linkedin/LinkedinService.java) | Creado | Servicio principal del negocio. Gestiona el modo real vs modo simulado. Si no hay token configurado, simula el post en los logs (solo su largo, nunca el texto) sin romper la ejecución. Si el texto pasa de 3.000 caracteres, no lo envía (`ERROR` "Pasa de 3.000 caracteres"). Si LinkedIn falla por corte de red, captura el error sin frenar la aprobación en base de datos (resiliencia). **Desde T13:** el motivo de un error es un texto fijo ("LinkedIn respondió HTTP 401", "LinkedIn no respondió a tiempo"), nunca el mensaje de la excepción, y `modo()` dice si está `APAGADO`, `SIMULADO` o `REAL` para el panel. |
+| [`CuraduriaService.java`](../backend-java/src/main/java/com/insightedulab/backend_java/curaduria/CuraduriaService.java) | Modificado | Inyecta `LinkedinService`. En el método `aprobar(...)`, cuando el borrador es de tipo `POST_LINKEDIN`, obtiene el texto final editado y llama a `linkedinService.publicarBorrador(id, textoParaPublicar)` **en segundo plano**, para que el panel no espere a LinkedIn. **Desde T13:** después guarda el resultado en el borrador, con una guarda (`APROBADO` y sin dato); toda excepción termina en `ERROR`. Sin reintento. |
+| [`LinkedinHttpException.java`](../backend-java/src/main/java/com/insightedulab/backend_java/linkedin/LinkedinHttpException.java) | Creado en T13 | LinkedIn respondió con un código que no es 2xx: lleva solo el código, nunca el cuerpo de la respuesta. |
 | [`application.properties`](../backend-java/src/main/resources/application.properties) | Modificado | Registra las propiedades bajo el prefijo `linkedin.*` conectadas a las variables de entorno. |
-| [`LinkedinServiceTest.java`](../backend-java/src/test/java/com/insightedulab/backend_java/LinkedinServiceTest.java) | Creado | 6 pruebas unitarias automatizadas con JUnit 5 y Mockito para verificar el modo deshabilitado, modo simulado, modo real, resiliencia ante errores, armado del JSON oficial y el tope de 3.000 caracteres. Las demás pruebas de Java corren con LinkedIn apagado (`pom.xml`), así que nunca publican. |
+| [`LinkedinServiceTest.java`](../backend-java/src/test/java/com/insightedulab/backend_java/LinkedinServiceTest.java) | Creado | 6 pruebas unitarias (11 desde T13) automatizadas con JUnit 5 y Mockito para verificar el modo deshabilitado, modo simulado, modo real, resiliencia ante errores, armado del JSON oficial y el tope de 3.000 caracteres. Las demás pruebas de Java corren con LinkedIn apagado (`pom.xml`), así que nunca publican. |
 
 ---
 
@@ -80,7 +81,7 @@
 
 ### Modo A: Simulado / Local (`LINKEDIN_HABILITADA=true`, sin credenciales)
 * No requiere crear cuentas de desarrollador de LinkedIn para probar.
-* Cuando se aprueba un borrador de LinkedIn en el panel web, Java genera el JSON oficial, lo registra en los logs del contenedor y asigna un ID simulado (`urn:li:share:simulado-<id>`).
+* Cuando se aprueba un borrador de LinkedIn en el panel web, Java genera el JSON oficial, lo registra en los logs del contenedor y guarda en el borrador el estado `SIMULADO` (T13).
 * **Ventaja:** El equipo puede probar el flujo de curaduría de punta a punta en local sin trabas ni errores.
 
 ### Modo B: En Vivo (Producción / Con credenciales reales)
@@ -117,7 +118,7 @@ python scripts/publicar_linkedin.py --texto "¡Felicidades a los graduados del s
 
 ### Opción 2: Correr las pruebas unitarias de Java
 Java no está instalado en Windows: las pruebas corren en un contenedor de Maven, con el comando de [OPERACION.md §5](OPERACION.md). Para correr solo las de LinkedIn, cambiar `mvn test` por `mvn test -Dtest=LinkedinServiceTest`.
-*(Debe terminar con `Tests run: 6, Failures: 0, Errors: 0, BUILD SUCCESS`).*
+*(Debe terminar con `Tests run: 11, Failures: 0, Errors: 0, BUILD SUCCESS`; eran 6 antes de T13).*
 
 ### Opción 3: Probar en el Panel Web
 1. Levantar el sistema con `docker compose up -d` (con `LINKEDIN_HABILITADA=true` en el `.env`; sin token, queda en modo simulado).

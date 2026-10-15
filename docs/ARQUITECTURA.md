@@ -1,7 +1,7 @@
 # Arquitectura de InsightEdu Lab
 
 > **Qué es este documento:** la descripción de **cómo funciona hoy** el sistema: sus piezas, sus flujos, sus datos y sus reglas. Es la **fuente de verdad** sobre el funcionamiento.
-> **Actualizado:** 2026-10-14 · **Rama:** `main`
+> **Actualizado:** 2026-10-15 · **Rama:** `main`
 > Reemplaza a la propuesta de arquitectura 3 en PDF del 2026-10-02, que se conserva en [docs/historico/propuesta-3/](historico/propuesta-3/) como registro. Si algo de este documento choca con el código, manda el código, y hay que corregir este documento.
 
 ## Cómo leerlo
@@ -164,12 +164,16 @@ Código: `agents/agent_mod/faq_semanal.py` y `backend-java/.../faqsemanal/`.
 
 ### 4.6 Curaduría (panel)
 
-Una persona entra al panel con **su usuario y su contraseña**. Las contraseñas se guardan cifradas con scrypt en `PANEL_USUARIOS`; 5 fallos seguidos bloquean el usuario 5 minutos. En la página **Borradores** ve los pendientes, con el mensaje original y el motivo de la IA, y puede:
+Una persona entra al panel con **su usuario y su contraseña**. Las contraseñas se guardan cifradas con scrypt en `PANEL_USUARIOS`; 5 fallos seguidos bloquean el usuario 5 minutos. La barra lateral tiene el título del panel, la navegación (Borradores lleva el número de tarjetas por revisar) y la sesión.
 
-- **editar y aprobar:** un post o un caso de éxito **solo se aprueba si se marca la casilla de consentimiento**. La regla está en el panel, en Java y en la base (V6). La FAQ no la necesita;
-- **rechazar**, con un motivo opcional.
+La página **Borradores** es una **cola de logros** (T13, DEC-159): una tarjeta por logro, con su post de LinkedIn y su caso de éxito (Java manda el `mensajeId` de cada borrador y el panel los junta), y una por FAQ semanal, del más antiguo al más nuevo. Al elegir una, se ven el mensaje original, el motivo de la IA y una pestaña por texto, con **dónde se publica**, el texto editable y un contador con las reglas de la guía de voz. Cada texto se trabaja **por separado**:
 
-Se registran quién aprobó o rechazó, cuándo y cuánto tardó la revisión. Si dos personas aprueban a la vez, gana la primera y la otra recibe 409. Si la publicación en LinkedIn está encendida, aprobar un post de LinkedIn también lo publica (§4.9). La página **Errores** reintenta los mensajes y logros que quedaron en `ERROR`.
+- **aprobar:** un post o un caso de éxito **solo se aprueba si se marca la casilla de consentimiento**, una sola por logro, que vale para sus dos textos. La regla está en el panel, en Java y en la base (V6). La FAQ no la necesita. Un post de más de 3.000 caracteres (contados como Java, en UTF-16) no se deja aprobar;
+- **guardar una edición** o **rechazar**, con un motivo opcional.
+
+**El botón del post dice antes de aprobar qué pasará en LinkedIn** (`linkedinModo`, §4.9): con LinkedIn apagado o simulado, "Aprobar post"; encendido, "Aprobar y publicar en LinkedIn", que pide confirmar. La tarjeta sale de la cola cuando no le queda ningún texto pendiente.
+
+Se registran quién aprobó o rechazó, cuándo y cuánto tardó la revisión de cada texto (desde que se abrió la tarjeta, o desde el texto anterior revisado en ella). Si dos personas aprueban a la vez, gana la primera y la otra recibe 409. La página **Errores** reintenta los mensajes y logros que quedaron en `ERROR`, y también la FAQ semanal (T13, DEC-161): la semana vuelve a la cola y Java la arma enseguida, en segundo plano.
 
 Contrato: [PANEL_JAVA_v1.md](contratos/PANEL_JAVA_v1.md). Código: `panel/` y `backend-java/.../curaduria/`.
 
@@ -210,9 +214,9 @@ Cuando Marketing aprueba un **post de LinkedIn** en el panel, Java puede publica
 | Qué se publica | Solo los `POST_LINKEDIN` **ya aprobados**, que exigen la casilla de consentimiento (D6), con el texto final que dejó Marketing. Los casos de éxito y la FAQ no se publican solos: van a OCI (`aprobados/`) para la web o una presentación |
 | Cuándo | En segundo plano, justo después de aprobar: el panel no espera a LinkedIn, y un fallo de LinkedIn nunca deshace la aprobación |
 | Quién publica | La cuenta del token `LINKEDIN_ACCESS_TOKEN`, como el autor `LINKEDIN_AUTHOR_URN` (un perfil o una página de empresa) |
-| Modos | **Apagado** (por defecto: no hace nada), **simulado** (encendido sin token: solo deja un aviso en el registro) y **real** (encendido con token y autor) |
-| Límites | ⚠️ Un post de más de 3.000 caracteres no se publica y el panel no lo avisa; si LinkedIn falla, queda solo en el registro y no se reintenta (DEC-151) |
-| Registros | El post publicado (`urn:li:share:…`) o el error. Nunca el texto ni el token |
+| Modos | **Apagado** (por defecto: no hace nada), **simulado** (encendido sin token: solo deja un aviso en el registro) y **real** (encendido con token y autor). Java informa el modo al panel (`linkedinModo`, sin el token ni el autor), y el botón del post lo dice antes de aprobar (DEC-159) |
+| Lo que se guarda | (T13, DEC-160) Después de llamar a LinkedIn, Java guarda el resultado en el borrador (`V9`): `PUBLICADO` (con el `urn:li:share:…`), `SIMULADO`, `APAGADO` o `ERROR`, con un motivo fijo ("Pasa de 3.000 caracteres", "LinkedIn respondió HTTP 401"…), nunca el mensaje de la excepción. Se guarda sin transacción abierta durante la llamada y con una guarda (`APROBADO` y sin dato). El panel lo muestra en el post aprobado ("Ver en LinkedIn") y en la columna "En LinkedIn" del dashboard. **Sin reintento:** podría publicar dos veces |
+| Registros | El post publicado (`urn:li:share:…`) o el motivo del error. Nunca el texto ni el token |
 
 Código: `backend-java/.../linkedin/` y `curaduria/CuraduriaService.java`. Detalle del módulo: [LINKEDIN_AUTOMATIZACION.md](LINKEDIN_AUTOMATIZACION.md).
 
@@ -220,13 +224,13 @@ Código: `backend-java/.../linkedin/` y `curaduria/CuraduriaService.java`. Detal
 
 ## 5. Los datos
 
-Las tablas las crea **Flyway** al arrancar Java, con los archivos de `backend-java/src/main/resources/db/migration/`. Hibernate solo comprueba que coincidan (`ddl-auto=validate`). ⚠️ **Una migración ya aplicada nunca se edita:** cada cambio va en un archivo nuevo, y el siguiente es `V9__…`.
+Las tablas las crea **Flyway** al arrancar Java, con los archivos de `backend-java/src/main/resources/db/migration/`. Hibernate solo comprueba que coincidan (`ddl-auto=validate`). ⚠️ **Una migración ya aplicada nunca se edita:** cada cambio va en un archivo nuevo, y el siguiente es `V10__…`.
 
 | Tabla | Una fila por… | Columnas principales |
 |---|---|---|
 | `mensajes` | Mensaje de Discord (`discord_id` único) | Autor, canal, fecha, texto, `contrato` (la caja completa en `jsonb`), `responde_a`; etiquetas (`intencion`, `confianza`, `sentimiento`, `tema`, `metodo_clasificacion`, `estado_clasificacion`); respuesta del bot (`respuesta_estado`, `respuesta_texto`, `respuesta_fuentes`); generación (`generacion_estado`, `generacion_motivo`); intentos y reservas |
 | `lotes_recibidos` | Lote recibido (`lote_id` único) | Modo, total, nuevos y actualizados: el recibo que se devuelve si el lote se reenvía |
-| `borradores` | Borrador de la IA | `tipo` (`POST_LINKEDIN`, `CASO_EXITO`, `FAQ`), `texto_ia`, `texto_final`, `estado` (`PENDIENTE`, `APROBADO`, `RECHAZADO`), consentimiento, quién y cuándo aprobó o rechazó, tiempo de curaduría, tokens |
+| `borradores` | Borrador de la IA | `tipo` (`POST_LINKEDIN`, `CASO_EXITO`, `FAQ`), `texto_ia`, `texto_final`, `estado` (`PENDIENTE`, `APROBADO`, `RECHAZADO`), consentimiento, quién y cuándo aprobó o rechazó, tiempo de curaduría, tokens; en un post aprobado, su estado en LinkedIn (`linkedin_estado`, `linkedin_post_id`, `linkedin_en`, `linkedin_motivo`) |
 | `faq_semanas` | Semana ISO (`2026-W41`) | Estado, dudas, repetidas, cuántas con respuesta y su borrador |
 | `subidas_oci` | Borrador y carpeta (`generados` o `aprobados`) | Estado (`PENDIENTE`, `SUBIDO`, `ERROR`), ruta, intentos y último error |
 
@@ -240,6 +244,7 @@ Las tablas las crea **Flyway** al arrancar Java, con los archivos de `backend-ja
 | V6 | Columnas del rechazo y las reglas de consentimiento y de "quién y cuándo" |
 | V7 | Un índice en `responde_a`, para el dashboard |
 | V8 | `subidas_oci` |
+| V9 | (T13) El estado de la publicación en LinkedIn en `borradores`, con un `CHECK`: solo un `POST_LINKEDIN` aprobado lo tiene |
 
 **Datos personales:**
 - los borradores usan **solo el primer nombre** del alumno;
@@ -316,7 +321,7 @@ Las cuatro corren en paralelo (4 hilos), cada una con su propia reserva en la ba
 | El Agente FAQ y los PDF | `agents/agent_faq/` |
 | El Agente-Mod, la FAQ semanal y la guía de voz | `agents/agent_mod/` |
 | El bot | `agents/bot_discord/` |
-| El panel | `panel/` (`app.py`, `paginas/`, `auth.py` y `cliente_java.py`) |
+| El panel | `panel/` (`app.py`, `paginas/`, `auth.py`, `cliente_java.py`, `estilo.py` con las piezas de diseño comunes y `logros.py` con la lógica de Borradores) |
 | La ingesta y el contrato v1 | `ingestion/discord/` |
 | Los scripts de claves y usuarios, la revisión del buscador y las pruebas de LinkedIn | `scripts/` |
 
@@ -348,4 +353,5 @@ La traza detallada de cómo se integró cada pieza (fichas de trabajo, informes 
 - No hay roles ni permisos distintos por usuario en el panel; todos los usuarios pueden aprobar.
 - No se leen hilos ni foros de Discord, y la IA no sube sus registros a OCI.
 - El dashboard muestra "dudas sin responder" contando solo las respuestas del bot y las hechas con "Responder" de Discord.
-- La publicación en LinkedIn no guarda en la base si un post se publicó, no reintenta y no avisa en el panel si un post pasó de 3.000 caracteres (DEC-151).
+- La publicación en LinkedIn no se reintenta si falla (DEC-160): el panel muestra el motivo y Marketing lo publica a mano. Los posts aprobados antes de la `V9` no tienen dato.
+- La tarjeta de un logro no dice el tipo de logro ("Contratación"): la base no lo guarda; se ve en el motivo de la IA.

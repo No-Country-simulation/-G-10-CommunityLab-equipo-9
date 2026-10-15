@@ -1,7 +1,7 @@
 # AGENTS.md — guía para asistentes de IA
 
 > Para cualquier asistente de IA o agente de código (de cualquier proveedor) que trabaje en este repositorio. También sirve a una persona que llega por primera vez.
-> **Rama:** `main` · **Actualizado:** 2026-10-14
+> **Rama:** `main` · **Actualizado:** 2026-10-15
 
 ## 1. El proyecto en tres líneas
 
@@ -49,7 +49,7 @@
 |---|---|
 | **Secretos** | Nunca leer, imprimir, copiar a un chat ni subir a git un archivo `.env`, una clave, un token de Discord o de LinkedIn, una URL PAR de OCI ni una contraseña. Para revisar un `.env`, mostrar solo los nombres de las variables. Las claves se crean con `scripts/generar_api_key.py` y los usuarios con `scripts/crear_usuario_panel.py` |
 | **Discord** | **Nunca ejecutar `ingestion/discord/simulate_students.py`**: publica mensajes falsos y los duplica. **Nunca dos bots encendidos** con el mismo token o en el mismo canal: cada mensaje se respondería dos veces |
-| **Migraciones** | Una migración de Flyway ya aplicada **nunca se edita**. Cada cambio de base va en un archivo nuevo; el siguiente es `V9__…` |
+| **Migraciones** | Una migración de Flyway ya aplicada **nunca se edita**. Cada cambio de base va en un archivo nuevo; el siguiente es `V10__…` |
 | **Contratos** | Solo crecen con cambios que **agregan**. Cambiar o quitar un campo exige una versión nueva y avisar a todas las piezas. El contrato v1 tiene una sola implementación: `ingestion/discord/contract.py` |
 | **Una sola puerta** | Solo `api-java` lee y escribe la base. La IA no guarda el estado del sistema y solo la llama Java. El panel, el bot y la ingesta hablan solo con Java |
 | **Claves por puerta** | Cada cliente (`ingesta`, `bot`, `panel`) tiene su clave en `X-Api-Key`, y **cada clave abre solo su puerta**. Una puerta nueva tiene que sumarse a `ApiKeyFilter` (con la ruta normalizada) y revisar el cliente en su controlador |
