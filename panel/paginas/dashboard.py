@@ -20,10 +20,11 @@ Tema claro y oscuro (DEC-156): al cambiar el tema en el menú, Streamlit NO vuel
 aquí no se elige ningún color según el tema: las tarjetas heredan el color del texto y usan fondos
 semitransparentes, y los colores del sentimiento los pone Streamlit desde .streamlit/config.toml
 (chartCategoricalColors de [theme.light] y [theme.dark]). Los gráficos son de Altair (viene con Streamlit).
+
+Los colores, los estilos, los íconos y los bloques de HTML están en estilo.py desde T13: los comparte Borradores.
 """
 from __future__ import annotations
 
-import html
 import os
 from datetime import date, datetime, timedelta
 
@@ -33,6 +34,19 @@ import streamlit as st
 
 import ui
 from cliente_java import ErrorJava
+from estilo import (ALERTA, BORDE, DESTINOS, ESPERA, ICONO_ALERTA, ICONO_DOCUMENTO, ICONO_RELOJ, PISTA, SERIE,
+                    SUAVE, TIPOS_PLURAL)
+from estilo import bloque as _bloque
+from estilo import corto as _corto
+from estilo import dia as _dia
+from estilo import e as _e
+from estilo import encabezado_lista as _encabezado_lista
+from estilo import hace as _hace
+from estilo import nota as _nota
+from estilo import seccion as _seccion
+from estilo import tarjeta as _tarjeta
+from estilo import titulo as _titulo
+from logros import en_linkedin_corto
 
 # De muy negativo a muy positivo: el orden en que se dibujan las barras divergentes. Sus colores son los
 # 5 primeros de chartCategoricalColors en config.toml, en este mismo orden
@@ -44,15 +58,6 @@ SENTIMIENTOS = {
     "MUY_POSITIVO": "Muy positivo",
 }
 
-# Colores que se leen en los dos temas (🧪 validados contra el fondo claro #ffffff y el oscuro #0e1117)
-SERIE = "#3987e5"                       # una sola serie: temas, activos, embudo y aprobados por semana
-PISTA = "rgba(57, 135, 229, 0.22)"      # lo que falta para llegar al total
-BORDE = "rgba(128, 128, 128, 0.28)"
-FONDO_TARJETA = "rgba(128, 128, 128, 0.05)"
-FONDO_FRANJA = "rgba(57, 135, 229, 0.09)"
-ESPERA = "#d18f0c"
-ALERTA = "#e0524a"
-SUAVE = "opacity: 0.72"                 # el texto secundario: el color del tema, más tenue
 # Los textos dentro de los gráficos: Streamlit cambia con el tema los ejes, pero no las marcas de texto. Este gris
 # contrasta parecido en los dos fondos (🧪 4,3:1 sobre blanco y 4,4:1 sobre #0e1117)
 TEXTO_GRAFICO = "#777a82"
@@ -74,47 +79,10 @@ TEMAS = {
 MOTIVOS = {"MUY_NEGATIVO": "Un mensaje muy negativo en el período",
            "DOS_DE_TRES": "2 negativos en sus últimos 3 mensajes"}
 
-# Dónde se usa cada tipo una vez aprobado (M11)
-DESTINOS = {
-    "POST_LINKEDIN": "LinkedIn de CommunityLab",
-    "CASO_EXITO": "Web y presentaciones a empresas",
-    "FAQ": "Canal #anuncios y la web",
-}
-TIPOS_PLURAL = {"POST_LINKEDIN": ("post", "posts"), "CASO_EXITO": ("caso de éxito", "casos de éxito"),
-                "FAQ": ("FAQ", "FAQ")}
-
-MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
 ATAJOS = {"7 días": 7, "30 días": 30, "90 días": 90}
 ELEGIR = "Elegir fechas"
 MINUTOS_POR_DEFECTO = 30
 CASOS_VISIBLES = 3  # en las tarjetas de "A quién ayudar hoy"; el resto, en "Ver todas"
-
-# Íconos de trazo (fijos), como en el prototipo
-ICONO_RELOJ = ('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2.2" '
-               'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9">'
-               '</circle><path d="M12 7v5l3 2"></path></svg>')
-ICONO_ALERTA = ('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2.2" '
-                'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9.5 17h-19z">'
-                '</path><path d="M12 10v4"></path><path d="M12 17.5v.5"></path></svg>')
-ICONO_DOCUMENTO = ('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2.2" '
-                   'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z">'
-                   '</path><path d="M14 3v5h5"></path><path d="M9 13h6"></path><path d="M9 17h4"></path></svg>')
-
-# Los estilos fijos de las tarjetas y las secciones. Nunca llevan datos
-ESTILOS = f"""<style>
-[class*="st-key-dash-tarjeta"], [class*="st-key-dash-seccion"] {{
-    border: 1px solid {BORDE}; border-radius: 10px; padding: 16px 18px; background: {FONDO_TARJETA};
-}}
-[class*="st-key-dash-franja"] {{ background: {FONDO_FRANJA}; border-radius: 12px; padding: 16px 20px; }}
-[class*="st-key-dash-caso"] {{ border-top: 1px solid {BORDE}; padding-top: 10px; }}
-[class*="st-key-dash-caso"] [data-testid="stText"] {{ font-size: 15px; }}
-[class*="st-key-dash-meta"] [data-testid="stText"] {{ {SUAVE}; font-size: 14px; }}
-[class*="st-key-dash-nombre"] [data-testid="stText"] {{ font-weight: 600; }}
-[class*="st-key-dash-oci"] {{
-    border: 1px solid {BORDE}; border-radius: 8px; padding: 12px 14px; background: {FONDO_TARJETA};
-}}
-</style>"""
-
 
 # ── Ayudas ──
 
@@ -125,11 +93,6 @@ def _pedir(que: str, funcion, *args):
     except ErrorJava as e:
         st.warning(f"No se pudo cargar {que}: {e.mensaje}")
         return None
-
-
-def _e(valor) -> str:
-    """Todo lo que entra en un bloque HTML pasa por aquí (DEC-158)."""
-    return html.escape(str(valor))
 
 
 def _numero(valor: float, decimales: int = 0) -> str:
@@ -151,18 +114,6 @@ def _duracion(segundos: float | None) -> str:
 
 def _tema(clave: str | None) -> str:
     return TEMAS.get(clave or "", clave or "Sin tema")
-
-
-def _dia(d: date) -> str:
-    return f"{d.day} {MESES[d.month - 1]}"
-
-
-def _hace(iso: str | None) -> str:
-    """Cuánto pasó desde una fecha de Java, en días."""
-    if not iso:
-        return "—"
-    dias = (datetime.now(ui.ZONA) - datetime.fromisoformat(iso.replace("Z", "+00:00"))).days
-    return "hoy" if dias < 1 else ("hace 1 día" if dias == 1 else f"hace {dias} días")
 
 
 def _minutos_por_historia() -> int:
@@ -205,11 +156,6 @@ def _revision(contenido: dict, tipo: str) -> dict:
     return next((r for r in contenido.get("revision") or [] if r["tipo"] == tipo), {"medianaSeg": None, "n": 0})
 
 
-def _corto(texto: str | None, largo: int = 240) -> str:
-    texto = " ".join((texto or "").split())
-    return texto if len(texto) <= largo else texto[:largo - 1] + "…"
-
-
 def enlace_discord(duda: dict) -> str | None:
     """El enlace al mensaje en Discord, o None si falta un dato. Los tres son números (snowflakes de Discord)."""
     partes = [duda.get("servidorId"), duda.get("canalId"), duda.get("discordId")]
@@ -218,38 +164,7 @@ def enlace_discord(duda: dict) -> str | None:
     return "https://discord.com/channels/{}/{}/{}".format(*partes)
 
 
-# ── Piezas de HTML (solo números y textos de esta página, DEC-158). Heredan el color del tema ──
-
-def _bloque(cuerpo: str) -> None:
-    st.html(f'<div style="font-family: inherit; color: inherit">{cuerpo}</div>')
-
-
-def _seccion(titulo: str, subtitulo: str | None = None) -> None:
-    """Separa las partes de la vista (indicadores, gráficos, listas) con una línea y un título."""
-    sub = f'<p style="margin: 2px 0 0; font-size: 15px; {SUAVE}">{_e(subtitulo)}</p>' if subtitulo else ""
-    _bloque(f'<div style="border-top: 1px solid {BORDE}; margin-top: 18px; padding-top: 18px">'
-            f'<h2 style="margin: 0; font-size: 22px; font-weight: 700">{_e(titulo)}</h2>{sub}</div>')
-
-
-def _titulo(titulo: str, subtitulo: str | None = None) -> None:
-    sub = f'<p style="margin: 2px 0 0; font-size: 15px; {SUAVE}">{_e(subtitulo)}</p>' if subtitulo else ""
-    _bloque(f'<h3 style="margin: 0; font-size: 19px; font-weight: 600">{_e(titulo)}</h3>{sub}')
-
-
-def _nota(texto: str) -> None:
-    _bloque(f'<div style="font-size: 13px; {SUAVE}">{_e(texto)}</div>')
-
-
-def _tarjeta(etiqueta: str, valor: str, linea: str | None = None, nota: str | None = None, extra: str = "") -> str:
-    """Una tarjeta del prototipo: etiqueta, número grande, una línea y una nota. extra: HTML ya escapado."""
-    partes = [f'<div style="font-size: 15px; {SUAVE}">{_e(etiqueta)}</div>',
-              f'<div style="font-size: 30px; font-weight: 600; line-height: 1.15">{_e(valor)}</div>', extra]
-    if linea:
-        partes.append(f'<div style="font-size: 14px">{_e(linea)}</div>')
-    if nota:
-        partes.append(f'<div style="font-size: 13px; {SUAVE}">{_e(nota)}</div>')
-    return '<div style="display: flex; flex-direction: column; gap: 6px">' + "".join(partes) + "</div>"
-
+# ── Piezas de HTML propias del dashboard (las comunes están en estilo.py, DEC-158) ──
 
 def _franja(titulo: str, piezas: list[tuple[str, str, str]]) -> None:
     columnas = "".join(
@@ -261,11 +176,6 @@ def _franja(titulo: str, piezas: list[tuple[str, str, str]]) -> None:
     _bloque(f'<div style="display: flex; flex-wrap: wrap; gap: 16px 40px">'
             f'<div style="flex: 1 1 100%; font-size: 15px; font-weight: 600; {SUAVE}">{_e(titulo)}</div>'
             f'{columnas}</div>')
-
-
-def _encabezado_lista(icono: str, titulo: str) -> None:
-    _bloque(f'<div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 17px">'
-            f'{icono}{_e(titulo)}</div>')
 
 
 # ── Gráficos (Altair, sin cuadrícula ni ejes de más, como el prototipo) ──
@@ -737,6 +647,8 @@ def _vista_contenido(hoy: date) -> None:
                     for b in aprobados],
             "De quién": [b.get("autorNombre") or "Varias personas" for b in aprobados],
             "Dónde se publica": [DESTINOS.get(b["tipo"], "—") for b in aprobados],
+            # T13 (M12): si el post se publicó en LinkedIn; "—" si no es un post
+            "En LinkedIn": [en_linkedin_corto(b) for b in aprobados],
             "Aprobado": [f"{ui.fecha(b.get('revisadoEn'))} · {b.get('revisadoPor') or '—'}" for b in aprobados],
         }), hide_index=True, on_select="rerun", selection_mode="single-row", key="dash_listos")
         # Sin fila elegida, el más reciente
@@ -768,7 +680,7 @@ def _barra_lateral(contenido: dict | None) -> None:
 cliente = ui.exigir_cliente()
 hoy_bogota = datetime.now(ui.ZONA).date()  # el "hoy" de Bogotá, como Java (no el del contenedor, en UTC)
 
-st.html(ESTILOS)
+# Los estilos fijos (estilo.ESTILOS) los pone app.py para todas las páginas
 _bloque('<h1 style="margin: 0; font-size: 32px; font-weight: 700">Dashboard</h1>')
 # Pestañas que solo ejecutan la abierta: cada vista pide a Java solo lo suyo
 pestana_comunidad, pestana_contenido = st.tabs(["Comunidad", "Contenido"], key="dash_vista", on_change="rerun")

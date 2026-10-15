@@ -164,3 +164,27 @@ def test_el_dashboard_por_rol_envia_rol_solo_para_alumnos_y_usa_las_puertas_nuev
     with pytest.raises(ValueError):
         cliente.dashboard_temas(desde, hasta, False, "mentores")
     assert len(pedidos) == 5  # el rol desconocido no llega a Java
+
+# ── T13 ──
+
+def test_la_lista_con_el_modo_de_linkedin_y_reintentar_una_faq():
+    cliente, pedidos = _cliente(_ok({"borradores": [], "linkedinModo": "APAGADO"}))
+
+    respuesta = cliente.listar_con_modo("PENDIENTE", 500)
+    cliente.reintentar_faq("2026-W41", "harrison")
+
+    listar, reintentar = pedidos
+    assert respuesta == {"borradores": [], "linkedinModo": "APAGADO"}
+    assert dict(listar.url.params) == {"estado": "PENDIENTE", "limite": "500"}
+    assert reintentar.method == "POST"
+    assert reintentar.url.path == "/api/v1/errores/faq/2026-W41/reintentar"
+    assert reintentar.headers["X-Usuario"] == "harrison" and reintentar.headers["Content-Length"] == "2"  # {}
+
+
+@pytest.mark.parametrize("semana", ["../borradores", "2026-41", "2026-W41/../x", "", None])
+def test_una_semana_con_otra_forma_no_sale_del_panel(semana):
+    cliente, pedidos = _cliente(_ok({}))
+
+    with pytest.raises(ValueError):
+        cliente.reintentar_faq(semana, "harrison")
+    assert pedidos == []

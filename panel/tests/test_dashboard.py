@@ -385,7 +385,8 @@ def test_contenido_muestra_tarjetas_graficos_y_listos_para_publicar(monkeypatch)
     assert "No publicables (7)" in html
     assert "9 piezas la semana del 5 oct" in html
     assert len(_graficos(at)) == 2  # embudo y aprobados por semana
-    assert [p.proto.label for p in at.get("page_link")] == ["Ir a Borradores"]
+    # T13: solo el de la página (la barra lateral tiene su propia navegación)
+    assert [p.proto.label for p in at.main.get("page_link")] == ["Ir a Borradores"]
     listos = at.dataframe[0].value
     assert listos["Dónde se publica"].tolist() == ["LinkedIn de CommunityLab", "Canal #anuncios y la web"]
     assert listos["De quién"].tolist() == ["Camila", "Varias personas"]
@@ -402,6 +403,28 @@ def test_contenido_el_embudo_muestra_los_porcentajes(monkeypatch):
             datos += convert_arrow_bytes_to_pandas_df(d.data.data).to_string()
     assert "9 · 56 %" in datos
     assert "9 · 100 %" in datos
+
+
+def test_contenido_dice_si_cada_post_se_publico_en_linkedin(monkeypatch):
+    """T13 (M12): la columna "En LinkedIn" de Listos para publicar, con cada estado."""
+    java = DashboardSimulado()
+    aprobados = java.listar_borradores
+
+    def con_linkedin(estado="PENDIENTE", tipo=None, limite=100):
+        lista = aprobados(estado, tipo, limite)
+        if estado != "APROBADO":
+            return lista
+        posts = [{**lista[0], "id": 20 + i, "linkedin": {"estado": e, "postId": None, "en": None, "motivo": None}}
+                 for i, e in enumerate(["PUBLICADO", "APAGADO", "SIMULADO", "ERROR", None])]
+        return posts + lista[1:]
+
+    java.listar_borradores = con_linkedin
+    at = _dashboard(monkeypatch, java, vista="Contenido")
+
+    assert not at.exception
+    listos = at.dataframe[0].value
+    assert listos["En LinkedIn"].tolist() == ["Publicado", "No: apagado", "Simulado", "Falló", "Sin dato", "—"]
+    assert list(listos.columns) == ["Qué", "De quién", "Dónde se publica", "En LinkedIn", "Aprobado"]
 
 
 # ── Sin datos, fallas y tema ──
