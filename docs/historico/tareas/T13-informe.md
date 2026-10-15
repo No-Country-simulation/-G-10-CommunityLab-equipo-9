@@ -9,7 +9,7 @@
 
 ## 1. Resumen
 
-La página **Borradores** es ahora una cola de logros con el diseño del prototipo: una tarjeta por logro (post + caso de éxito) y una por FAQ, con botones por texto, un solo consentimiento, el contador de la guía de voz y el aviso de LinkedIn antes de aprobar. Java guarda en la `V9` si cada post se publicó en LinkedIn (M12), y la página Errores reintenta la FAQ semanal. 🧪 Pasan 256 pruebas de Java y 136 del panel. **Falta la prueba real de Harrison** (sección 7 de la ficha): hasta reconstruir `api-java`, la base real no tiene la `V9`.
+La página **Borradores** es ahora una cola de logros con el diseño del prototipo: una tarjeta por logro (post + caso de éxito) y una por FAQ, con botones por texto, un solo consentimiento, el contador de la guía de voz y el aviso de LinkedIn antes de aprobar. Java guarda en la `V9` si cada post se publicó en LinkedIn (M12), y la página Errores reintenta la FAQ semanal. 🧪 Pasan 256 pruebas de Java y 136 del panel. 🧪 La prueba real de Harrison (sección 7) dio lo esperado en sus 9 pasos; la base real ya tiene la `V9`.
 
 ## 2. Criterios de terminado
 
@@ -19,7 +19,7 @@ La página **Borradores** es ahora una cola de logros con el diseño del prototi
 | Cada texto tiene sus botones y su tiempo, con un solo consentimiento por tarjeta, y la edición no se pierde al cambiar de pestaña | ✅ | `test_aprobar_el_post_y_despues_el_caso_cada_uno_con_su_tiempo`, `test_guardar_edicion_y_rechazar_tocan_solo_su_texto`, `test_una_edicion_no_se_pierde_al_cambiar_de_pestana_ni_de_tarjeta` |
 | El botón del post dice antes de aprobar qué pasará en LinkedIn y, si va a publicar, pide confirmar | ✅ | `test_el_boton_del_post_dice_antes_de_aprobar_que_pasara_en_linkedin` (los 4 casos de la tabla); captura `real-confirmar` |
 | Ningún texto ni nombre de alumno o de la IA va en HTML, en markdown o en una etiqueta sin escapar | ✅ | `test_un_nombre_con_markdown_o_html_se_ve_tal_cual` (5 nombres), `test_un_texto_con_html_se_muestra_escapado`, `test_un_nombre_escapado_se_ve_tal_cual` (10 casos) |
-| La `V9` guarda el estado en LinkedIn, el panel lo muestra en Borradores y en el dashboard, y un post de más de 3.000 caracteres no se puede aprobar | ✅ (⚠️ falta la prueba real) | Java: `laV9AgregaLasColumnas…`, `aprobarUnPostConLinkedinApagado…`, `elEstadoEnLinkedinSeGuardaUnaSolaVez…`. Panel: `test_un_post_aprobado_dice_que_paso_en_linkedin`, `test_contenido_dice_si_cada_post_se_publico_en_linkedin`, `test_el_contador_cuenta_como_java…` |
+| La `V9` guarda el estado en LinkedIn, el panel lo muestra en Borradores y en el dashboard, y un post de más de 3.000 caracteres no se puede aprobar | ✅ (también en la prueba real, sección 7) | Java: `laV9AgregaLasColumnas…`, `aprobarUnPostConLinkedinApagado…`, `elEstadoEnLinkedinSeGuardaUnaSolaVez…`. Panel: `test_un_post_aprobado_dice_que_paso_en_linkedin`, `test_contenido_dice_si_cada_post_se_publico_en_linkedin`, `test_el_contador_cuenta_como_java…` |
 | La FAQ en `ERROR` se reintenta desde Errores | ✅ | Java: `reintentarUnaFaqEnErrorLaDevuelveALaColaYLaArmaEnSegundoPlano` y sus 409/404/422/401/403. Panel: `test_la_pagina_de_errores_reintenta_una_faq` |
 | El contrato solo agrega, y está en `PANEL_JAVA_v1.md` con ejemplos | ✅ | `git diff docs/contratos/PANEL_JAVA_v1.md`: las líneas con `-` son comas nuevas en los JSON o frases ampliadas; ningún campo cambió |
 | Las pruebas de Java y del panel pasan, y las capturas en claro y en oscuro están descritas | ✅ | Sección 4 |
@@ -154,7 +154,7 @@ Para validar con Harrison; si las valida, van como DEC-162 en adelante.
 
 ## 6. Dudas, riesgos y pendientes
 
-1. **Prueba real** (la corre Harrison, sección 5 de la ficha): `docker compose up -d --build api-java panel` aplica la `V9` a la base real. Una vez aplicada **no se edita** (el siguiente cambio de base es `V10`). Hoy deberían verse **5 tarjetas** por revisar.
+1. ✅ **Prueba real** hecha (sección 7): la `V9` ya está en la base real y **no se edita** (el siguiente cambio de base es `V10`).
 2. 🧪 **Los íconos SVG dentro de `st.html` no se ven** en Streamlit 1.65: tampoco el reloj de "El más antiguo espera…" ni los de "A quién ayudar hoy" del dashboard de T12, ni antes ni después de T13. No se tocó el dashboard (fuera de alcance); Borradores usa un ícono de Material (`:material/location_on:`) en un markdown de texto fijo. 🔎 Probablemente el sanitizador de `st.html` quita el `<svg>`. Para el orquestador: decidir si se cambian los íconos del dashboard.
 3. **El índigo de DEC-109** (`ui.ESTILOS`) choca con el prototipo, que usa botones oscuros y píldoras rellenas. Propuesta: dejarlo como está hasta después de la demo; si se cambia, también se ve en el inicio de sesión.
 4. Una edición sin guardar se pierde al **recargar la página** o cerrar la sesión (la sesión no sobrevive a una recarga: mejora pendiente en ESTADO.md). Las capturas tuvieron que navegar con la barra lateral por eso.
@@ -174,4 +174,15 @@ Desde la raíz del repositorio, el 2026-10-15:
 | 4 | `git log --oneline -3` después de cada commit | Cada commit quedó en su lugar, sin mezclarse |
 | 5 | `git push` | `2e8e088..77494a8  tarea/T13-borradores -> tarea/T13-borradores` |
 
-La prueba real (sección 5 de la ficha) queda pendiente: la corre Harrison después de esta tarea.
+**Prueba real** (sección 5 de la ficha), corrida por Harrison el 2026-10-15. 🧪 Los 9 pasos dieron lo esperado:
+
+| Paso | Qué se hizo | Resultado |
+|---|---|---|
+| 1 | `docker compose exec api-java printenv LINKEDIN_HABILITADA` | `false` |
+| 2 y 3 | `docker compose up -d --build api-java panel` y `docker compose ps` | Java aplicó la `V9`; `api-java` y `panel` en `(healthy)` |
+| 4 | Borradores, en claro y en oscuro | 5 tarjetas por revisar: los logros 183 y 254 (solo el caso de éxito), 256 y 257 (post y caso) y la FAQ |
+| 5 | Editar el post, pasar al caso y volver | La edición siguió ahí (no se guardó) |
+| 6 | El botón del post antes de aprobar | "Aprobar post", con "La publicación en LinkedIn está apagada…" |
+| 7 | Aprobar el post y después el caso de un logro real | Aprobados; el post dice "No publicado: la publicación en LinkedIn está apagada" |
+| 8 | Dashboard → Contenido → Listos para publicar | "En LinkedIn": "No: apagado" en ese post |
+| 9 | Errores | "FAQ semanal en ERROR" vacía |
