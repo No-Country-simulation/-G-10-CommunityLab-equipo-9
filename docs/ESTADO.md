@@ -82,5 +82,7 @@ Para recrear una rama retirada: `git branch <nombre> <commit>`.
 | `feature/integracion-arquitectura-3` | Fusionada en `main` por Pull Request | La integración completa |
 | `integracion/linkedin` | `58c87c8` (fusionada en `main` por el PR #13 y borrada el 2026-10-14) | La publicación en LinkedIn de `feature/automatizacion-linkedin`, apagada por defecto, y el manual de servicio al cliente en revisión (DEC-149 a DEC-152) |
 | `docs/cierre-oe7-dec144` | `092415e` (fusionada en `main` por el PR #11 y borrada el 2026-10-12) | El cierre de OE7, DEC-144 aplicada y la regla de ramas (DEC-148) |
+| `docs/estado-ramas-retiradas` | `a34c9d5` (fusionada en `main` por el PR #14 y borrada el 2026-10-14) | Esta tabla al día |
+| `tarea/T12-dashboard` | `68d223d` (fusionada en `main` por el PR #15 y borrada el 2026-10-15) | El dashboard por rol, con KPIs y tema claro y oscuro (T12) |
 
 La traza de cada tarea (qué se pidió, qué se hizo, cómo se probó y qué se decidió) está en [docs/historico/tareas/](historico/tareas/).
