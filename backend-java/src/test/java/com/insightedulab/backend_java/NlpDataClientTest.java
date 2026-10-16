@@ -149,7 +149,8 @@ class NlpDataClientTest {
     @Test
     void losTiemposSonLosDeD4() {
         assertThat(RestClientConfig.TIEMPO_CONEXION).hasSeconds(5);
-        assertThat(RestClientConfig.TIEMPO_LECTURA).hasSeconds(30);
+        // DEC-166: la IA corta el pedido en tiempo real a los 40 s (TIEMPO_REAL_TOPE_S); Java tiene que esperar más
+        assertThat(RestClientConfig.TIEMPO_LECTURA_S).isEqualTo(45).isGreaterThan(40);
     }
 
     // ── T06b: POST /v1/faq ──

@@ -187,7 +187,7 @@ def construir_etiquetador():
     from .llm_models import build_llm
 
     try:
-        llm = build_llm()
+        llm = build_llm(usar_respaldo=True)
     except Exception as e:
         log.error("No se pudo crear el LLM del etiquetador: %r", e)
         llm = None

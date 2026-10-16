@@ -15,19 +15,22 @@ load_dotenv()
 CLASIFICADOR_PROVIDER: str = os.getenv("ORQ_CLASIFICADOR_PROVIDER", "google")
 CLASIFICADOR_MODEL: str = os.getenv("ORQ_CLASIFICADOR_MODEL", "gemini-3.5-flash-lite")
 CLASIFICADOR_TEMPERATURE: float = 0.0
+# DEC-165: si Gemini rechaza el modelo principal (503 por demanda alta, u otro error), la misma llamada se repite
+# con este modelo. Lo usan el clasificador y el Agente FAQ. Vacío = sin respaldo
+MODELO_RESPALDO: str = os.getenv("GEMINI_MODELO_RESPALDO", "").strip()
 
-# Tiempo máximo de cada llamada al LLM (D4, F8): modelo 20 s < Java → IA 30 s < bot → Java 40 s
+# Tiempos (D4, F8, DEC-166): cada llamada 20 s < tope en tiempoReal 40 s < Java → IA 45 s < bot → Java 55 s
 LLM_TIMEOUT_S: float = float(os.getenv("LLM_TIMEOUT_S", "20"))
 # Reintentos propios de /v1/procesar si el LLM falla (no se reintenta si se agotó el tiempo)
 LLM_REINTENTOS: int = int(os.getenv("LLM_REINTENTOS", "1"))
-# DEC-54: tope total de un pedido en tiempoReal (clasificar + Agente FAQ). Si se agota, la duda llega con
-# respuesta.encontrada = false y el bot deriva al mentor, antes de los 30 s que espera Java. 0 = sin tope
-TIEMPO_REAL_TOPE_S: float = float(os.getenv("TIEMPO_REAL_TOPE_S", "25"))
+# DEC-54 y DEC-166: tope total de un pedido en tiempoReal (clasificar + Agente FAQ). Si se agota, la duda llega con
+# respuesta.encontrada = false y el bot deriva al mentor, antes de los 45 s que espera Java. 0 = sin tope
+TIEMPO_REAL_TOPE_S: float = float(os.getenv("TIEMPO_REAL_TOPE_S", "40"))
 
 # Agente-Mod (T06): redacta posts de LinkedIn y casos de éxito en POST /v1/generar.
 # DEC-85: el modelo se configura; por defecto, el mismo que clasifica. Mismo proveedor (D5).
 MOD_MODEL_NAME: str = os.getenv("MOD_MODEL_NAME", "").strip() or CLASIFICADOR_MODEL
-# Una sola llamada, sin reintentos: tiene que caber en los 30 s de lectura de Java (D4). Si falla, Java reintenta
+# Una sola llamada, sin reintentos: tiene que caber en los 45 s de lectura de Java (D4, DEC-166). Si falla, Java reintenta
 MOD_TIMEOUT_S: float = float(os.getenv("MOD_TIMEOUT_S", "25"))
 # Algo de creatividad para redactar (el clasificador usa 0)
 MOD_TEMPERATURE: float = float(os.getenv("MOD_TEMPERATURE", "0.7"))

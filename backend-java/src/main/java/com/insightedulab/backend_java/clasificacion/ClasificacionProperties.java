@@ -9,7 +9,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param intervaloMs    espera entre el fin de una tanda y el inicio de la siguiente
  * @param tanda          cuántos mensajes PENDIENTE se envían a la IA por vez (T02: uno tras otro, 1 a 3 s cada uno)
  * @param maxIntentos    al llegar aquí, un ERROR de la IA en un mensaje es definitivo
- * @param reservaSegundos cuánto dura la reserva de una tanda; tiene que superar los 30 s de espera a la IA
+ * @param reservaSegundos cuánto dura la reserva de una tanda; tiene que superar los 45 s de espera a la IA (DEC-166)
  */
 @ConfigurationProperties(prefix = "clasificacion")
 public record ClasificacionProperties(

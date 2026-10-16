@@ -162,7 +162,9 @@ En PowerShell, desde la raíz del repositorio:
 
 ### Prueba real en `#dudas`
 
-Pendiente: Harrison la corre con la IA rehecha, una pregunta a la vez, y se completa esta tabla.
+**Primer intento (2026-10-16, 10:31 a 10:33): no sirve como prueba.** Las 4 primeras preguntas se derivaron con el mensaje genérico, incluida "¿Las clases quedan grabadas?", que una hora antes se respondía con el PDF 12. 🧪 El registro de `ia` muestra la causa: 3 mensajes agotaron el tope de 25 s esperando a Gemini ("se agotó el tope de 25 s antes de la respuesta del Agente FAQ"), y en 1 Gemini respondió `503 UNAVAILABLE` ("high demand"). Gemini estaba saturado, igual que en la prueba 3. No se llegó a comparar con los PDF. El bot hizo lo que debe hacer ante un fallo del LLM: derivar (D3).
+
+Segundo intento: pendiente, cuando Gemini tenga menos demanda. Una pregunta a la vez; se completa esta tabla.
 
 | Pregunta | El bot | Documento |
 |---|---|---|
@@ -172,3 +174,42 @@ Pendiente: Harrison la corre con la IA rehecha, una pregunta a la vez, y se comp
 | ¿Las clases quedan grabadas? | | |
 | ¿Hay becas y cuáles son los requisitos? | | |
 | ¿Qué módulos tiene el bootcamp? (agregada: no se pudo medir en la prueba 3) | | |
+
+**Más intentos del 2026-10-16** (todos derivaron, y el registro de `ia`, Java y el bot dice por qué):
+
+| Hora | Clave y modelo | Qué pasó |
+|---|---|---|
+| 10:39 | Clave original, `gemini-3.5-flash-lite` | ✅ "¿Las clases quedan grabadas?" se respondió con el PDF 12, pág. 1 |
+| 10:40 | Ídem | Las 5 preguntas en **un solo mensaje**: deriva (es lo esperado: no hay un fragmento que responda las 5) |
+| 10:41 | Ídem | 2 mensajes: los dos agotaron el tope de 25 s (cada llamada tardó unos 10 s) |
+| 11:09 | Clave de otra cuenta de Google, mismo modelo | Clasificar ✅ (7 s), responder ✅ (4 s), revisar ❌ `503` |
+| 11:20 | Clave nueva, `gemini-flash-lite-latest` | Agotó el tope de 25 s |
+| 11:24 | Ídem | Clasificar: `503`, reintento; agotó el tope (25,1 s en Java). Después, la respuesta también dio `503` |
+
+🧪 Medición aparte, con el mismo camino del bot, para "¿Qué contenido tiene el curso?" con `gemini-flash-lite-latest`: clasificar tardó 17,1 s (y en dos repeticiones, 5,9 y 8,9 s), responder 4,9 s y revisar 3,3 s. La respuesta salió bien del PDF 13, con fidelidad 1,0. Tokens de toda la duda: unos 2.400 de entrada y 320 de salida, sin "pensamiento". **El consumo no era el problema**: lo eran los 503 y la lentitud de Google.
+
+## 8. Parte D · El bot resiste a Gemini lento o saturado (autorizada por Harrison, 2026-10-16)
+
+Está **fuera del alcance original** de la ficha (§5 prohibía tocar el bot). Harrison lo autorizó para la demo ("no importa si la tarea 15 no lo permite, te doy permiso") y pidió hacerlo en un solo commit. **T15 no causó el problema**: no cambió ni una línea de código de la IA ni del bot, y una duda hace las mismas 1 a 3 llamadas que antes (sección 7).
+
+| Cambio | Qué hace | Archivos |
+|---|---|---|
+| **DEC-165 · Modelo de respaldo** | `GEMINI_MODELO_RESPALDO` (opcional). Si el modelo principal falla (503 u otro error), el clasificador y el Agente FAQ (respuesta y revisión) repiten la misma llamada con este modelo (`with_fallbacks` de LangChain). Vacío o igual al principal = como antes. El Agente-Mod no lo usa | `agents/orquestador/config.py`, `clasificadores/llm_models.py` (`con_respaldo`, `build_llm(usar_respaldo=…)`), `clasificadores/etiquetador.py`, `agents/agent_faq/config.py`, `agent_faq/llm_models.py` |
+| **DEC-166 · Tiempos** | Tope en vivo 25 → **40 s**; Java → IA 30 → **45 s**; bot → Java 40 → **55 s**. Los tres pasan a ser variables | `agents/orquestador/config.py`, `RestClientConfig.java` (`ia.tiempo-lectura-s`), `application.properties`, `bot_communitylab.py`, `compose.yml`, `.env.example` |
+| Comentarios | Los "30 s" de las reservas y del cliente de la IA pasan a "45 s" (las reservas siguen alcanzando: 3 × 45 < 180 y 45 < 120) | `GeneracionProperties.java`, `ClasificacionProperties.java`, `NlpDataClient.java` |
+| Pruebas | 7 pruebas nuevas del respaldo; la de Java comprueba 45 s > 40 s; la del bot, 55 s | `test_v1_procesar.py`, `NlpDataClientTest.java`, `test_bot.py` |
+| Documentación | Contratos (solo la tabla de tiempos, con una nota del cambio), DEC-165, DEC-166, DEC-20 y DEC-54 al día, ARQUITECTURA §4 y §8, OPERACION §2 y §15 (nueva), ESTADO §3 punto 7 | `docs/` |
+
+**No se tocó** la revisión anti-alucinación, los umbrales, los fragmentos, el texto de la derivación, los PDF ni el índice.
+
+**Pruebas de la Parte D**
+
+| Comando | Resultado (🧪) |
+|---|---|
+| `python -m pytest agents/orquestador/tests -q` (contenedor desechable de la imagen `ia`) | ✅ `86 passed` (79 + 7 nuevas) |
+| `python -m pytest agents/bot_discord/tests -q` (contenedor desechable de la imagen `bot`) | ✅ `22 passed` |
+| El Agente FAQ arranca con un respaldo configurado (clave falsa, sin llamar a Gemini) | ✅ `RunnableWithFallbacks modelo-principal -> ['modelo-respaldo']`, y la revisión también tiene respaldo |
+| `mvn test` (OPERACION §5, contra `insightedu_test`) | ✅ 256 pruebas, 0 fallas, 0 errores (informes de Surefire), incluida `losTiemposSonLosDeD4` (45 s > 40 s) |
+| Prueba real en `#dudas`, después de reconstruir | Pendiente |
+
+**Lo que no se puede garantizar:** si Google rechaza a la cuenta gratuita en todos los modelos a la vez, el bot deriva (D3). Para la demo se recomienda una clave con facturación (ESTADO §3, punto 7).

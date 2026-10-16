@@ -9,7 +9,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param intervaloMs     espera entre el fin de una tanda y el inicio de la siguiente
  * @param tanda           cuántos logros se envían por vez (uno tras otro: cada uno es una llamada al LLM)
  * @param maxIntentos     al llegar aquí, un fallo es definitivo (generacion_estado = ERROR)
- * @param reservaSegundos cuánto dura la reserva; tiene que superar los 30 s de espera a la IA por cada logro de la tanda
+ * @param reservaSegundos cuánto dura la reserva; tiene que superar los 45 s de espera a la IA por cada logro de la tanda (DEC-166)
  * @param maxRespuestas   cuántas respuestas del logro viajan en el pedido (la IA acepta hasta 20)
  */
 @ConfigurationProperties(prefix = "generacion")

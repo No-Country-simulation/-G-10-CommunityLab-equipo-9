@@ -5,6 +5,7 @@
 > **Cambio de T05 (2026-10-04, DEC-54):** en `tiempoReal`, todo el pedido tiene un **tope de 25 s** (`TIEMPO_REAL_TOPE_S`, §6). Si se agota, la duda llega con sus etiquetas y `respuesta.encontrada = false`. Solo agrega: ningún campo cambió. Además se quitó la puerta vieja `POST /procesar`.
 > **Cambio de T06 (2026-10-04, DEC-82):** una puerta nueva, **`POST /v1/generar`**: el Agente-Mod redacta un post de LinkedIn y un caso de éxito a partir de un logro (§9). Solo agrega: `/v1/procesar` no cambió.
 > **Cambio de T06b (2026-10-04, DEC-97):** una puerta nueva, **`POST /v1/faq`**: con las dudas de la semana, la IA arma un borrador de preguntas frecuentes (§10). Solo agrega: `/v1/procesar` y `/v1/generar` no cambiaron.
+> **Cambio de T15 (2026-10-16, DEC-166, autorizado por Harrison):** cambian solo los **tiempos** de §6: el tope de `tiempoReal` pasa de 25 a **40 s**, y Java espera a la IA **45 s** en lugar de 30 (los dos se configuran). Ningún campo cambió. Motivo: Gemini saturado tardaba hasta 17 s por llamada. Además, la IA puede repetir una llamada con un modelo de respaldo (DEC-165), sin cambios en el contrato.
 
 ## 0. Sobre este documento
 
@@ -204,18 +205,19 @@ Así lo hace Java desde T04 (`ClasificacionService`): cada 30 s toma hasta 5 men
 |---|---|
 | Cada llamada al LLM, del clasificador y del Agente FAQ | **20 s** (`LLM_TIMEOUT_S`). Si se agota, no se reintenta |
 | Reintentos del clasificador por otros errores | **1** (`LLM_REINTENTOS`) |
-| **Todo el pedido en `tiempoReal`** | **25 s** (`TIEMPO_REAL_TOPE_S`, DEC-54, T05). En `historial` no hay tope |
-| Java → IA | 30 s de lectura y 5 s de conexión (`RestClientConfig`, T04) |
-| Bot → Java | 40 s |
+| **Todo el pedido en `tiempoReal`** | **40 s** (`TIEMPO_REAL_TOPE_S`; DEC-54 lo puso en 25 s en T05, DEC-166 lo sube). En `historial` no hay tope |
+| Java → IA | **45 s** de lectura (`IA_TIEMPO_LECTURA_S`, DEC-166; antes 30 s) y 5 s de conexión (`RestClientConfig`, T04) |
+| Bot → Java | **55 s** (`TIEMPO_JAVA_S`, DEC-166; antes 40 s) |
+| Modelo de respaldo | Si el modelo principal falla (por ejemplo, 503 por demanda alta), la misma llamada se repite con `GEMINI_MODELO_RESPALDO`, dentro de los mismos tiempos (DEC-165). Vacío = sin respaldo |
 
-**El tope de `tiempoReal` (agregado en T05).** Una duda encadena hasta 3 llamadas al LLM: clasificar, generar la respuesta y el control anti-alucinación. Sin tope, la suma podía superar los 30 s de Java. Ahora clasificar y responder comparten 25 s:
+**El tope de `tiempoReal` (agregado en T05).** Una duda encadena hasta 3 llamadas al LLM: clasificar, generar la respuesta y el control anti-alucinación. Sin tope, la suma podía superar la espera de Java. Ahora clasificar y responder comparten 40 s:
 
 | Si se agota… | Resultado |
 |---|---|
-| Mientras responde el Agente FAQ | Las etiquetas de la duda llegan bien, con `respuesta = {"texto": "", "encontrada": false, "fuentes": [], "motivo": "Se agotó el tope de 25 s del pedido en tiempo real."}`. El bot deriva al mentor |
+| Mientras responde el Agente FAQ | Las etiquetas de la duda llegan bien, con `respuesta = {"texto": "", "encontrada": false, "fuentes": [], "motivo": "Se agotó el tope de 40 s del pedido en tiempo real."}`. El bot deriva al mentor |
 | Mientras clasifica | `estado = ERROR`, sin etiquetas (F4), como cualquier otro error del LLM |
 
-Así la respuesta llega antes de los 30 s de Java. 🔎 Python no puede detener un hilo: el Agente FAQ cortado termina su trabajo en segundo plano y su respuesta se descarta (sí gasta esa llamada a Gemini).
+Así la respuesta llega antes de los 45 s de Java. 🔎 Python no puede detener un hilo: el Agente FAQ cortado termina su trabajo en segundo plano y su respuesta se descarta (sí gasta esa llamada a Gemini).
 
 ## 7. Errores
 
@@ -261,7 +263,7 @@ Es una puerta aparte de `/v1/procesar` (DEC-82): redactar no hace más lenta la 
 | Cabecera obligatoria | `X-Api-Key` con `API_KEY_IA`, igual que `/v1/procesar` (S2) |
 | Cabecera opcional | `X-Id-Correlacion`: vuelve en los errores |
 | Respuesta | `200` con la decisión (también cuando el LLM falla: entonces `estado = ERROR`), `401`, `422` o `500`, con el formato común de error (§7) |
-| Tiempo | Una sola llamada, con un tope de **25 s** (`MOD_TIMEOUT_S`) y sin reintento: cabe en los 30 s de lectura de Java. Si falla, Java la pide otra vez en la siguiente vuelta |
+| Tiempo | Una sola llamada, con un tope de **25 s** (`MOD_TIMEOUT_S`) y sin reintento: cabe en los 45 s de lectura de Java. Si falla, Java la pide otra vez en la siguiente vuelta |
 | Modelo | `MOD_MODEL_NAME` (DEC-85). Si está vacío, el mismo que clasifica. Mismo proveedor y clave (D5). Temperatura `MOD_TEMPERATURE` (0,7) |
 
 ### 9.2 El pedido

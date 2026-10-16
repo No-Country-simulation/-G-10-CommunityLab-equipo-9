@@ -56,6 +56,8 @@ services:
       API_KEY_IA: ${API_KEY_IA:-}
       # Dentro de Docker la IA se encuentra por el nombre de su servicio, no por localhost.
       PYTHON_NLP_URL: http://ia:8000
+      # DEC-166: segundos que Java espera a la IA; más que el tope de la IA en tiempo real (TIEMPO_REAL_TOPE_S)
+      IA_TIEMPO_LECTURA_S: ${IA_TIEMPO_LECTURA_S:-45}
       # T06: false apaga la generación de borradores del Agente-Mod (cada logro gasta una llamada a Gemini)
       GENERACION_HABILITADA: ${GENERACION_HABILITADA:-true}
       # T06b · FAQ semanal: true la arma una vez al encender Java (para la demo). Gasta unas 15 a 20 llamadas a Gemini
@@ -90,10 +92,12 @@ services:
       FAQ_PROVIDER: google
       FAQ_MODEL_NAME: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      # DEC-165: si Gemini rechaza el modelo principal (503), el clasificador y el Agente FAQ usan este. Vacío = sin respaldo
+      GEMINI_MODELO_RESPALDO: ${GEMINI_MODELO_RESPALDO:-}
       # S2: /v1/procesar exige esta clave en X-Api-Key. Vacía = /v1/procesar rechaza todo con 401
       API_KEY_IA: ${API_KEY_IA:-}
-      # DEC-54: tope total de un pedido en tiempoReal, para responder antes de los 30 s de Java
-      TIEMPO_REAL_TOPE_S: ${TIEMPO_REAL_TOPE_S:-25}
+      # DEC-54 y DEC-166: tope total de un pedido en tiempoReal, para responder antes de los 45 s de Java
+      TIEMPO_REAL_TOPE_S: ${TIEMPO_REAL_TOPE_S:-40}
       # T06 · Agente-Mod (DEC-85): el modelo que redacta. Vacío = el mismo que clasifica
       MOD_MODEL_NAME: ${MOD_MODEL_NAME:-}
       # T06b · tope total de POST /v1/faq; tiene que ser menor que los 150 s que espera Java
@@ -130,6 +134,8 @@ services:
       API_KEY_BOT: ${API_KEY_BOT:-}
       # Dentro de Docker, Java se encuentra por el nombre de su servicio
       BOT_JAVA_URL: http://api-java:8080
+      # DEC-166: segundos que el bot espera a Java; más que los que Java espera a la IA (IA_TIEMPO_LECTURA_S)
+      TIEMPO_JAVA_S: ${TIEMPO_JAVA_S:-55}
     # Sin puertos publicados: el bot solo sale hacia Discord y hacia la API Java
     depends_on:
       api-java:

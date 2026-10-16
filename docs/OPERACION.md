@@ -1,7 +1,7 @@
 # Operación — levantar InsightEdu Lab con Docker
 
 > **Estado:** v0.7 · **Fecha:** 2026-10-16 · **Rama:** `main`
-> Cubre los servicios que ya están en `compose.yml`: base de datos, API Java, IA, bot de Discord (T05) y panel (T07, T08), la subida de borradores a OCI (T09, sección 12), la publicación en LinkedIn (sección 13) y cómo agregar un PDF al Agente FAQ (sección 14). La ingesta por lotes todavía se corre a mano (ver el [README](../README.md) §8.3); programarla en un servidor está pendiente ([ESTADO.md](ESTADO.md)). Cómo funciona cada pieza: [ARQUITECTURA.md](ARQUITECTURA.md). Las menciones a T01–T10 remiten a la traza de [historico/tareas/](historico/tareas/).
+> Cubre los servicios que ya están en `compose.yml`: base de datos, API Java, IA, bot de Discord (T05) y panel (T07, T08), la subida de borradores a OCI (T09, sección 12), la publicación en LinkedIn (sección 13) , cómo agregar un PDF al Agente FAQ (sección 14) y qué hacer si Gemini está lento o saturado (sección 15). La ingesta por lotes todavía se corre a mano (ver el [README](../README.md) §8.3); programarla en un servidor está pendiente ([ESTADO.md](ESTADO.md)). Cómo funciona cada pieza: [ARQUITECTURA.md](ARQUITECTURA.md). Las menciones a T01–T10 remiten a la traza de [historico/tareas/](historico/tareas/).
 
 Todos los comandos se ejecutan **desde la raíz del repositorio**, en PowerShell.
 
@@ -22,6 +22,9 @@ Abrir `.env` y completar:
 |---|---|---|
 | `POSTGRES_PASSWORD` | Sí | Una contraseña larga inventada. Sin ella, la base de datos no arranca |
 | `GEMINI_API_KEY` | No | La clave de Google AI Studio. Sin ella, la IA clasifica por palabras clave y el Agente FAQ no responde |
+| `GEMINI_MODEL` | No | El modelo de Gemini del clasificador, del Agente FAQ y del Agente-Mod. `gemini-3.5-flash-lite` por defecto. Si Google lo rechaza con 503, ver la sección 15 |
+| `GEMINI_MODELO_RESPALDO` | No | DEC-165 · Si Google rechaza `GEMINI_MODEL` (503), el clasificador y el Agente FAQ repiten la llamada con este modelo. Vacío: sin respaldo. Cómo elegirlo: sección 15 |
+| `TIEMPO_REAL_TOPE_S`, `IA_TIEMPO_LECTURA_S`, `TIEMPO_JAVA_S` | No | DEC-166 · Cuánto puede tardar una duda en vivo: tope de la IA (40 s), espera de Java a la IA (45 s) y espera del bot a Java (55 s). Si se cambian, **cada uno tiene que ser mayor que el anterior** |
 | `MOD_MODEL_NAME` | No | T06 · El modelo de Gemini que redacta los posts y casos de éxito (DEC-85). Vacío: el mismo de `GEMINI_MODEL` |
 | `GENERACION_HABILITADA` | No | T06 · `true` por defecto. Con `false`, Java no pide borradores al Agente-Mod (cada logro nuevo gasta una llamada a Gemini) |
 | `FAQ_SEMANAL_AL_ARRANCAR` | No | T06b · `false` por defecto. Con `true`, Java arma la FAQ semanal una vez al encender, para la demo (ver la sección 9) |
@@ -418,3 +421,35 @@ Si no se rehace el índice, el bot sigue sin ver el PDF nuevo. Un PDF que todav�
 **"Debilidad conocida" (DEC-164).** Tres preguntas oficiales (nota final, ChatGPT y publicar el nombre en LinkedIn) ya las resolvía mal el buscador **antes** de los PDF 12 y 13. El script las muestra como `DÉBIL` u `OK`, con el motivo escrito, pero no las cuenta como falla. Una pregunta nueva solo entra a esa categoría si se midió que ya fallaba sin el PDF nuevo y que el bot no responde peor. Cualquier otra falla sigue frenando el PDF.
 
 **El PDF 13** (programa del bootcamp) se genera desde `scripts/pdf_programa/`: para cambiarlo se edita el `.md` y se corre el comando del comienzo de `generar.py`, en un contenedor desechable. Después, los pasos 2 a 6.
+
+## 15. Gemini lento o saturado (DEC-165 y DEC-166)
+
+**Síntoma.** El bot responde "No encontré una respuesta segura en los documentos…" a dudas que antes respondía. El buscador no tiene la culpa: el registro de la IA dice por qué.
+
+```powershell
+docker compose logs ia --since 15m
+```
+
+| El registro dice | Qué pasa | Qué hacer |
+|---|---|---|
+| `503 UNAVAILABLE` … `high demand` | Google está saturado con ese modelo. A la cuenta gratuita la rechaza primero | Configurar un modelo de respaldo (abajo). Para la demo, usar una clave **con facturación** |
+| `se agotó el tope de 40 s` | Gemini responde, pero lento: las 3 llamadas de una duda no entran en el tope | Esperar a que baje la demanda, o subir los tres tiempos de la sección 2, manteniendo el orden |
+| `404 NOT_FOUND` | El nombre del modelo no existe para esa clave | Corregir `GEMINI_MODEL` o `GEMINI_MODELO_RESPALDO` |
+
+**Cambiar la clave no arregla un 503:** la saturación es del modelo, para todos. Una clave de **otro proyecto** de Google solo pone en cero la cuota diaria.
+
+**Elegir el modelo principal y el de respaldo.** Primero se listan los modelos que acepta la clave. El comando imprime solo nombres, nunca la clave, y no gasta cuota:
+
+```powershell
+docker compose exec ia python -c "import os; from google import genai; c = genai.Client(api_key=os.environ['GEMINI_API_KEY']); [print(m.name) for m in c.models.list() if 'generateContent' in (m.supported_actions or []) and 'lite' in m.name]"
+```
+
+Después se prueba cada candidato con **una** llamada mínima: unas pocas palabras, y un 503 o un 404 no se cobran.
+
+```powershell
+docker compose exec ia python -c "import os, time; from google import genai; c = genai.Client(api_key=os.environ['GEMINI_API_KEY']); t = time.time(); print(c.models.generate_content(model='NOMBRE', contents='Responde solo: ok').text, round(time.time() - t, 1), 's')"
+```
+
+Conviene un modelo "lite" que responda en menos de 5 s. Uno que tarde 20 s no sirve: una duda hace 3 llamadas. Se escriben `GEMINI_MODEL` y `GEMINI_MODELO_RESPALDO` en el `.env` (dos modelos **distintos**), y se aplica con `docker compose up -d ia`.
+
+⚠️ `GEMINI_MODEL` también cambia el modelo de la clasificación de todos los mensajes y de los borradores (D5).

@@ -121,8 +121,8 @@ Código: `backend-java/.../clasificacion/` y `agents/orquestador/grafo_v1.py` y 
 
 ### 4.3 Mensajes en vivo (el bot)
 
-1. Un alumno escribe en `#dudas` o `#logros`. El bot pide el JSON del mensaje a Discord, lo convierte al contrato v1 con `transform.py` y lo envía a `POST /api/v1/mensajes/en-vivo` (máximo 40 s, mostrando "escribiendo…").
-2. Java guarda el mensaje **ya reservado**, así la clasificación en segundo plano no lo toma dos veces. Después llama a la IA en modo `tiempoReal`, que tiene un tope total de 25 s.
+1. Un alumno escribe en `#dudas` o `#logros`. El bot pide el JSON del mensaje a Discord, lo convierte al contrato v1 con `transform.py` y lo envía a `POST /api/v1/mensajes/en-vivo` (máximo 55 s, mostrando "escribiendo…"; DEC-166).
+2. Java guarda el mensaje **ya reservado**, así la clasificación en segundo plano no lo toma dos veces. Después llama a la IA en modo `tiempoReal`, que tiene un tope total de 40 s (DEC-166).
 3. Si es una duda, la IA consulta al **Agente FAQ**, que busca en los PDF y responde **solo si encuentra respaldo**.
 4. Java guarda las etiquetas y la respuesta, y le devuelve al bot una **orden**:
 
@@ -287,8 +287,8 @@ Todas las piezas usan el mismo formato de error: `{codigo, mensaje, errores, idC
 
 | Tema | Detalle |
 |---|---|
-| Proveedor | **Un solo proveedor: Google Gemini.** Modelo por defecto: `gemini-3.5-flash-lite` (`GEMINI_MODEL`). El Agente-Mod puede usar otro con `MOD_MODEL_NAME`. Este modelo ignora `temperature` |
-| Tiempos (de adentro hacia afuera) | Cada llamada al LLM: 20 s · tope en vivo: 25 s · Java → IA: 30 s · bot → Java: 40 s. El Agente-Mod tiene 25 s; la FAQ semanal tiene un tope de 120 s y Java la espera 150 s |
+| Proveedor | **Un solo proveedor: Google Gemini.** Modelo por defecto: `gemini-3.5-flash-lite` (`GEMINI_MODEL`). El Agente-Mod puede usar otro con `MOD_MODEL_NAME`. Este modelo ignora `temperature`. Si Google rechaza el modelo principal (503, demanda alta), el clasificador y el Agente FAQ repiten la llamada con `GEMINI_MODELO_RESPALDO`, si está configurado (DEC-165). El Agente-Mod no: si falla, Java reintenta |
+| Tiempos (de adentro hacia afuera) | Cada llamada al LLM: 20 s · tope en vivo: 40 s · Java → IA: 45 s · bot → Java: 55 s (DEC-166; se configuran con `TIEMPO_REAL_TOPE_S`, `IA_TIEMPO_LECTURA_S` y `TIEMPO_JAVA_S`). El Agente-Mod tiene 25 s; la FAQ semanal tiene un tope de 120 s y Java la espera 150 s |
 | Búsqueda en los PDF (Agente FAQ) | Embeddings `intfloat/multilingual-e5-small` y reordenador `cross-encoder/ms-marco-MiniLM-L-6-v2`, descargados al construir la imagen (la IA arranca sin internet). Una respuesta con fidelidad media cuenta como **no encontrada** |
 | El índice de los PDF | Está construido y guardado en git, en `agents/agent_faq/data/vectorstore/faiss_pdfs/`. Si se agregan o cambian PDF en `data/pdfs/`, hay que reconstruirlo: 🧪 borrar `faiss_pdfs/` y volver a construir la imagen `ia`; al arrancar, la IA lo arma de nuevo. Antes de guardarlo, `scripts/revisar_buscador_faq.py` comprueba que los PDF agregados (hoy el 12 y el 13) no tapen a los oficiales ([OPERACION.md](OPERACION.md) §14). Un PDF que todavía no está listo va a `data/pdfs_en_revision/`, que la IA no lee (DEC-152) |
 | Lo que la IA nunca hace | Guardar el estado del sistema, publicar nada o hablar con la base de datos |
@@ -358,3 +358,4 @@ La traza detallada de cómo se integró cada pieza (fichas de trabajo, informes 
 - La publicación en LinkedIn no se reintenta si falla (DEC-160): el panel muestra el motivo y Marketing lo publica a mano. Los posts aprobados antes de la `V9` no tienen dato.
 - La tarjeta de un logro no dice el tipo de logro ("Contratación"): la base no lo guarda; se ve en el motivo de la IA.
 - El reordenador del Agente FAQ está entrenado en inglés, y un cambio pequeño en la pregunta puede mover el documento elegido. Por ejemplo, "¿Qué computador necesito para el bootcamp?" lleva al PDF 13 en lugar del 12, y el bot la deriva a un mentor. "Nota final", "ChatGPT" y "publicar mi nombre en LinkedIn" también se derivan (DEC-164).
+- Si Gemini está saturado (503) o lento, el bot deriva dudas que sabría responder: ante un fallo del LLM nunca inventa (D3). El modelo de respaldo (DEC-165) y los tiempos más largos (DEC-166) lo reducen, pero no lo evitan cuando Google rechaza a la cuenta gratuita en todos los modelos ([OPERACION.md §15](OPERACION.md)).
