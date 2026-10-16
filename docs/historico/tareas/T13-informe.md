@@ -136,7 +136,7 @@ Lo que se corrigió al mirarlas: el botón **Aprobar** apagado salía índigo co
 
 ## 5. Decisiones que se tomaron
 
-Para validar con Harrison; si las valida, van como DEC-162 en adelante.
+Harrison las validó el 2026-10-15 en la revisión. Las que se ven en pantalla, y la de los hilos virtuales, se registraron juntas como **DEC-162**; las demás son detalles internos y quedan solo aquí.
 
 | Decisión | Alternativas descartadas | ¿Cambia el contrato, la arquitectura o D1 a D7? |
 |---|---|---|
@@ -183,6 +183,6 @@ Desde la raíz del repositorio, el 2026-10-15:
 | 4 | Borradores, en claro y en oscuro | 5 tarjetas por revisar: los logros 183 y 254 (solo el caso de éxito), 256 y 257 (post y caso) y la FAQ |
 | 5 | Editar el post, pasar al caso y volver | La edición siguió ahí (no se guardó) |
 | 6 | El botón del post antes de aprobar | "Aprobar post", con "La publicación en LinkedIn está apagada…" |
-| 7 | Aprobar el post y después el caso de un logro real | Aprobados; el post dice "No publicado: la publicación en LinkedIn está apagada" |
+| 7 | Aprobar textos reales con sus botones: el post del logro 256 (borrador 21) y el caso de éxito del logro 183 (borrador 15), que solo tenía ese texto pendiente | Aprobados; el post dice "No publicado: la publicación en LinkedIn está apagada" y en la base quedó `APAGADO`. Aprobar los dos textos de una misma tarjeta no se probó a mano: lo cubre `test_aprobar_el_post_y_despues_el_caso_cada_uno_con_su_tiempo` (corrección del orquestador en la revisión) |
 | 8 | Dashboard → Contenido → Listos para publicar | "En LinkedIn": "No: apagado" en ese post |
 | 9 | Errores | "FAQ semanal en ERROR" vacía |
