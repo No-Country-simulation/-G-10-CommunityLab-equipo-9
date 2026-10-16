@@ -7,12 +7,15 @@ devuelve un error, y Java guarda el mensaje como ERROR para reintentarlo.
 from __future__ import annotations
 
 import concurrent.futures
+import contextvars
 import logging
 import time
 from dataclasses import dataclass
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
+
+from agents.reintento_llm import plazo_en_vivo
 
 from ..config import LLM_REINTENTOS, LLM_TIMEOUT_S
 from ..contrato_ia import Intencion, MensajeContrato, Sentimiento, Tema
@@ -113,13 +116,19 @@ class EtiquetadorLLM:
 
         entrada = [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=construir_entrada(mensaje))]
         error = "Error desconocido."
-        for intento in range(self.reintentos + 1):
+        # En vivo (DEC-170) reintenta el modelo, solo ante un 503 o un 504 y mientras quede tiempo del tope; aquí no
+        # se repite: un 429 o un 400 no se arreglan reintentando. En historial, los reintentos propios de siempre
+        intentos = 1 if plazo is not None else self.reintentos + 1
+        for intento in range(intentos):
             espera = self.timeout_s
             if plazo is not None:
-                espera = min(espera, plazo - time.perf_counter())
+                # La llamada puede incluir el respaldo y los reintentos: la corta el tope, no el tiempo de una llamada
+                espera = plazo - time.perf_counter()
                 if espera <= 0:
                     return Etiquetado(error="Se agotó el tope del pedido en tiempo real.")
-            futuro = _ejecutor.submit(self._estructurado.invoke, entrada)
+            # El hilo hereda la hora límite (contextvars): así el modelo sabe si le alcanza para reintentar
+            with plazo_en_vivo(plazo):
+                futuro = _ejecutor.submit(contextvars.copy_context().run, self._estructurado.invoke, entrada)
             try:
                 salida = futuro.result(timeout=espera)
             except concurrent.futures.TimeoutError:

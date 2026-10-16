@@ -23,6 +23,7 @@ from agents.orquestador.clasificadores.etiquetador import (
     EtiquetasLLM,
 )
 from agents.orquestador.clasificadores.llm_models import con_respaldo
+from agents.reintento_llm import ReintentoEnVivo
 from agents.orquestador.contrato_ia import RespuestaFaq
 from agents.orquestador.grafo_v1 import ProcesadorV1, responder_con_agente_faq
 from agents.orquestador.nodos import invocador_faq
@@ -603,12 +604,14 @@ def test_el_clasificador_usa_el_respaldo_y_el_agente_mod_no(gemini_configurado, 
     clasificador = gemini_configurado.build_llm(usar_respaldo=True)
     agente_mod = gemini_configurado.build_llm(modelo="modelo-mod")
 
-    assert isinstance(clasificador, RunnableWithFallbacks)
-    assert clasificador.runnable.model == "modelo-principal"
-    assert [f.model for f in clasificador.fallbacks] == ["modelo-respaldo"]
-    # La salida estructurada del clasificador se arma sobre los dos modelos
-    assert isinstance(clasificador.with_structured_output(EtiquetasLLM, include_raw=True), RunnableWithFallbacks)
-    assert not isinstance(agente_mod, RunnableWithFallbacks) and agente_mod.model == "modelo-mod"
+    # DEC-170: el clasificador va envuelto en el reintento en vivo; adentro, el principal con su respaldo
+    assert isinstance(clasificador, ReintentoEnVivo) and isinstance(clasificador.envuelto, RunnableWithFallbacks)
+    assert clasificador.envuelto.runnable.model == "modelo-principal"
+    assert [f.model for f in clasificador.envuelto.fallbacks] == ["modelo-respaldo"]
+    # La salida estructurada del clasificador se arma sobre los dos modelos, y sigue con reintento
+    estructurado = clasificador.with_structured_output(EtiquetasLLM, include_raw=True)
+    assert isinstance(estructurado, ReintentoEnVivo) and isinstance(estructurado.envuelto, RunnableWithFallbacks)
+    assert not isinstance(agente_mod, (RunnableWithFallbacks, ReintentoEnVivo)) and agente_mod.model == "modelo-mod"
 
 
 @pytest.mark.parametrize("respaldo", ["", "modelo-principal"], ids=["vacio", "igual-al-principal"])
@@ -618,7 +621,8 @@ def test_sin_respaldo_o_con_el_mismo_modelo_no_hay_segunda_llamada(gemini_config
 
     llm = gemini_configurado.build_llm(usar_respaldo=True)
 
-    assert not isinstance(llm, RunnableWithFallbacks) and llm.model == "modelo-principal"
+    assert isinstance(llm, ReintentoEnVivo)  # el reintento en vivo siempre (DEC-170)
+    assert not isinstance(llm.envuelto, RunnableWithFallbacks) and llm.envuelto.model == "modelo-principal"
 
 
 def test_el_agente_faq_responde_y_revisa_con_el_respaldo(monkeypatch):
@@ -633,7 +637,8 @@ def test_el_agente_faq_responde_y_revisa_con_el_respaldo(monkeypatch):
 
     llm = faq_llm.select_llm()
 
-    assert isinstance(llm, RunnableWithFallbacks)
-    assert [f.model for f in llm.fallbacks] == ["modelo-respaldo"]
-    # La revisión anti-alucinación (BuscadorTool.guardrail) también pasa al respaldo
-    assert isinstance(llm.with_structured_output(EvaluacionFidelidad), RunnableWithFallbacks)
+    assert isinstance(llm, ReintentoEnVivo) and isinstance(llm.envuelto, RunnableWithFallbacks)
+    assert [f.model for f in llm.envuelto.fallbacks] == ["modelo-respaldo"]
+    # La revisión anti-alucinación (BuscadorTool.guardrail) también pasa al respaldo, con el reintento en vivo
+    revision = llm.with_structured_output(EvaluacionFidelidad)
+    assert isinstance(revision, ReintentoEnVivo) and isinstance(revision.envuelto, RunnableWithFallbacks)

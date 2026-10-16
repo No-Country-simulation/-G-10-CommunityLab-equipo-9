@@ -14,12 +14,15 @@ No invoca al Agente-Mod (fase 4) ni sube nada a OCI (D2: los activos los sube Ja
 from __future__ import annotations
 
 import concurrent.futures
+import contextvars
 import logging
 import re
 import time
 from typing import Callable, TypedDict
 
 from langgraph.graph import END, START, StateGraph
+
+from agents.reintento_llm import plazo_en_vivo
 
 from .config import TIEMPO_REAL_TOPE_S
 from .contrato_ia import (
@@ -152,7 +155,9 @@ class ProcesadorV1:
             return self.responder_faq(mensaje)
         restante = plazo - time.perf_counter()
         if restante > 0:
-            futuro = _ejecutor_faq.submit(self.responder_faq, mensaje)
+            # El hilo hereda la hora límite (contextvars): el Agente FAQ reintenta un 503 solo si le alcanza (DEC-170)
+            with plazo_en_vivo(plazo):
+                futuro = _ejecutor_faq.submit(contextvars.copy_context().run, self.responder_faq, mensaje)
             try:
                 return futuro.result(timeout=restante)
             except concurrent.futures.TimeoutError:

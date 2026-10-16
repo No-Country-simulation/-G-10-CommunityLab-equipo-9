@@ -92,8 +92,9 @@ services:
       FAQ_PROVIDER: google
       FAQ_MODEL_NAME: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      # DEC-165: si Gemini rechaza el modelo principal (503), el clasificador y el Agente FAQ usan este. Vacío = sin respaldo
-      GEMINI_MODELO_RESPALDO: ${GEMINI_MODELO_RESPALDO:-}
+      # DEC-165 y DEC-169: si Gemini rechaza el modelo principal (503), el clasificador y el Agente FAQ usan este.
+      # gemini-3.5-flash por defecto. Para no usar respaldo, se pone el mismo modelo de GEMINI_MODEL
+      GEMINI_MODELO_RESPALDO: ${GEMINI_MODELO_RESPALDO:-gemini-3.5-flash}
       # S2: /v1/procesar exige esta clave en X-Api-Key. Vacía = /v1/procesar rechaza todo con 401
       API_KEY_IA: ${API_KEY_IA:-}
       # DEC-54 y DEC-166: tope total de un pedido en tiempoReal, para responder antes de los 45 s de Java
