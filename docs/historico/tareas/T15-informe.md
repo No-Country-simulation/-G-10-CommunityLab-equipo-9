@@ -5,11 +5,13 @@
 | Fecha | 2026-10-16 |
 | Modelo de Claude usado | Opus 5.5 (la ficha recomendaba Sonnet 5.5) |
 | Rama | `tarea/T15-pdf-preguntas-frecuentes` |
-| Commits | `958a432` (PDF 12 y 13, generador y script de revisión), `96730c7` (índice con los dos PDF) y el de la documentación con este informe |
+| Commits | `958a432` (PDF 12 y 13, generador y script de revisión), `96730c7` (índice con los dos PDF), `774d29e` (documentación de T15), `28c7f3e` (Parte D: respaldo de Gemini y tiempos) y el del cierre de este informe |
 
 ## 1. Resumen
 
 Entraron al bot el PDF 12 (`12_Preguntas_Frecuentes_CommunityLab.pdf`, de Juan Sebastián Rodríguez), tal como está, y el PDF 13 (`13_Programa_del_Bootcamp_CommunityLab.pdf`), generado desde un Markdown con `fpdf2`. El índice nuevo tiene 80 fragmentos (PDF 12: 28 %; PDF 13: 6 %). 🧪 El script de revisión, que ahora revisa varios PDF y tiene la categoría "debilidad conocida", da `todo OK` en la IA real. El texto del PDF 13 tiene **una pregunta más** que la §4 de la ficha, y una pregunta del script cambió: las dos cosas las validó Harrison (sección 5).
+
+Durante la prueba real, Gemini estuvo saturado todo el día (503 y 504 en casi todos los modelos de la cuenta gratuita), y el bot derivaba dudas que el buscador encontraba bien. Con la autorización de Harrison se agregó la **Parte D** (sección 8), fuera del alcance original: un **modelo de respaldo** (DEC-165) y **tiempos en vivo de 40/45/55 s** (DEC-166). 🧪 Con eso, y con la clave original otra vez, el bot respondió 3 de 3 dudas, en 29 a 33 s: con el tope viejo de 25 s se habrían derivado. **Lo que el orquestador tiene que tener presente está en la sección 9.**
 
 ## 2. Criterios de terminado
 
@@ -17,9 +19,9 @@ Entraron al bot el PDF 12 (`12_Preguntas_Frecuentes_CommunityLab.pdf`, de Juan S
 |---|---|---|
 | Los PDF 12 y 13 están en `pdfs/`, y el texto del 13 es el de la sección 4 | ✅ con un agregado validado | `958a432`: el PDF 12 entra con `git mv` (`rename … (100%)`). El 13 tiene el texto de la §4 **más** la pregunta "¿Qué contenido tiene el curso?" (decisión 1 de la sección 5). Prueba 1: el texto extraído es igual al `.md` |
 | El índice nuevo está en git, y el script da `todo OK` con la categoría "debilidad conocida" explicada | ✅ | `96730c7`. Prueba 2 (sección 4.2), en la IA real y otra vez contra el índice de git |
-| La prueba con Gemini y la prueba real dan lo esperado | ⚠️ Gemini: sí, salvo "¿Qué módulos tiene el bootcamp?", que no se pudo medir (Gemini respondió 503 y 504). La prueba real: pendiente | Secciones 4.3 y 7 |
+| La prueba con Gemini y la prueba real dan lo esperado | ⚠️ Parcial. Gemini (prueba 3): sí, salvo "¿Qué módulos…?", sin medir por 503/504. Prueba real: "clases grabadas" (10:39) y "contenido del curso" (11:44) respondieron con su PDF; con la Parte D y la clave original, 3 de 3 respondidas (11:58 a 12:00). Las otras derivaciones del día fueron por 503, 504 o el tope, nunca por el buscador | Secciones 4.3, 7 y 8 |
 | DEC-163, DEC-164, DEC-152 en ✅, ARQUITECTURA (§1 y §11), ESTADO y OPERACION al día | ✅ | Sección 3 |
-| El informe está completo, y no se tocó nada fuera del alcance | ✅ | No se tocó código del Agente FAQ, del bot ni de la IA, ni `TOP_N_RERANK`, los umbrales o los documentos `00_…` a `11_…`. No se tocó el texto del PDF 12. No se leyó el `.env` |
+| El informe está completo, y no se tocó nada fuera del alcance | ⚠️ Fuera del alcance, **con autorización** | Partes A a C: no se tocó código. La **Parte D** sí cambia código de la IA, de Java y del bot, y los valores de dos contratos: la autorizó Harrison (sección 8). No se tocaron `TOP_N_RERANK`, los umbrales, la revisión anti-alucinación, los documentos `00_…` a `11_…` ni el texto del PDF 12. No se leyó el `.env`, y ninguna clave pasó por el chat |
 
 ## 3. Archivos cambiados
 
@@ -134,6 +136,12 @@ Cada pregunta pasa por `BuscadorTool.ejecutar`: los 3 fragmentos, la respuesta d
 | DEC-163: entran los PDF 12 y 13 | — (decisiones 1 y 2 de la ficha) | No |
 | DEC-164: la categoría "debilidad conocida" | — (punto 5 de la ficha) | No |
 | Generar el PDF 13 con Helvetica (fuente de fábrica, latin-1) y una fecha fija | Una fuente TTF Unicode (había que instalar fuentes en el contenedor, y el texto no necesita nada fuera de latin-1) | No |
+| 👤 **3. No revertir los PDF 12 y 13** (Harrison lo consideró, porque las dudas se derivaban). 🧪 Comparación sin Gemini, índice viejo (53 fragmentos) contra nuevo (80): la misma búsqueda (~170 ms), el mismo texto para Gemini (2.200 a 3.200 caracteres, siempre 3 fragmentos) y las mismas 3 llamadas por duda. Con el índice viejo, "contenido", "ciencia de datos" y "horas" iban a reglamentos que no responden | Revertir (no ahorra tiempo ni tokens, y vuelve a derivar esas preguntas) | No |
+| 👤 **4. DEC-165 · Modelo de respaldo de Gemini** (`GEMINI_MODELO_RESPALDO`) para el clasificador y el Agente FAQ, no para el Agente-Mod. Autorizada por Harrison | Cambiar solo de modelo (también se saturaba); cambiar de clave (no arregla un 503: la saturación es del modelo) | No cambia el contrato. Sobre D5: un proveedor, dos modelos |
+| 👤 **5. DEC-166 · Tiempos 40/45/55 s**, configurables. Autorizada por Harrison | Dejar 25/30/40 (cada llamada tardaba hasta 17 s); subir solo el de la IA (chocaba con los 30 s de Java) | **Sí cambia los contratos**, pero solo la tabla de tiempos (`JAVA_IA_v1` §6, `BOT_JAVA_v1` §7): ningún campo. D4 se mantiene (espera con "escribiendo…") |
+| 👤 **6. Un solo commit para la Parte D**, como pidió Harrison | Tres commits (respaldo, tiempos, reconstrucción) | No |
+| 👤 **7. Configuración del `.env` de Harrison** (no está en git): `GEMINI_MODEL=gemini-flash-lite-latest`, `GEMINI_MODELO_RESPALDO=gemini-3.5-flash`, y de nuevo la **primera clave** de Gemini. 🔎 Los valores por defecto del repositorio no cambiaron (`gemini-3.5-flash-lite`, sin respaldo) | Cambiar el valor por defecto en `compose.yml` (queda para el orquestador, sección 9) | No |
+| Reintentar ante un 503 mientras quede tiempo: **propuesto, no hecho**. 2 dudas se derivaron a los 9 y 17 s, con más de 20 s libres | No se hizo: Harrison pidió cerrar T15 cuando Gemini volvió a responder con la clave original | No |
 
 ## 6. Dudas, riesgos y pendientes
 
@@ -142,6 +150,7 @@ Cada pregunta pasa por `BuscadorTool.ejecutar`: los 3 fragmentos, la respuesta d
 - **El reordenador es frágil con el español** (sección 4.1): el próximo PDF puede mover preguntas que hoy pasan. Para eso está el script; las preguntas que fallen sin respaldo de una medición no deben pasar a "debilidad conocida".
 - **"¿Las clases quedan grabadas?"** se responde, pero la respuesta dice que se consulte a un mentor. En el dashboard cuenta como respondida (mejora 🟡 en ESTADO).
 - **ChatGPT**: la mejora (que la Política de IA diga "ChatGPT") queda en ESTADO. Cambiar un documento oficial está fuera de esta tarea.
+- **La Parte D se hizo fuera del alcance de la ficha**, con autorización de Harrison: el orquestador tiene que auditarla (sección 9).
 - **Gemini respondió 503 (demanda alta)** en 10 de las 17 preguntas del primer intento. Se repitieron con reintentos: 68 intentos en total, por encima de la estimación de 35 a 50 (detalle en la sección 4.3).
 
 ## 7. Comandos que ejecutó Harrison
@@ -159,23 +168,31 @@ En PowerShell, desde la raíz del repositorio:
 9. `docker compose cp ia:/app/agents/agent_faq/data/vectorstore/faiss_pdfs agents/agent_faq/data/vectorstore/`
 10. `git add -f agents/agent_faq/data/vectorstore/faiss_pdfs`
 11. `git commit -m "feat: indice del Agente FAQ con los PDF 12 y 13"` → `96730c7`
+12. `git add …` (la documentación y este informe) y `git commit -m "docs: T15 en DECISIONES (DEC-163, DEC-164, DEC-152), ARQUITECTURA, ESTADO, OPERACION e informe"` → `774d29e`
+13. Cambió `GEMINI_API_KEY` en el `.env` (una clave de otra cuenta de Google) y `docker compose up -d ia`
+14. `docker compose stop bot ia`, y después `docker compose up -d ia` y `docker compose up -d bot`
+15. Cambió `GEMINI_MODEL=gemini-flash-lite-latest` en el `.env` y `docker compose up -d ia`
+16. `git add -A` y `git commit -m "feat: modelo de respaldo de Gemini y tiempos en vivo de 40/45/55 s (DEC-165, DEC-166), con contratos y documentacion"` → `28c7f3e`
+17. Agregó `GEMINI_MODELO_RESPALDO=gemini-3.5-flash` en el `.env` y `docker compose up -d --build ia api-java bot`
+18. Volvió a poner la **primera** `GEMINI_API_KEY` en el `.env` y recreó los servicios (11:57)
+19. Las pruebas en `#dudas` de esta sección
 
 ### Prueba real en `#dudas`
 
 **Primer intento (2026-10-16, 10:31 a 10:33): no sirve como prueba.** Las 4 primeras preguntas se derivaron con el mensaje genérico, incluida "¿Las clases quedan grabadas?", que una hora antes se respondía con el PDF 12. 🧪 El registro de `ia` muestra la causa: 3 mensajes agotaron el tope de 25 s esperando a Gemini ("se agotó el tope de 25 s antes de la respuesta del Agente FAQ"), y en 1 Gemini respondió `503 UNAVAILABLE` ("high demand"). Gemini estaba saturado, igual que en la prueba 3. No se llegó a comparar con los PDF. El bot hizo lo que debe hacer ante un fallo del LLM: derivar (D3).
 
-Segundo intento: pendiente, cuando Gemini tenga menos demanda. Una pregunta a la vez; se completa esta tabla.
+**Resultado por pregunta** (lo que se pudo atribuir con las capturas de Harrison):
 
 | Pregunta | El bot | Documento |
 |---|---|---|
-| ¿Qué contenido tiene el curso? | | |
-| ¿Hay una ruta de ciencia de datos? | | |
-| ¿Cuántas horas a la semana tengo que dedicarle? | | |
-| ¿Las clases quedan grabadas? | | |
-| ¿Hay becas y cuáles son los requisitos? | | |
-| ¿Qué módulos tiene el bootcamp? (agregada: no se pudo medir en la prueba 3) | | |
+| ¿Las clases quedan grabadas? (10:39) | ✅ Responde | PDF 12, pág. 1 |
+| ¿Qué contenido tiene el curso? (11:44, con la Parte D) | ✅ Responde, con los 8 módulos por período (40 s) | PDF 13, pág. 1 |
+| ¿Hay una ruta de ciencia de datos? (11:45) | Deriva: `503` en los dos modelos (17 s) | — |
+| ¿Cuántas horas a la semana tengo que dedicarle? (11:47) | Deriva: `503` en los dos modelos (9,6 s) | — |
+| 3 dudas de Harrison, de 11:58 a 12:00, con la clave original | ✅ **3 de 3 responden** (29, 31 y 33 s), sin ningún 503 ni 504 en la IA | No queda en el registro (no guarda textos) |
+| ¿Hay becas…? y ¿Qué módulos tiene el bootcamp? | **No probadas** en vivo con Gemini funcionando | — |
 
-**Más intentos del 2026-10-16** (todos derivaron, y el registro de `ia`, Java y el bot dice por qué):
+**Todos los intentos del 2026-10-16**, con lo que dicen los registros de `ia`, Java y el bot (los registros no guardan el texto de las preguntas, por diseño):
 
 | Hora | Clave y modelo | Qué pasó |
 |---|---|---|
@@ -185,6 +202,8 @@ Segundo intento: pendiente, cuando Gemini tenga menos demanda. Una pregunta a la
 | 11:09 | Clave de otra cuenta de Google, mismo modelo | Clasificar ✅ (7 s), responder ✅ (4 s), revisar ❌ `503` |
 | 11:20 | Clave nueva, `gemini-flash-lite-latest` | Agotó el tope de 25 s |
 | 11:24 | Ídem | Clasificar: `503`, reintento; agotó el tope (25,1 s en Java). Después, la respuesta también dio `503` |
+| 11:44 a 11:48 | Ídem, **con la Parte D** (respaldo `gemini-3.5-flash`, tope 40 s) | "Contenido del curso" ✅ (40 s). "Ciencia de datos" y "horas": `503` en los dos modelos (17 y 9,6 s). Otra duda: `504` al clasificar y tope de 40 s |
+| 11:58 a 12:00 | **Primera clave** otra vez, con la Parte D | ✅ 3 de 3 responden (29, 31 y 33 s), sin errores en la IA |
 
 🧪 Medición aparte, con el mismo camino del bot, para "¿Qué contenido tiene el curso?" con `gemini-flash-lite-latest`: clasificar tardó 17,1 s (y en dos repeticiones, 5,9 y 8,9 s), responder 4,9 s y revisar 3,3 s. La respuesta salió bien del PDF 13, con fidelidad 1,0. Tokens de toda la duda: unos 2.400 de entrada y 320 de salida, sin "pensamiento". **El consumo no era el problema**: lo eran los 503 y la lentitud de Google.
 
@@ -210,6 +229,21 @@ Está **fuera del alcance original** de la ficha (§5 prohibía tocar el bot). H
 | `python -m pytest agents/bot_discord/tests -q` (contenedor desechable de la imagen `bot`) | ✅ `22 passed` |
 | El Agente FAQ arranca con un respaldo configurado (clave falsa, sin llamar a Gemini) | ✅ `RunnableWithFallbacks modelo-principal -> ['modelo-respaldo']`, y la revisión también tiene respaldo |
 | `mvn test` (OPERACION §5, contra `insightedu_test`) | ✅ 256 pruebas, 0 fallas, 0 errores (informes de Surefire), incluida `losTiemposSonLosDeD4` (45 s > 40 s) |
-| Prueba real en `#dudas`, después de reconstruir | Pendiente |
+| Prueba real en `#dudas`, después de reconstruir | ✅ "Contenido del curso" respondió en 40 s (11:44); 2 dudas derivaron por 503 en los dos modelos. Con la clave original, 3 de 3 respondidas en 29 a 33 s (sección 7) |
 
 **Lo que no se puede garantizar:** si Google rechaza a la cuenta gratuita en todos los modelos a la vez, el bot deriva (D3). Para la demo se recomienda una clave con facturación (ESTADO §3, punto 7).
+
+## 9. Para el orquestador: lo que hay que tener presente
+
+| # | Tema | Qué saber | Qué hacer |
+|---|---|---|---|
+| 1 | **La Parte D está fuera del alcance de la ficha** | La autorizó Harrison el 2026-10-16 para la demo. Toca código de la IA (`llm_models.py` de las dos piezas, `config.py`, `etiquetador.py`), de Java (`RestClientConfig`, `application.properties`) y del bot (`TIEMPO_JAVA_S`). Las pruebas pasan: IA 86, bot 22, Java 256 | Auditar la sección 8 y el commit `28c7f3e` |
+| 2 | **Cambian dos contratos, solo en sus tiempos** | `JAVA_IA_v1` §6 y `BOT_JAVA_v1` §7: 40/45/55 s en lugar de 25/30/40. Ningún campo, orden ni error cambió. Cada contrato tiene su nota del cambio | Avisar al equipo de Java y del bot; nada que migrar |
+| 3 | **El orden de los tiempos es una regla** | Tope de la IA (`TIEMPO_REAL_TOPE_S`) < Java → IA (`IA_TIEMPO_LECTURA_S`) < bot → Java (`TIEMPO_JAVA_S`). Si alguien sube uno solo, Java o el bot cortan antes de que llegue la respuesta | Revisarlo en cualquier PR que toque esas variables (`.env.example` lo explica) |
+| 4 | **Gemini gratis no es confiable para la demo** | El 2026-10-16, Google rechazó con 503 casi todos los modelos de la cuenta gratuita durante horas, incluso con claves de otras cuentas. Con Gemini respondiendo, una duda tarda **29 a 40 s** (3 llamadas) | Decidir antes de la demo: clave **con facturación** (centavos por duda, con prioridad en Google) o ensayo el mismo día. ESTADO §3, punto 7, y OPERACION §15 |
+| 5 | **El `.env` de Harrison no es igual al valor por defecto del repositorio** | Su `.env`: `GEMINI_MODEL=gemini-flash-lite-latest` y `GEMINI_MODELO_RESPALDO=gemini-3.5-flash`. El repositorio sigue con `gemini-3.5-flash-lite` y sin respaldo. `-latest` es un alias: Google puede cambiar el modelo que hay detrás | Decidir si `compose.yml` y `.env.example` adoptan un respaldo por defecto, y elegir el modelo de la demo midiendo (OPERACION §15) |
+| 6 | **El respaldo no cubre al Agente-Mod** | Los borradores y la FAQ semanal usan un solo modelo: si falla, Java reintenta en la vuelta siguiente | Nada, salvo que se quiera extenderlo |
+| 7 | **Mejora propuesta y no hecha: reintentar ante un 503 mientras quede tiempo** | 2 dudas se derivaron a los 9 y 17 s, con más de 20 s libres. Un 503 no se cobra | Evaluarla si la demo sigue con la cuenta gratuita |
+| 8 | **Los PDF 12 y 13 no causan gasto ni demora** | Medido sin Gemini: misma búsqueda (~170 ms), mismo tamaño de texto para Gemini, mismas 3 llamadas por duda (decisión 3 de la sección 5) | Si alguien propone revertirlos por lentitud, mostrar esta medición |
+| 9 | **Falta probar en vivo** | "¿Hay becas…?" y "¿Qué módulos tiene el bootcamp?" no se probaron en vivo con Gemini funcionando; tampoco "computador para el bootcamp" | Sumarlas al ensayo de la demo |
+| 10 | **Consumo de Gemini durante T15** | Unos 68 intentos en la prueba 3, unos 15 en mediciones de modelos y diagnóstico (casi todos con muy pocos tokens), y las pruebas en vivo de Harrison. Una duda completa usa unos 2.400 tokens de entrada y 320 de salida | — |

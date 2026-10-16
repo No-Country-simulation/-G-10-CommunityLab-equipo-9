@@ -86,6 +86,6 @@ Para recrear una rama retirada: `git branch <nombre> <commit>`.
 | `docs/estado-ramas-retiradas` | `a34c9d5` (fusionada en `main` por el PR #14 y borrada el 2026-10-14) | Esta tabla al día |
 | `tarea/T12-dashboard` | `68d223d` (fusionada en `main` por el PR #15 y borrada el 2026-10-15) | El dashboard por rol, con KPIs y tema claro y oscuro (T12) |
 | `tarea/T13-borradores` | `a224e58` (fusionada en `main` por el PR #17 y borrada el 2026-10-15) | Borradores por logro, estado en LinkedIn (`V9`) y reintento de la FAQ (T13) |
-| `tarea/T15-pdf-preguntas-frecuentes` | Activa: se fusiona en `main` por Pull Request | Los PDF 12 y 13 del Agente FAQ, el índice nuevo y el script de revisión con varios PDF (T15) |
+| `tarea/T15-pdf-preguntas-frecuentes` | Activa: se fusiona en `main` por Pull Request | Los PDF 12 y 13 del Agente FAQ, el índice nuevo, el script de revisión con varios PDF, el modelo de respaldo de Gemini y los tiempos de 40/45/55 s (T15, DEC-163 a DEC-166) |
 
 La traza de cada tarea (qué se pidió, qué se hizo, cómo se probó y qué se decidió) está en [docs/historico/tareas/](historico/tareas/).
