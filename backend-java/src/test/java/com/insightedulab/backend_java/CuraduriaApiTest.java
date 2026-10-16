@@ -4,14 +4,20 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.insightedulab.backend_java.clasificacion.ClasificacionService;
 import com.insightedulab.backend_java.client.NlpDataClient;
+import com.insightedulab.backend_java.client.RespuestaFaqSemanal;
 import com.insightedulab.backend_java.client.RespuestaGenerar;
 import com.insightedulab.backend_java.client.RespuestaIa;
 import com.insightedulab.backend_java.controller.BorradorController;
+import com.insightedulab.backend_java.controller.ErroresController;
+import com.insightedulab.backend_java.curaduria.CuraduriaRepository;
 import com.insightedulab.backend_java.curaduria.CuraduriaService;
 import com.insightedulab.backend_java.curaduria.VistasPanel.PedidoAprobar;
 import com.insightedulab.backend_java.error.ConflictoException;
 import com.insightedulab.backend_java.error.ProhibidoException;
 import com.insightedulab.backend_java.generacion.GeneracionService;
+import com.insightedulab.backend_java.linkedin.LinkedinClient;
+import com.insightedulab.backend_java.linkedin.LinkedinProperties;
+import com.insightedulab.backend_java.linkedin.LinkedinService;
 import com.insightedulab.backend_java.model.enums.AutorRol;
 import com.insightedulab.backend_java.model.enums.AutorTipo;
 import com.insightedulab.backend_java.repository.MensajeUpsertRepository;
@@ -20,6 +26,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,6 +40,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.net.URI;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -44,11 +52,17 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
@@ -88,6 +102,7 @@ class CuraduriaApiTest {
     @Autowired ClasificacionService clasificacion;
     @Autowired GeneracionService generacion;
     @Autowired CuraduriaService curaduria;
+    @Autowired CuraduriaRepository repo;
     @Autowired MensajeUpsertRepository upsert;
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
@@ -516,7 +531,250 @@ class CuraduriaApiTest {
         }
     }
 
+    // ── T13 · Caso 1: la V9 ──
+
+    @Test
+    void laV9AgregaLasColumnasYSoloUnPostAprobadoTieneEstadoEnLinkedin() {
+        List<String> columnas = jdbc.queryForList("""
+                SELECT column_name FROM information_schema.columns
+                 WHERE table_name = 'borradores' AND column_name LIKE 'linkedin%'""", String.class);
+        assertThat(columnas).containsExactlyInAnyOrder("linkedin_estado", "linkedin_post_id", "linkedin_en",
+                "linkedin_motivo");
+        long caso = borrador(logro("101"), "CASO_EXITO", CASO);
+        jdbc.update("""
+                UPDATE borradores SET estado = 'APROBADO', aprobado_por = 'x', aprobado_en = now(),
+                       texto_final = texto_ia, consentimiento_confirmado = true WHERE id = ?""", caso);
+        long post = borrador(mensaje("101"), "POST_LINKEDIN", POST);
+
+        assertThatThrownBy(() -> jdbc.update(
+                "UPDATE borradores SET linkedin_estado = 'APAGADO', linkedin_en = now() WHERE id = ?", caso))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("borradores_linkedin_check");
+        // Un post todavía PENDIENTE tampoco
+        assertThatThrownBy(() -> jdbc.update(
+                "UPDATE borradores SET linkedin_estado = 'APAGADO', linkedin_en = now() WHERE id = ?", post))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("borradores_linkedin_check");
+    }
+
+    // ── T13 · Caso 2: aprobar un post guarda su estado en LinkedIn ──
+
+    @Test
+    void aprobarUnPostConLinkedinApagadoLoGuardaComoApagado() throws Exception {
+        long post = postPendiente("101");
+        long caso = borrador(mensaje("101"), "CASO_EXITO", CASO);
+
+        mvc.perform(conClave(aprobarPedido(caso, true, null), CLAVE_PANEL)).andReturn();
+        long inicio = System.nanoTime();
+        MvcResult r = mvc.perform(conClave(aprobarPedido(post, true, null), CLAVE_PANEL)).andReturn();
+
+        // Aprobar responde enseguida: LinkedIn va en segundo plano
+        assertThat(r.getResponse().getStatus()).isEqualTo(200);
+        assertThat(Duration.ofNanos(System.nanoTime() - inicio)).isLessThan(Duration.ofSeconds(5));
+        esperar(() -> fila(post).get("linkedin_estado") != null);
+        Map<String, Object> f = fila(post);
+        assertThat(f).containsEntry("linkedin_estado", "APAGADO").containsEntry("linkedin_post_id", null)
+                .containsEntry("linkedin_motivo", null);
+        assertThat(f.get("linkedin_en")).isNotNull();
+        // El caso de éxito no se publica en LinkedIn
+        assertThat(fila(caso)).containsEntry("linkedin_estado", null);
+        JsonNode linkedin = detalle(post).get("linkedin");
+        assertThat(linkedin.get("estado").asText()).isEqualTo("APAGADO");
+        assertThat(linkedin.get("en").isNull()).isFalse();
+        assertThat(detalle(caso).get("linkedin").isNull()).isTrue();
+    }
+
+    // ── T13 · Caso 4: la guarda del estado en LinkedIn ──
+
+    @Test
+    void elEstadoEnLinkedinSeGuardaUnaSolaVezYSoloEnUnPostAprobado() {
+        long mensajeId = logro("101");
+        // Ids altos: ninguna tarea en segundo plano de otra prueba puede tocar estas filas
+        long post = jdbc.queryForObject("""
+                INSERT INTO borradores (id, mensaje_id, tipo, texto_ia, estado, aprobado_por, aprobado_en, texto_final,
+                                        consentimiento_confirmado)
+                VALUES (9001, ?, 'POST_LINKEDIN', ?, 'APROBADO', 'x', now(), ?, true) RETURNING id""",
+                Long.class, mensajeId, POST, POST);
+        long pendiente = jdbc.queryForObject(
+                "INSERT INTO borradores (id, mensaje_id, tipo, texto_ia) VALUES (9002, ?, 'POST_LINKEDIN', ?) RETURNING id",
+                Long.class, mensajeId, POST);
+
+        assertThat(repo.guardarLinkedin(post, "PUBLICADO", "urn:li:share:123", null)).isTrue();
+        assertThat(repo.guardarLinkedin(post, "ERROR", null, "LinkedIn respondió HTTP 500")).isFalse();
+        assertThat(repo.guardarLinkedin(pendiente, "APAGADO", null, null)).isFalse();
+
+        assertThat(fila(post)).containsEntry("linkedin_estado", "PUBLICADO")
+                .containsEntry("linkedin_post_id", "urn:li:share:123").containsEntry("linkedin_motivo", null);
+        assertThat(fila(pendiente)).containsEntry("linkedin_estado", null);
+    }
+
+    // ── T13 · Caso 5 y 5b: listar y ver traen lo nuevo ──
+
+    @Test
+    void listarYVerTraenElLogroElMotivoYElEstadoEnLinkedin() throws Exception {
+        long post = postPendiente("101");
+        long caso = borrador(mensaje("101"), "CASO_EXITO", CASO);
+        long faq = faq("2026-W40");
+
+        MvcResult r = mvc.perform(conClave(get("/api/v1/borradores"), CLAVE_PANEL)).andReturn();
+        JsonNode cuerpo = cuerpo(r);
+        JsonNode lista = cuerpo.get("borradores");
+
+        assertThat(cuerpo.get("linkedinModo").asText()).isEqualTo("APAGADO");  // las pruebas la apagan (pom.xml)
+        assertThat(lista.get(0).get("id").asLong()).isEqualTo(post);
+        assertThat(lista.get(0).get("mensajeId").asLong()).isEqualTo(mensaje("101"));
+        assertThat(lista.get(0).get("motivoIa").asText()).isEqualTo("Es una contratación.");
+        JsonNode linkedin = lista.get(0).get("linkedin");
+        for (String campo : List.of("estado", "postId", "en", "motivo")) {
+            assertThat(linkedin.get(campo).isNull()).as(campo).isTrue();  // sin dato: todavía no se aprobó
+        }
+        assertThat(lista.get(1).get("id").asLong()).isEqualTo(caso);
+        assertThat(lista.get(1).get("mensajeId").asLong()).isEqualTo(mensaje("101"));
+        assertThat(lista.get(1).get("linkedin").isNull()).isTrue();
+        assertThat(lista.get(2).get("id").asLong()).isEqualTo(faq);
+        assertThat(lista.get(2).get("mensajeId").isNull()).isTrue();
+        assertThat(lista.get(2).get("linkedin").isNull()).isTrue();
+        assertThat(lista.get(2).get("motivoIa").asText()).isEqualTo("3 preguntas repetidas, 2 con respuesta.");
+
+        assertThat(detalle(post).get("linkedin").get("estado").isNull()).isTrue();
+        assertThat(detalle(faq).get("linkedin").isNull()).isTrue();
+    }
+
+    @Test
+    void elModoDeLinkedinNoMuestraElTokenNiElAutor() throws Exception {
+        // Encendido con token y autor (propiedades de prueba): solo se lee el modo, nunca se llama a LinkedIn
+        LinkedinClient cliente = Mockito.mock(LinkedinClient.class);
+        LinkedinService real = new LinkedinService(cliente,
+                new LinkedinProperties(true, "token-secreto-de-prueba", "urn:li:organization:777", null));
+        CuraduriaService servicio = new CuraduriaService(Mockito.mock(CuraduriaRepository.class), real, null);
+
+        String respuesta = json.writeValueAsString(servicio.listar(null, null, null));
+
+        assertThat(json.readTree(respuesta).get("linkedinModo").asText()).isEqualTo("REAL");
+        assertThat(respuesta).doesNotContain("token-secreto-de-prueba").doesNotContain("urn:li:organization:777");
+        Mockito.verifyNoInteractions(cliente);
+    }
+
+    // ── T13 · Caso 6 y 7: reintentar la FAQ en ERROR ──
+
+    @Test
+    void reintentarUnaFaqEnErrorLaDevuelveALaColaYLaArmaEnSegundoPlano() throws Exception {
+        semanaEnError("2026-W39");
+        duda("201", "sim-ana");
+        duda("202", "sim-beto");
+        CountDownLatch soltar = new CountDownLatch(1);
+        doAnswer(inv -> {
+            soltar.await(10, TimeUnit.SECONDS);  // la IA simulada espera a que la prueba mire la base
+            return new RespuestaFaqSemanal("1.0", "faq-x", "2026-W39", "OK", FAQ, "1 pregunta repetida.",
+                    List.of(new RespuestaFaqSemanal.Grupo("¿Cuándo es la entrega?", 2, false, null, List.of(),
+                            "Sin respaldo.")), new RespuestaIa.Metricas(10, 100, 20));
+        }).when(ia).faq(any(), anyString());
+
+        JsonNode errores = cuerpo(mvc.perform(conClave(get("/api/v1/errores"), CLAVE_PANEL)).andReturn());
+        assertThat(errores.get("faq")).hasSize(1);
+        JsonNode enError = errores.get("faq").get(0);
+        assertThat(enError.get("semana").asText()).isEqualTo("2026-W39");
+        assertThat(enError.get("intentos").asInt()).isEqualTo(3);
+        assertThat(enError.get("motivo").asText()).isEqualTo("La IA no respondió a tiempo.");
+        assertThat(enError.get("desde").isNull()).isFalse();
+        assertThat(enError.get("hasta").isNull()).isFalse();
+
+        MvcResult r = mvc.perform(conClave(reintentarFaq("2026-W39"), CLAVE_PANEL)).andReturn();
+
+        assertThat(r.getResponse().getStatus()).isEqualTo(200);
+        assertThat(cuerpo(r).get("semana").asText()).isEqualTo("2026-W39");
+        assertThat(cuerpo(r).get("etapa").asText()).isEqualTo("faq");
+        assertThat(cuerpo(r).get("estado").asText()).isEqualTo("PENDIENTE");
+        assertThat(semana("2026-W39")).containsEntry("estado", null).containsEntry("intentos", 0)
+                .containsEntry("terminada_en", null);
+        assertThat(cuerpo(mvc.perform(conClave(get("/api/v1/errores"), CLAVE_PANEL)).andReturn()).get("faq")).isEmpty();
+
+        // En segundo plano, con la IA simulada (nunca la real)
+        verify(ia, timeout(10_000)).faq(any(), anyString());
+        soltar.countDown();
+        esperar(() -> "GENERADA".equals(semana("2026-W39").get("estado")));
+        assertThat(semana("2026-W39")).containsEntry("intentos", 1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM borradores WHERE tipo = 'FAQ' AND estado = 'PENDIENTE'",
+                Integer.class)).isEqualTo(1);
+        verify(ia, times(1)).faq(any(), anyString());
+    }
+
+    @Test
+    void reintentarUnaFaqQueNoEstaEnErrorQueNoExisteOConOtraFormaNoCambiaNada() throws Exception {
+        faq("2026-W40");  // GENERADA
+
+        assertThat(estado(reintentarFaq("2026-W40"), CLAVE_PANEL)).isEqualTo(409);
+        assertThat(estado(reintentarFaq("2026-W41"), CLAVE_PANEL)).isEqualTo(404);
+        for (String semana : List.of("2026-41", "2026-W4", "semana", "2026-W401")) {
+            assertThat(estado(reintentarFaq(semana), CLAVE_PANEL)).as(semana).isEqualTo(422);
+        }
+        MockHttpServletRequestBuilder sinUsuario = post("/api/v1/errores/faq/2026-W40/reintentar")
+                .contentType(MediaType.APPLICATION_JSON).content("{}");
+        assertThat(estado(sinUsuario, CLAVE_PANEL)).isEqualTo(422);
+        assertThat(semana("2026-W40")).containsEntry("estado", "GENERADA").containsEntry("intentos", 1);
+        Mockito.verifyNoInteractions(ia);
+    }
+
+    // ── T13 · Caso 8: la puerta nueva solo la abre la clave del panel ──
+
+    @Test
+    void laPuertaDeReintentarLaFaqSoloLaAbreElPanel() throws Exception {
+        semanaEnError("2026-W39");
+
+        assertThat(estado(reintentarFaq("2026-W39"), null)).isEqualTo(401);
+        assertThat(estado(reintentarFaq("2026-W39"), CLAVE_BOT)).isEqualTo(403);
+        for (String ruta : List.of("/api/v1/errores;x=1/faq/2026-W39/reintentar",
+                "/api/v1/%65rrores/faq/2026-W39/reintentar", "/api/v1/errores/faq/2026-W39/reintentar;x=1")) {
+            MockHttpServletRequestBuilder disfrazada = post(URI.create(ruta))
+                    .header(BorradorController.CABECERA_USUARIO, USUARIO)
+                    .contentType(MediaType.APPLICATION_JSON).content("{}");
+            assertThat(estado(disfrazada, CLAVE_BOT)).as(ruta).isEqualTo(403);
+        }
+        // Segunda capa: el controlador también revisa el cliente
+        ErroresController controlador = new ErroresController(curaduria);
+        assertThatThrownBy(() -> controlador.reintentarFaq("bot", USUARIO, "2026-W39"))
+                .isInstanceOf(ProhibidoException.class);
+        assertThat(semana("2026-W39")).containsEntry("estado", "ERROR").containsEntry("intentos", 3);
+    }
+
     // ── Ayudas ──
+
+    private static MockHttpServletRequestBuilder reintentarFaq(String semana) {
+        return post("/api/v1/errores/faq/" + semana + "/reintentar")
+                .header(BorradorController.CABECERA_USUARIO, USUARIO)
+                .contentType(MediaType.APPLICATION_JSON).content("{}");
+    }
+
+    /** Una semana de la FAQ que agotó sus intentos, con la ventana de las dudas de datos() (fin de septiembre). */
+    private void semanaEnError(String semana) {
+        jdbc.update("""
+                INSERT INTO faq_semanas (semana, desde, hasta, estado, motivo, intentos, terminada_en)
+                VALUES (?, '2026-09-21T13:00:00Z', '2026-10-01T13:00:00Z', 'ERROR', 'La IA no respondió a tiempo.', 3, now())
+                """, semana);
+    }
+
+    /** Una duda de una persona, ya clasificada OK, que entra en la FAQ semanal. */
+    private void duda(String discordId, String autorId) {
+        DatosMensaje d = datos(discordId, "¿hasta cuándo se puede entregar el challenge?");
+        upsert.upsert(new DatosMensaje(d.discordId(), d.canalId(), autorId, d.autorTipo(), d.autorRol(),
+                d.esSimulado(), d.fecha(), d.respondeA(), d.texto(), d.contrato(), d.versionContrato(), d.servidorId()));
+        jdbc.update("""
+                UPDATE mensajes SET intencion = 'PREGUNTA_FAQ', estado_clasificacion = 'OK', tema = 'evaluaciones',
+                       confianza = 0.9 WHERE discord_id = ?""", discordId);
+    }
+
+    private Map<String, Object> semana(String semana) {
+        return jdbc.queryForMap("SELECT estado, intentos, terminada_en FROM faq_semanas WHERE semana = ?", semana);
+    }
+
+    /** Sondea la base cada 50 ms hasta que se cumpla, con un tope de 10 s: las tareas en segundo plano tardan poco. */
+    private static void esperar(Supplier<Boolean> condicion) throws InterruptedException {
+        long tope = System.nanoTime() + Duration.ofSeconds(10).toNanos();
+        while (!condicion.get()) {
+            assertThat(System.nanoTime()).as("La tarea en segundo plano no terminó en 10 s").isLessThan(tope);
+            Thread.sleep(50);
+        }
+    }
 
     private MockHttpServletRequestBuilder aprobarPedido(long id, boolean consentimiento, String textoFinal) throws Exception {
         Map<String, Object> cuerpo = new LinkedHashMap<>();

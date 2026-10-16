@@ -8,15 +8,21 @@ import com.insightedulab.backend_java.curaduria.VistasPanel.PedidoAprobar;
 import com.insightedulab.backend_java.curaduria.VistasPanel.PedidoEditar;
 import com.insightedulab.backend_java.curaduria.VistasPanel.PedidoRechazar;
 import com.insightedulab.backend_java.curaduria.VistasPanel.Reintento;
+import com.insightedulab.backend_java.curaduria.VistasPanel.ReintentoFaq;
 import com.insightedulab.backend_java.error.ConflictoException;
 import com.insightedulab.backend_java.error.DatoInvalidoException;
 import com.insightedulab.backend_java.error.NoEncontradoException;
+import com.insightedulab.backend_java.faqsemanal.FaqSemanalService;
+import com.insightedulab.backend_java.linkedin.LinkedinPostResponse;
+import com.insightedulab.backend_java.linkedin.LinkedinService;
 import com.insightedulab.backend_java.model.enums.EstadoBorrador;
 import com.insightedulab.backend_java.model.enums.TipoBorrador;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 
 /**
@@ -29,11 +35,16 @@ import java.util.regex.Pattern;
  *       pero lo valida: así no llega cualquier texto a la base ni al registro.</li>
  * </ul>
  * El registro nunca lleva textos de alumnos ni de la IA (S11): solo ids, tipos y el usuario del panel.
+ *
+ * <p>T13: después de aprobar un post, el resultado de LinkedIn se guarda en el borrador (V9, DEC-160), y una FAQ en
+ * ERROR se puede reintentar desde el panel (DEC-161). Las dos cosas corren en segundo plano, después de responder.</p>
  */
 @Service
 public class CuraduriaService {
 
     public static final Pattern USUARIO_VALIDO = Pattern.compile("[A-Za-z0-9._-]{1,40}");
+    /** La semana ISO de la FAQ, como la arma FaqSemanalService.semanaDe (2026-W41) */
+    static final Pattern SEMANA_VALIDA = Pattern.compile("\\d{4}-W\\d{2}");
     static final int MAX_TEXTO = 20_000;
     static final int MAX_MOTIVO = 500;
     /** Una semana: más que eso es un error del panel, no una revisión */
@@ -45,11 +56,18 @@ public class CuraduriaService {
     private static final Logger log = LoggerFactory.getLogger(CuraduriaService.class);
 
     private final CuraduriaRepository repo;
-    private final com.insightedulab.backend_java.linkedin.LinkedinService linkedinService;
+    private final LinkedinService linkedinService;
+    private final FaqSemanalService faqSemanal;
+    /**
+     * Lo que sigue después de responder al panel: publicar en LinkedIn y armar una FAQ reintentada. Un hilo virtual
+     * por tarea: la FAQ puede esperar a la IA hasta 150 s, y así no frena a nadie
+     */
+    private final ExecutorService segundoPlano = Executors.newVirtualThreadPerTaskExecutor();
 
-    public CuraduriaService(CuraduriaRepository repo, com.insightedulab.backend_java.linkedin.LinkedinService linkedinService) {
+    public CuraduriaService(CuraduriaRepository repo, LinkedinService linkedinService, FaqSemanalService faqSemanal) {
         this.repo = repo;
         this.linkedinService = linkedinService;
+        this.faqSemanal = faqSemanal;
     }
 
     public ListaBorradores listar(String estado, String tipo, Integer limite) {
@@ -62,7 +80,7 @@ public class CuraduriaService {
         if (l < 1 || l > LIMITE_MAXIMO) {
             throw new DatoInvalidoException("limite", "Tiene que estar entre 1 y " + LIMITE_MAXIMO + ".");
         }
-        return new ListaBorradores(repo.listar(e, t, l));
+        return new ListaBorradores(repo.listar(e, t, l), linkedinService == null ? null : linkedinService.modo());
     }
 
     public DetalleBorrador detalle(long id) {
@@ -104,17 +122,43 @@ public class CuraduriaService {
                 texto != null ? ", con edición" : "");
         DetalleBorrador resultado = detalle(id);
 
-        if (com.insightedulab.backend_java.model.enums.TipoBorrador.POST_LINKEDIN.name().equals(estado.tipo()) && linkedinService != null) {
+        if (TipoBorrador.POST_LINKEDIN.name().equals(estado.tipo()) && linkedinService != null) {
             String textoParaPublicar = (resultado.textoFinal() != null && !resultado.textoFinal().isBlank())
                     ? resultado.textoFinal()
                     : resultado.textoIa();
             // Ejecución en segundo plano para no demorar la respuesta de aprobación en el panel web
-            java.util.concurrent.CompletableFuture.runAsync(() -> {
-                linkedinService.publicarBorrador(id, textoParaPublicar);
-            });
+            segundoPlano.execute(() -> publicarYGuardar(id, textoParaPublicar));
         }
 
         return resultado;
+    }
+
+    /**
+     * T13 (DEC-160): publica en LinkedIn y guarda el resultado en el borrador. La llamada a LinkedIn va sin
+     * transacción abierta, y el UPDATE lleva su guarda (APROBADO y sin dato). Toda excepción termina en ERROR, con
+     * un motivo fijo. Sin reintento: podría publicar dos veces en público.
+     */
+    void publicarYGuardar(long id, String texto) {
+        LinkedinPostResponse r;
+        try {
+            r = linkedinService.publicarBorrador(id, texto);
+        } catch (RuntimeException e) {
+            log.error("Borrador {}: falló la publicación en LinkedIn ({})", id, e.getClass().getSimpleName());
+            r = null;
+        }
+        if (r == null) {
+            r = LinkedinPostResponse.error("Falló la publicación en LinkedIn");
+        }
+        try {
+            if (repo.guardarLinkedin(id, r.estado(), r.idPost(), r.motivo())) {
+                log.info("Borrador {}: estado en LinkedIn {}", id, r.estado());
+            } else {
+                log.warn("Borrador {}: no se guardó el estado en LinkedIn (ya tenía uno o ya no está APROBADO)", id);
+            }
+        } catch (RuntimeException e) {
+            log.error("Borrador {}: no se pudo guardar el estado en LinkedIn {} ({})", id, r.estado(),
+                    e.getClass().getSimpleName());
+        }
     }
 
     public DetalleBorrador rechazar(long id, String usuario, PedidoRechazar pedido) {
@@ -137,7 +181,8 @@ public class CuraduriaService {
     }
 
     public ListaErrores errores() {
-        return new ListaErrores(repo.erroresClasificacion(LIMITE_ERRORES), repo.erroresGeneracion(LIMITE_ERRORES));
+        return new ListaErrores(repo.erroresClasificacion(LIMITE_ERRORES), repo.erroresGeneracion(LIMITE_ERRORES),
+                repo.erroresFaq(LIMITE_ERRORES));
     }
 
     /** DEC-111: la clasificación en ERROR vuelve a PENDIENTE con sus intentos en 0. */
@@ -158,6 +203,39 @@ public class CuraduriaService {
         }
         log.info("Mensaje {}: generación devuelta a la cola por {}", mensajeId, usuario);
         return new Reintento(mensajeId, "generacion", "SIN_GENERAR");
+    }
+
+    /**
+     * T13 (DEC-161): la FAQ de una semana en ERROR vuelve a la cola con sus intentos en 0 y, después de responder,
+     * se arma en segundo plano (tarda hasta 150 s y gasta una llamada a Gemini). Si el reintento programado llega
+     * al mismo tiempo, la reserva de faq_semanas hace que solo uno la arme.
+     */
+    public ReintentoFaq reintentarFaq(String semana, String usuario) {
+        exigirUsuario(usuario);
+        if (semana == null || !SEMANA_VALIDA.matcher(semana).matches()) {
+            throw new DatoInvalidoException("semana", "Tiene que tener la forma 2026-W41.");
+        }
+        if (!repo.reintentarFaq(semana)) {
+            if (!repo.existeSemana(semana)) {
+                throw new NoEncontradoException("La semana no existe.");
+            }
+            throw new ConflictoException("La FAQ de esta semana ya no está en ERROR.");
+        }
+        log.info("FAQ {}: devuelta a la cola por {}", semana, usuario);
+        segundoPlano.execute(() -> armarFaq(semana));
+        return new ReintentoFaq(semana, "faq", "PENDIENTE");
+    }
+
+    private void armarFaq(String semana) {
+        try {
+            FaqSemanalService.Resultado r = faqSemanal.reintentarSemana(semana);
+            // Solo números: nunca textos de alumnos ni el borrador (S11)
+            log.info("FAQ semanal (reintento del panel) {}: {} · dudas {}, repetidas {}, con respuesta {} · {} ms",
+                    r.semana(), r.estado(), r.dudas(), r.repetidas(), r.conRespuesta(), r.duracionMs());
+        } catch (RuntimeException e) {
+            // La reserva vence sola: el reintento programado la vuelve a tomar
+            log.error("FAQ semanal (reintento del panel) {}: falló", semana, e);
+        }
     }
 
     // ── Validaciones ──

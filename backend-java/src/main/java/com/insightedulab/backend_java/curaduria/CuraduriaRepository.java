@@ -1,10 +1,12 @@
 package com.insightedulab.backend_java.curaduria;
 
 import com.insightedulab.backend_java.curaduria.VistasPanel.DetalleBorrador;
+import com.insightedulab.backend_java.curaduria.VistasPanel.EstadoLinkedin;
 import com.insightedulab.backend_java.curaduria.VistasPanel.EstadoOci;
 import com.insightedulab.backend_java.curaduria.VistasPanel.MensajeEnError;
 import com.insightedulab.backend_java.curaduria.VistasPanel.Origen;
 import com.insightedulab.backend_java.curaduria.VistasPanel.ResumenBorrador;
+import com.insightedulab.backend_java.curaduria.VistasPanel.SemanaEnError;
 import com.insightedulab.backend_java.curaduria.VistasPanel.SemanaFaq;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -34,20 +36,26 @@ public class CuraduriaRepository {
                      m.autor_id)""";
     private static final String CANAL = "coalesce(m.contrato->'canal'->>'nombre', m.canal_id)";
 
+    // El estado en LinkedIn de un post (V9, T13)
+    private static final String LINKEDIN = "b.linkedin_estado, b.linkedin_post_id, b.linkedin_en, b.linkedin_motivo";
+
     // RESPUESTA_BOT queda afuera: lo que responde el bot no se aprueba (D3, DEC-66)
+    // T13: el mensaje del logro (para juntar el post y el caso de éxito), el motivo de la IA y el estado en LinkedIn
     private static final String LISTAR = """
             SELECT b.id, b.tipo, b.estado, b.creado_en, left(coalesce(b.texto_final, b.texto_ia), 160) AS extracto,
                    %s AS autor_nombre, %s AS canal, f.semana,
                    CASE b.estado WHEN 'APROBADO' THEN b.aprobado_por WHEN 'RECHAZADO' THEN b.rechazado_por END
                        AS revisado_por,
                    CASE b.estado WHEN 'APROBADO' THEN b.aprobado_en WHEN 'RECHAZADO' THEN b.rechazado_en END
-                       AS revisado_en
+                       AS revisado_en,
+                   m.id AS mensaje_id, CASE WHEN m.id IS NOT NULL THEN m.generacion_motivo ELSE f.motivo END AS motivo_ia,
+                   %s
               FROM borradores b
               LEFT JOIN mensajes m ON m.id = b.mensaje_id
               LEFT JOIN faq_semanas f ON f.borrador_id = b.id
              WHERE b.estado = :estado AND b.tipo <> 'RESPUESTA_BOT'
                AND (CAST(:tipo AS text) IS NULL OR b.tipo = CAST(:tipo AS text))
-            """.formatted(AUTOR, CANAL);
+            """.formatted(AUTOR, CANAL, LINKEDIN);
     // Lo pendiente, del más antiguo al más nuevo (se atiende en orden); lo revisado, lo último primero
     private static final String ORDEN_PENDIENTES = " ORDER BY b.creado_en, b.id LIMIT :limite";
     private static final String ORDEN_REVISADOS = " ORDER BY revisado_en DESC NULLS LAST, b.id DESC LIMIT :limite";
@@ -59,12 +67,13 @@ public class CuraduriaRepository {
                    m.texto AS mensaje_texto, m.generacion_motivo, %s AS autor_nombre, %s AS canal,
                    f.semana, f.desde, f.hasta, f.motivo AS faq_motivo,
                    (SELECT s.estado FROM subidas_oci s WHERE s.borrador_id = b.id AND s.carpeta = 'generados') AS oci_generados,
-                   (SELECT s.estado FROM subidas_oci s WHERE s.borrador_id = b.id AND s.carpeta = 'aprobados') AS oci_aprobados
+                   (SELECT s.estado FROM subidas_oci s WHERE s.borrador_id = b.id AND s.carpeta = 'aprobados') AS oci_aprobados,
+                   %s
               FROM borradores b
               LEFT JOIN mensajes m ON m.id = b.mensaje_id
               LEFT JOIN faq_semanas f ON f.borrador_id = b.id
              WHERE b.id = :id AND b.tipo <> 'RESPUESTA_BOT'
-            """.formatted(AUTOR, CANAL);
+            """.formatted(AUTOR, CANAL, LINKEDIN);
 
     private static final String ESTADO =
             "SELECT tipo, estado FROM borradores WHERE id = :id AND tipo <> 'RESPUESTA_BOT'";
@@ -126,6 +135,34 @@ public class CuraduriaRepository {
 
     private static final String EXISTE_MENSAJE = "SELECT count(*) FROM mensajes WHERE id = :id";
 
+    // T13: las semanas de la FAQ que quedaron en ERROR (T06b), la más nueva primero
+    private static final String ERRORES_FAQ = """
+            SELECT semana, desde, hasta, intentos, motivo
+              FROM faq_semanas
+             WHERE estado = 'ERROR'
+             ORDER BY desde DESC, id DESC
+             LIMIT :limite
+            """;
+
+    // Vuelve a la cola de T06b: sin estado, sin reserva y con sus intentos en 0. Conserva su ventana de dudas y el
+    // último motivo. Quien la arma después la reserva primero, así que nunca se arma dos veces a la vez
+    private static final String REINTENTAR_FAQ = """
+            UPDATE faq_semanas
+               SET estado = NULL, reservada_hasta = NULL, terminada_en = NULL, intentos = 0
+             WHERE semana = :semana AND estado = 'ERROR'
+            """;
+
+    private static final String EXISTE_SEMANA = "SELECT count(*) FROM faq_semanas WHERE semana = :semana";
+
+    // T13 (DEC-160): el resultado de la publicación en LinkedIn. La guarda: solo un post todavía APROBADO y sin
+    // dato. Si llega dos veces, la segunda no cambia nada
+    private static final String GUARDAR_LINKEDIN = """
+            UPDATE borradores
+               SET linkedin_estado = :estado, linkedin_post_id = :postId, linkedin_motivo = :motivo,
+                   linkedin_en = now()
+             WHERE id = :id AND tipo = 'POST_LINKEDIN' AND estado = 'APROBADO' AND linkedin_estado IS NULL
+            """;
+
     private final NamedParameterJdbcTemplate jdbc;
 
     public CuraduriaRepository(NamedParameterJdbcTemplate jdbc) {
@@ -139,7 +176,8 @@ public class CuraduriaRepository {
         return jdbc.query(sql, p, (rs, i) -> new ResumenBorrador(rs.getLong("id"), rs.getString("tipo"),
                 rs.getString("estado"), instante(rs, "creado_en"), rs.getString("extracto"),
                 rs.getString("autor_nombre"), rs.getString("canal"), rs.getString("semana"),
-                rs.getString("revisado_por"), instante(rs, "revisado_en")));
+                rs.getString("revisado_por"), instante(rs, "revisado_en"), (Long) rs.getObject("mensaje_id"),
+                rs.getString("motivo_ia"), linkedin(rs)));
     }
 
     /** El borrador con su contexto, o null si no existe. */
@@ -157,7 +195,7 @@ public class CuraduriaRepository {
                     instante(rs, "creado_en"), rs.getString("aprobado_por"), instante(rs, "aprobado_en"),
                     (Integer) rs.getObject("tiempo_curaduria_seg"), rs.getString("rechazado_por"),
                     instante(rs, "rechazado_en"), rs.getString("motivo_rechazo"), motivoIa, origen, faq,
-                    new EstadoOci(rs.getString("oci_generados"), rs.getString("oci_aprobados")));
+                    new EstadoOci(rs.getString("oci_generados"), rs.getString("oci_aprobados")), linkedin(rs));
         });
         return filas.isEmpty() ? null : filas.get(0);
     }
@@ -211,6 +249,31 @@ public class CuraduriaRepository {
         return n != null && n > 0;
     }
 
+    public List<SemanaEnError> erroresFaq(int limite) {
+        return jdbc.query(ERRORES_FAQ, new MapSqlParameterSource("limite", limite), (rs, i) -> new SemanaEnError(
+                rs.getString("semana"), instante(rs, "desde"), instante(rs, "hasta"), rs.getInt("intentos"),
+                rs.getString("motivo")));
+    }
+
+    /** true si la semana volvió a la cola; false si ya no estaba en ERROR (o no existe). */
+    public boolean reintentarFaq(String semana) {
+        return jdbc.update(REINTENTAR_FAQ, new MapSqlParameterSource("semana", semana)) == 1;
+    }
+
+    public boolean existeSemana(String semana) {
+        Long n = jdbc.queryForObject(EXISTE_SEMANA, new MapSqlParameterSource("semana", semana), Long.class);
+        return n != null && n > 0;
+    }
+
+    /**
+     * Guarda el resultado de la publicación en LinkedIn (T13). true si se guardó; false si el borrador no es un
+     * post, ya no está APROBADO o ya tenía su estado (la guarda).
+     */
+    public boolean guardarLinkedin(long id, String estado, String postId, String motivo) {
+        return jdbc.update(GUARDAR_LINKEDIN, new MapSqlParameterSource().addValue("id", id).addValue("estado", estado)
+                .addValue("postId", postId, Types.VARCHAR).addValue("motivo", motivo, Types.VARCHAR)) == 1;
+    }
+
     /** D6: el post y el caso de éxito nombran al alumno. La FAQ no (DEC-100). */
     public static boolean requiereConsentimiento(String tipo) {
         return "POST_LINKEDIN".equals(tipo) || "CASO_EXITO".equals(tipo);
@@ -220,6 +283,15 @@ public class CuraduriaRepository {
         return new MensajeEnError(rs.getLong("id"), rs.getString("discord_id"), rs.getString("canal"),
                 instante(rs, "fecha"), rs.getString("autor_nombre"), rs.getString("extracto"),
                 rs.getInt("intentos"), rs.getString("motivo"));
+    }
+
+    /** El estado en LinkedIn de un post (con sus campos en null si no hay dato), o null si no es un post. */
+    private static EstadoLinkedin linkedin(ResultSet rs) throws SQLException {
+        if (!"POST_LINKEDIN".equals(rs.getString("tipo"))) {
+            return null;
+        }
+        return new EstadoLinkedin(rs.getString("linkedin_estado"), rs.getString("linkedin_post_id"),
+                instante(rs, "linkedin_en"), rs.getString("linkedin_motivo"));
     }
 
     private static Instant instante(ResultSet rs, String columna) throws SQLException {

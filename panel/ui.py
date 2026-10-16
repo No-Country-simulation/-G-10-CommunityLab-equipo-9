@@ -45,12 +45,6 @@ TIPOS = {
     "FAQ": "FAQ semanal",
 }
 
-ESTADOS = {
-    "Pendientes": "PENDIENTE",
-    "Aprobados": "APROBADO",
-    "Rechazados": "RECHAZADO",
-}
-
 ZONA = ZoneInfo(os.environ.get("PANEL_ZONA", "America/Bogota"))
 
 

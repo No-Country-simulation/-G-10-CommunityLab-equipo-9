@@ -3,6 +3,8 @@ Página "Errores" (T07, DEC-111): lo que quedó en ERROR y su botón de reintent
 
 - Clasificación (T04): el mensaje vuelve a PENDIENTE con sus intentos en 0; lo toma la vuelta siguiente (30 s).
 - Generación (T06): el logro vuelve a "sin generar"; lo toma la vuelta siguiente (60 s). Gasta una llamada a Gemini.
+- FAQ semanal (T13, DEC-161): la semana vuelve a la cola y Java la arma enseguida, en segundo plano. Tarda hasta
+  unos minutos y gasta una llamada a Gemini.
 """
 from __future__ import annotations
 
@@ -50,3 +52,26 @@ for etapa, titulo, explicacion in ETAPAS:
                     else:
                         ui.avisar("ok", f"Mensaje {m['mensajeId']} devuelto a la cola: se procesa en la próxima vuelta.")
                         st.rerun()
+
+with st.container(border=True):
+    st.subheader("FAQ semanal en ERROR")
+    st.text("La IA no pudo armar la FAQ de estas semanas después de varios intentos. Reintentar la arma enseguida, "
+            "en segundo plano, y gasta una llamada a Gemini.")
+    semanas = errores.get("faq") or []
+    if not semanas:
+        st.success("No hay nada en ERROR.")
+    for s in semanas:
+        with st.container(border=True):
+            st.text(f"Semana {s['semana']} · del {ui.fecha(s.get('desde'))} al {ui.fecha(s.get('hasta'))} · "
+                    f"{s.get('intentos')} intentos")
+            if s.get("motivo"):
+                st.text(f"Último error: {s['motivo']}")
+            if st.button("Reintentar", key=f"reintentar_faq_{s['semana']}"):
+                try:
+                    cliente.reintentar_faq(s["semana"], ui.usuario_actual())
+                except (ErrorJava, ValueError) as e:
+                    st.warning(getattr(e, "mensaje", str(e)))
+                else:
+                    ui.avisar("ok", f"La FAQ de la semana {s['semana']} se está armando: tarda hasta unos minutos. "
+                                    f"Cuando esté, aparece en Borradores.")
+                    st.rerun()

@@ -7,6 +7,8 @@
 > **Agregado en T09** (solo agrega): el campo `oci` en la respuesta de [ver un borrador](#22-ver-un-borrador) (puerta 2, y las que devuelven el mismo borrador): si ya está guardado en OCI. Nada de lo anterior cambió.
 >
 > **Agregado en T12** (DEC-153 a DEC-157, solo agrega): el parámetro opcional `rol` en sentimiento y temas, `servidorId` y `canalId` en cada duda sin responder, y dos puertas nuevas, `comunidad` y `contenido`, en la [sección 7](#7-dashboard-t08). Ningún campo cambió de nombre ni de significado. La única regla que cambió es la de la frustración (DEC-157): sus "últimos 3 mensajes" ahora son solo los del período.
+>
+> **Agregado en T13** (DEC-159 a DEC-161, solo agrega): en [listar borradores](#21-listar-borradores), `mensajeId`, `motivoIa` y `linkedin` en cada borrador, y `linkedinModo` junto a la lista; en [ver un borrador](#22-ver-un-borrador), `linkedin` (el estado guardado de la publicación en LinkedIn, migración `V9`); en [lo que quedó en `ERROR`](#26-lo-que-quedó-en-error), la lista `faq`; y la puerta 9, [reintentar la FAQ semanal](#28-reintentar-la-faq-semanal-t13). Ningún campo existente cambió de nombre ni de significado.
 
 ## 0. Sobre este documento
 
@@ -51,6 +53,7 @@ Dentro de Docker, Java está en `http://api-java:8080` (variable `PANEL_JAVA_URL
 | 6 | `GET /api/v1/errores` | Listar lo que quedó en `ERROR` |
 | 7 | `POST /api/v1/errores/clasificacion/{mensajeId}/reintentar` | Devolver una clasificación a la cola |
 | 8 | `POST /api/v1/errores/generacion/{mensajeId}/reintentar` | Devolver una generación a la cola |
+| 9 | `POST /api/v1/errores/faq/{semana}/reintentar` | (T13) Devolver una FAQ semanal a la cola y armarla enseguida, en segundo plano |
 
 Los borradores `RESPUESTA_BOT` no pasan por el panel: lo que responde el bot no se aprueba (D3, DEC-66).
 
@@ -80,7 +83,25 @@ GET /api/v1/borradores?estado=PENDIENTE
       "canal": "logros",
       "semana": null,
       "revisadoPor": null,
-      "revisadoEn": null
+      "revisadoEn": null,
+      "mensajeId": 22,
+      "motivoIa": "Contratación: consiguió su primer trabajo en tecnología.",
+      "linkedin": { "estado": null, "postId": null, "en": null, "motivo": null }
+    },
+    {
+      "id": 2,
+      "tipo": "CASO_EXITO",
+      "estado": "PENDIENTE",
+      "creadoEn": "2026-10-04T15:02:11.120Z",
+      "extracto": "Situación: Camila cursó…",
+      "autorNombre": "Camila Rojas",
+      "canal": "logros",
+      "semana": null,
+      "revisadoPor": null,
+      "revisadoEn": null,
+      "mensajeId": 22,
+      "motivoIa": "Contratación: consiguió su primer trabajo en tecnología.",
+      "linkedin": null
     },
     {
       "id": 11,
@@ -92,13 +113,26 @@ GET /api/v1/borradores?estado=PENDIENTE
       "canal": null,
       "semana": "2026-W40",
       "revisadoPor": null,
-      "revisadoEn": null
+      "revisadoEn": null,
+      "mensajeId": null,
+      "motivoIa": "3 preguntas repetidas, 2 con respuesta.",
+      "linkedin": null
     }
-  ]
+  ],
+  "linkedinModo": "APAGADO"
 }
 ```
 
 `extracto` son los primeros 160 caracteres del texto final (o del de la IA, si no se editó). `revisadoPor` y `revisadoEn` dicen quién aprobó o rechazó, y cuándo.
+
+Agregado en T13:
+
+| Campo | Qué es |
+|---|---|
+| `mensajeId` | El mensaje de Discord (el logro) del que salió el borrador. El post y el caso de éxito del mismo logro tienen el mismo: el panel los junta en una tarjeta. `null` en la FAQ |
+| `motivoIa` | El mismo campo de [ver un borrador](#22-ver-un-borrador) |
+| `linkedin` | El mismo campo de [ver un borrador](#22-ver-un-borrador): el estado de la publicación en LinkedIn de un post, o `null` si no es un post |
+| `linkedinModo` | Junto a la lista: qué pasa **al aprobar un post**. `APAGADO` (`LINKEDIN_HABILITADA=false`: no publica nada), `SIMULADO` (encendido sin token o sin autor: no publica nada) o `REAL` (encendido con token y autor: **publica en público**). Sale de la configuración de Java, con la misma regla que usa al publicar, sin llamar a LinkedIn. Solo el modo: **nunca** el token, el autor ni si el token venció (DEC-159) |
 
 ### 2.2 Ver un borrador
 
@@ -130,7 +164,8 @@ GET /api/v1/borradores/1
     "autorNombre": "Camila Rojas"
   },
   "faq": null,
-  "oci": { "generados": "SUBIDO", "aprobados": null }
+  "oci": { "generados": "SUBIDO", "aprobados": null },
+  "linkedin": { "estado": null, "postId": null, "en": null, "motivo": null }
 }
 ```
 
@@ -142,6 +177,22 @@ GET /api/v1/borradores/1
 | `origen` | El mensaje de Discord que dio origen al borrador. `autorNombre` es el `nombreVisible` del contrato v1. `null` en la FAQ, que junta muchas dudas |
 | `faq` | Solo en la FAQ: `{ "semana": "2026-W40", "desde": "…", "hasta": "…", "motivo": "…" }` |
 | `oci` | (T09) Si el borrador ya está guardado en OCI: el estado de cada subida, `PENDIENTE`, `SUBIDO` o `ERROR`, o `null` si todavía no se encoló. `generados` es la carpeta de todo borrador; `aprobados` solo existe en los `APROBADO` (F11), y es `null` en el resto. **Solo el estado**: nunca la ruta del objeto ni la URL PAR (es una credencial). Siempre viene el objeto, con sus dos campos |
+| `linkedin` | (T13, DEC-160) Solo en un `POST_LINKEDIN`: lo que pasó al mandarlo a LinkedIn después de aprobarlo. `null` en los otros tipos. Un post sin dato (todavía no aprobado, o aprobado antes de la `V9`) trae el objeto con sus cuatro campos en `null`. Ver la tabla de abajo |
+
+**`linkedin`, campo por campo** (T13):
+
+| Campo | Qué es |
+|---|---|
+| `estado` | `PUBLICADO` (LinkedIn lo aceptó), `SIMULADO` (encendido sin token: no se publicó nada), `APAGADO` (`LINKEDIN_HABILITADA=false`: no se publicó nada), `ERROR` (no se publicó; ver `motivo`) o `null` (sin dato) |
+| `postId` | Solo en `PUBLICADO`: el identificador que devolvió LinkedIn, por ejemplo `urn:li:share:7251234567890123456`. El panel arma el enlace "Ver en LinkedIn" solo si tiene la forma `urn:li:share:<números>` o `urn:li:ugcPost:<números>` |
+| `en` | Cuándo guardó Java el resultado |
+| `motivo` | Solo en `ERROR`: un texto corto y fijo armado por Java, por ejemplo `"Pasa de 3.000 caracteres"`, `"Texto vacío"`, `"LinkedIn respondió HTTP 401"` o `"LinkedIn no respondió a tiempo"`. **Nunca** el mensaje de una excepción ni el cuerpo de la respuesta de LinkedIn |
+
+Ejemplo de un post publicado:
+
+```json
+"linkedin": { "estado": "PUBLICADO", "postId": "urn:li:share:7251234567890123456", "en": "2026-10-15T20:31:02.114Z", "motivo": null }
+```
 
 ### 2.3 Editar
 
@@ -180,6 +231,8 @@ Responde `200` con el borrador ya `APROBADO`. Queda guardado:
 | `tiempo_curaduria_seg` | El del pedido |
 
 Aprobar **solo cambia el estado en la base** (DEC-113): subir lo aprobado a OCI es la tarea T09.
+
+(T13, DEC-160) Al aprobar un `POST_LINKEDIN`, Java lo manda a LinkedIn **en segundo plano**, después de responder, según `linkedinModo` (§2.1). Cuando termina, guarda el resultado en el campo `linkedin` del borrador (§2.2). La respuesta de aprobar llega antes: su `linkedin` todavía viene sin dato. No hay reintento: un reintento podría publicar dos veces en público. Las puertas de aprobar, rechazar y editar **no cambiaron**.
 
 ### 2.5 Rechazar
 
@@ -222,11 +275,22 @@ GET /api/v1/errores
       "intentos": 3,
       "motivo": "La IA respondió HTTP 500"
     }
+  ],
+  "faq": [
+    {
+      "semana": "2026-W41",
+      "desde": "2026-10-05T13:00:00Z",
+      "hasta": "2026-10-12T13:00:00Z",
+      "intentos": 3,
+      "motivo": "La IA no respondió a tiempo."
+    }
   ]
 }
 ```
 
 Hasta 200 de cada lista, la más reciente primero. La clasificación no guarda el motivo del error (solo queda en el registro de `api-java`), así que su `motivo` es `null`.
+
+(T13) `faq` son las semanas de la FAQ semanal (T06b) que agotaron sus intentos (`faq_semanas.estado = ERROR`): la semana, su ventana de dudas (`desde` y `hasta`), los intentos y el último motivo. La más nueva primero.
 
 ### 2.7 Reintentar (DEC-111)
 
@@ -247,13 +311,32 @@ X-Usuario: harrison
 
 El cuerpo `{}` está para que el pedido lleve `Content-Length` (§1).
 
+### 2.8 Reintentar la FAQ semanal (T13)
+
+```
+POST /api/v1/errores/faq/2026-W41/reintentar
+X-Usuario: harrison
+
+{}
+```
+```json
+{ "semana": "2026-W41", "etapa": "faq", "estado": "PENDIENTE" }
+```
+
+| Qué | Detalle |
+|---|---|
+| `semana` | La semana ISO, con la forma `2026-W41`. Otra forma: `422`. Si no existe: `404`. Si no está en `ERROR`: `409` |
+| Qué cambia en `faq_semanas` | Vuelve a la cola: `estado`, `reservada_hasta` y `terminada_en` vacíos, `intentos = 0`. Conserva su ventana de dudas y su último `motivo` |
+| Y después | **Después de responder**, Java arma esa FAQ **en segundo plano** (DEC-161): tarda hasta 150 s y gasta una llamada a Gemini. Si sale bien, aparece un borrador FAQ nuevo en Borradores. Si falla, vuelve a los reintentos de siempre (cada 30 min, hasta 3 intentos) |
+| Dos a la vez | La reserva de `faq_semanas` hace que, si el reintento programado llega al mismo tiempo, solo uno la arme |
+
 ## 3. Reglas
 
 1. **Solo se cambian los `PENDIENTE`.** Editar, aprobar o rechazar un borrador que ya está `APROBADO` o `RECHAZADO` da `409`.
 2. **Dos personas a la vez: gana la primera.** Cada cambio es un solo `UPDATE … WHERE id = :id AND estado = 'PENDIENTE'`. Si dos personas aprueban o rechazan el mismo borrador a la vez, PostgreSQL bloquea la fila: la segunda ya no la encuentra `PENDIENTE`, no cambia nada y recibe `409`. Lo guardado es todo de la primera (usuario, texto y tiempo).
 3. **Consentimiento (D6).** Un `POST_LINKEDIN` o un `CASO_EXITO` sin `"consentimiento": true` da `422` y sigue `PENDIENTE`. La FAQ no lo necesita, porque no nombra alumnos (DEC-100). La V6 lo impide también en la base (`borradores_consentimiento_check`): son dos capas.
 4. **Ediciones.** Si dos personas editan a la vez (`PUT`), queda la última que guardó. Para evitar que se pierda una edición al aprobar, el panel envía el texto en el mismo `aprobar`.
-5. **Reintentar** solo funciona si el mensaje sigue en `ERROR`. Si no, `409`.
+5. **Reintentar** solo funciona si el mensaje (o la semana de la FAQ, T13) sigue en `ERROR`. Si no, `409`.
 6. El registro de Java nunca lleva textos de alumnos ni de la IA (S11): solo ids, tipos y el usuario del panel.
 
 ## 4. Errores
@@ -273,10 +356,10 @@ Todos usan el formato común de Java (`ErrorApi`, [JAVA_IA_v1.md §7](JAVA_IA_v1
 |---|---|---|
 | `401` | `NO_AUTORIZADO` | Falta `X-Api-Key` o la clave no es de ningún cliente |
 | `403` | `PROHIBIDO` | La clave es de otro cliente (`ingesta` o `bot`), también si escribe la ruta de otra forma (`;x=1`, `%65`, `//`) |
-| `404` | `NO_ENCONTRADO` | El borrador o el mensaje no existe |
-| `409` | `CONFLICTO` | El borrador ya no está `PENDIENTE`, o el mensaje ya no está en `ERROR` |
+| `404` | `NO_ENCONTRADO` | El borrador, el mensaje o la semana de la FAQ no existe |
+| `409` | `CONFLICTO` | El borrador ya no está `PENDIENTE`, o el mensaje o la semana de la FAQ ya no está en `ERROR` |
 | `411` | `LONGITUD_REQUERIDA` | Un `POST` o `PUT` sin `Content-Length` |
-| `422` | `DATO_INVALIDO` | Falta el consentimiento (D6), `X-Usuario` falta o no cumple el formato, el texto está vacío o es muy largo, falta `tiempoCuraduriaSeg`, o un filtro (`estado`, `tipo`, `limite`, `id`) no es válido |
+| `422` | `DATO_INVALIDO` | Falta el consentimiento (D6), `X-Usuario` falta o no cumple el formato, el texto está vacío o es muy largo, falta `tiempoCuraduriaSeg`, o un filtro (`estado`, `tipo`, `limite`, `id`) no es válido, o (T13) la `semana` no tiene la forma `2026-W41` |
 
 ## 5. CORS (S6)
 
@@ -285,7 +368,8 @@ Java **no** responde cabeceras CORS: se quitó `CorsConfig`, que aceptaba cualqu
 ## 6. Fuera de este contrato
 
 - Subir lo aprobado a OCI (T09, DEC-113). El dashboard (T08).
-- Volver a generar un borrador, reintentar una semana de la FAQ en `ERROR` y publicar en LinkedIn.
+- Volver a generar un borrador. (T13: reintentar una semana de la FAQ en `ERROR` ya está en este contrato, §2.8.)
+- Publicar en LinkedIn: lo hace Java solo, al aprobar un post (§2.4). El panel solo ve el modo (§2.1) y el resultado (§2.2). Reintentar una publicación que falló tampoco existe: podría publicar dos veces (DEC-160).
 - Roles o permisos distintos por usuario: todos los usuarios del panel pueden hacer todo.
 
 ## 7. Dashboard (T08)

@@ -85,6 +85,15 @@ public class FaqSemanalService {
         return s == null ? null : procesar(s);
     }
 
+    /**
+     * Arma la FAQ de una semana que el panel devolvió a la cola (T13, DEC-161), con su misma ventana. OMITIDA si ya
+     * no está libre: la terminó o la está armando otra ejecución (por ejemplo, el reintento programado).
+     */
+    public Resultado reintentarSemana(String semana) {
+        Semana s = repo.reservar(semana, propiedades.reservaSegundos());
+        return s == null ? new Resultado(semana, "OMITIDA", 0, 0, 0, 0) : procesar(s);
+    }
+
     /** La semana ISO en la zona configurada, por ejemplo 2026-W40. */
     public String semanaDe(Instant momento) {
         ZonedDateTime z = momento.atZone(propiedades.zonaId());

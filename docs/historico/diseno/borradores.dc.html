@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Borradores</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#ffffff}
+a{color:#1f4fa3}a:hover{color:#163a7a}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid #1f4fa3;outline-offset:2px}
+button[disabled]{cursor:not-allowed}
+</style>
+</helmet>
+<div style="font-family: 'Source Sans 3', system-ui, sans-serif; color: #262730; background: #ffffff; min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+
+<aside style="flex: 1 1 240px; box-sizing: border-box; background: #f0f2f6; padding: 28px 16px; display: flex; flex-direction: column; gap: 24px">
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 0 8px">
+<div style="font-size: 19px; font-weight: 700">CommunityLab</div>
+<div style="font-size: 14px; color: #55565f">Panel de curaduría</div>
+</div>
+<nav aria-label="Páginas" style="display: flex; flex-direction: column; gap: 4px">
+<a href="Borradores.dc.html" aria-current="page" style="display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #262730; text-decoration: none; font-size: 16px; font-weight: 600; background: #dfe3eb">Borradores <span style="background: #262730; color: #ffffff; border-radius: 999px; font-size: 13px; font-weight: 600; padding: 1px 9px">4</span></a>
+<a href="DashMarketing.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #262730; text-decoration: none; font-size: 16px">Dashboard</a>
+<span style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; color: #55565f; font-size: 16px">Errores</span>
+</nav>
+<section aria-label="Estado de los datos" style="background: #ffffff; border: 1px solid #e1e4ea; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0ca30c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.5 2.5L16 9.5"></path></svg>
+Datos al día
+</div>
+<div style="font-size: 14px; color: #55565f">Última actualización: hace 12 min</div>
+<div style="font-size: 14px; color: #55565f">Próxima: 15:00 (cada hora, sola)</div>
+</section>
+<div style="margin-top: auto; padding: 0 8px; font-size: 14px; color: #55565f; display: flex; flex-direction: column; gap: 4px">
+<span>Sesión: mkt_paula</span>
+<a href="#" style="font-size: 14px">Cerrar sesión</a>
+</div>
+</aside>
+
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 36px 40px 64px; display: flex; flex-direction: column; gap: 24px">
+
+<header style="display: flex; flex-direction: column; gap: 4px">
+<h1 style="margin: 0; font-size: 34px; font-weight: 700">Borradores</h1>
+<p style="margin: 0; font-size: 17px; color: #55565f">Cada logro trae dos textos: un post para LinkedIn y un caso de éxito para la web. Se revisan juntos.</p>
+</header>
+
+<div role="group" aria-label="Estado" style="display: flex; flex-wrap: wrap; gap: 6px">
+<button type="button" aria-pressed="true" style="min-height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid #262730; background: #262730; color: #ffffff; font: inherit; font-size: 15px; font-weight: 600">Por revisar (4)</button>
+<button type="button" aria-pressed="false" style="min-height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid #c9cdd6; background: #ffffff; color: #262730; font: inherit; font-size: 15px">Aprobados</button>
+<button type="button" aria-pressed="false" style="min-height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid #c9cdd6; background: #ffffff; color: #262730; font: inherit; font-size: 15px">Rechazados</button>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+
+<section aria-label="Cola de revisión" style="flex: 1 1 300px; max-width: 100%; display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 14px; color: #55565f">Del más antiguo al más nuevo</div>
+<sc-for list="{{cola}}" as="c" hint-placeholder-count="4">
+<button type="button" aria-current="{{c.actual}}" style="text-align: left; font: inherit; color: #262730; background: #ffffff; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; {{c.borde}}">
+<span style="display: flex; justify-content: space-between; gap: 8px; width: 100%"><span style="font-size: 16px; font-weight: 600">{{c.titulo}}</span><span style="font-size: 13px; color: #55565f; white-space: nowrap">{{c.cuando}}</span></span>
+<span style="font-size: 15px; color: #262730">{{c.resumen}}</span>
+<span style="font-size: 13px; background: #eef1f6; color: #3a3d48; border-radius: 999px; padding: 2px 10px">{{c.chip}}</span>
+</button>
+</sc-for>
+</section>
+
+<section aria-labelledby="t-logro" style="flex: 999 1 560px; min-width: 0; border: 1px solid #e1e4ea; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 18px">
+
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline">
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+<h2 id="t-logro" style="margin: 0; font-size: 24px; font-weight: 700">Logro de Ana</h2>
+<span style="font-size: 14px; background: #e6f0fc; color: #1c3f73; border-radius: 999px; padding: 2px 12px; font-weight: 600">Contratación</span>
+</div>
+<span style="font-size: 14px; color: #55565f">#logros · 10 oct, 18:42 · hace 2 días</span>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px">
+<div style="background: #f7f8fa; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 14px; font-weight: 600; color: #55565f">Mensaje original</div>
+<div style="font-size: 15px; line-height: 1.45">"¡Lo logré! Después de 6 meses en el bootcamp me contrataron como desarrolladora junior en una fintech. Gracias a los mentores por la paciencia con mis mil preguntas."</div>
+</div>
+<div style="background: #f7f8fa; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 14px; font-weight: 600; color: #55565f">Por qué la IA lo propuso</div>
+<div style="font-size: 15px; line-height: 1.45">Contratación: consiguió su primer empleo en tecnología. Es publicable según la guía de voz.</div>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div role="tablist" aria-label="Textos del logro" style="display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid #e1e4ea">
+<button type="button" role="tab" aria-selected="{{esPost}}" onClick="{{verPost}}" style="min-height: 44px; padding: 0 16px; background: transparent; border: none; font: inherit; font-size: 16px; color: #262730; margin-bottom: -1px; {{estiloTabPost}}">Post de LinkedIn</button>
+<button type="button" role="tab" aria-selected="{{esCaso}}" onClick="{{verCaso}}" style="min-height: 44px; padding: 0 16px; background: transparent; border: none; font: inherit; font-size: 16px; color: #262730; margin-bottom: -1px; {{estiloTabCaso}}">Caso de éxito</button>
+</div>
+
+<div style="display: flex; align-items: center; gap: 8px; font-size: 15px; color: #262730">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#55565f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>
+<span>{{destino}}</span>
+</div>
+
+<sc-if value="{{esPost}}" hint-placeholder-val="{{ true }}">
+<label for="texto-post" style="font-size: 14px; font-weight: 600; color: #55565f">Texto del post (puedes editarlo)</label>
+<textarea id="texto-post" rows="13" value="{{textoPost}}" onChange="{{cambiarPost}}" style="width: 100%; box-sizing: border-box; font: inherit; font-size: 15px; line-height: 1.5; padding: 12px 14px; border: 1px solid #c9cdd6; border-radius: 8px; resize: vertical; color: #262730"></textarea>
+</sc-if>
+<sc-if value="{{esCaso}}" hint-placeholder-val="{{ false }}">
+<label for="texto-caso" style="font-size: 14px; font-weight: 600; color: #55565f">Texto del caso de éxito (puedes editarlo)</label>
+<textarea id="texto-caso" rows="13" value="{{textoCaso}}" onChange="{{cambiarCaso}}" style="width: 100%; box-sizing: border-box; font: inherit; font-size: 15px; line-height: 1.5; padding: 12px 14px; border: 1px solid #c9cdd6; border-radius: 8px; resize: vertical; color: #262730"></textarea>
+</sc-if>
+
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center">
+<span style="font-size: 14px; color: #55565f">{{conteo}}</span>
+<button type="button" style="min-height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid #c9cdd6; background: #ffffff; color: #262730; font: inherit; font-size: 15px">Copiar texto</button>
+</div>
+</div>
+
+<div style="border-top: 1px solid #eef0f4; padding-top: 16px; display: flex; flex-direction: column; gap: 14px">
+<label style="display: flex; gap: 10px; align-items: flex-start; font-size: 15px; line-height: 1.45; cursor: pointer">
+<input type="checkbox" checked="{{consentimiento}}" onChange="{{alternarConsentimiento}}" style="width: 20px; height: 20px; margin: 1px 0 0; flex: none">
+<span>Ana dio su consentimiento para publicar su nombre y su historia. <strong>Vale para los dos textos.</strong></span>
+</label>
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+<button type="button" disabled="{{bloqueado}}" onClick="{{aprobar}}" style="min-height: 44px; padding: 0 20px; border-radius: 8px; border: none; font: inherit; font-size: 16px; font-weight: 600; {{estiloAprobar}}">Aprobar post y caso de éxito</button>
+<button type="button" style="min-height: 44px; padding: 0 18px; border-radius: 8px; border: 1px solid #c9cdd6; background: #ffffff; color: #262730; font: inherit; font-size: 16px">Guardar edición</button>
+<button type="button" style="min-height: 44px; padding: 0 12px; border: none; background: transparent; color: #a3261f; font: inherit; font-size: 16px; text-decoration: underline">Rechazar…</button>
+</div>
+<sc-if value="{{bloqueado}}" hint-placeholder-val="{{ true }}">
+<div style="font-size: 14px; color: #55565f">Para aprobar, marca la casilla de consentimiento.</div>
+</sc-if>
+
+<sc-if value="{{aprobado}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; background: #ebf7eb; border-radius: 10px; padding: 14px 16px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0ca30c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.5 2.5L16 9.5"></path></svg>
+<span style="font-size: 15px; color: #0f3d0f; font-weight: 600">Aprobados los dos textos de Ana.</span>
+<a href="DashMarketing.dc.html" style="font-size: 15px">Verlos en Listos para publicar</a>
+<button type="button" onClick="{{deshacer}}" style="min-height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid #b9dcb9; background: #ffffff; color: #262730; font: inherit; font-size: 14px">Volver a empezar (solo en el prototipo)</button>
+</div>
+</sc-if>
+</div>
+
+</section>
+</div>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1260}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      pestana: 'post',
+      consentimiento: false,
+      aprobado: false,
+      textoPost: '🎉 Después de seis meses en el bootcamp, Ana consiguió su primer trabajo en tecnología: desarrolladora junior en una fintech.\n\nSu camino se parece al de muchas personas de nuestra comunidad: constancia, muchas preguntas y el apoyo de quienes ya recorrieron ese camino. En CommunityLab creemos que nadie aprende solo, y que cada duda resuelta es un paso más hacia el primer empleo.\n\n«Gracias a los mentores por la paciencia con mis mil preguntas», nos escribió al contarnos la noticia.\n\nAna, ¡felicitaciones! Tu historia demuestra que preguntar también es avanzar. ¿Quién sigue? 🚀\n\n#CommunityLab #Empleabilidad #HistoriasDeÉxito',
+      textoCaso: 'Situación\nAna cursó durante seis meses el bootcamp de programación de CommunityLab, con el objetivo de conseguir su primer empleo en tecnología.\n\nDesafío\nComo muchas personas que empiezan, avanzó con constancia y se apoyó en la comunidad y en los mentores para resolver sus dudas en el camino.\n\nLogro\nAl terminar ese período, Ana fue contratada como desarrolladora junior en una empresa fintech: su primer trabajo en el sector.\n\nEn sus palabras\n«Gracias a los mentores por la paciencia con mis mil preguntas.»\n\nCierre\nLa historia de Ana muestra el valor de un acompañamiento cercano: preguntar sin miedo y contar con mentores disponibles acorta el camino hacia el primer empleo.'
+    };
+  }
+  renderVals() {
+    var self = this;
+    var s = this.state;
+    var esPost = s.pestana === 'post';
+    var texto = esPost ? s.textoPost : s.textoCaso;
+    var palabras = texto.trim() ? texto.trim().split(/\s+/).length : 0;
+    var conteo = esPost
+      ? palabras + ' palabras (la guía pide 90 a 160) · ' + texto.length + ' de 3.000 caracteres de LinkedIn'
+      : palabras + ' palabras (la guía pide 150 a 250) · sin emojis ni hashtags';
+    var bloqueado = !s.consentimiento || s.aprobado;
+    var activa = 'border-bottom: 3px solid #262730; font-weight: 600;';
+    var inactiva = 'border-bottom: 3px solid transparent; color: #55565f;';
+    var cola = [
+      { titulo: 'Ana', resumen: 'Consiguió su primer trabajo como desarrolladora', cuando: 'hace 2 días', chip: 'Post + caso de éxito', actual: 'true' },
+      { titulo: 'Diego', resumen: 'Terminó su proyecto final', cuando: 'hace 1 día', chip: 'Post + caso de éxito', actual: 'false' },
+      { titulo: 'Valentina', resumen: 'Obtuvo una beca para el próximo módulo', cuando: 'hace 5 h', chip: 'Post + caso de éxito', actual: 'false' },
+      { titulo: 'FAQ de la semana 2026-W41', resumen: '6 preguntas repetidas, 4 con respuesta en los documentos', cuando: 'hace 1 h', chip: 'FAQ · sin consentimiento', actual: 'false' }
+    ].map(function (c) {
+      c.borde = c.actual === 'true' ? 'border: 2px solid #262730;' : 'border: 1px solid #e1e4ea;';
+      return c;
+    });
+    return {
+      cola: cola,
+      esPost: esPost,
+      esCaso: !esPost,
+      estiloTabPost: esPost ? activa : inactiva,
+      estiloTabCaso: esPost ? inactiva : activa,
+      destino: esPost
+        ? 'Dónde se publica: el LinkedIn de CommunityLab'
+        : 'Dónde se publica: la web de CommunityLab y las presentaciones a empresas',
+      textoPost: s.textoPost,
+      textoCaso: s.textoCaso,
+      conteo: conteo,
+      consentimiento: s.consentimiento,
+      bloqueado: bloqueado,
+      aprobado: s.aprobado,
+      estiloAprobar: bloqueado
+        ? 'background: #e4e6eb; color: #6b6d76;'
+        : 'background: #262730; color: #ffffff;',
+      verPost: function () { self.setState({ pestana: 'post' }); },
+      verCaso: function () { self.setState({ pestana: 'caso' }); },
+      cambiarPost: function (e) { self.setState({ textoPost: e.target.value }); },
+      cambiarCaso: function (e) { self.setState({ textoCaso: e.target.value }); },
+      alternarConsentimiento: function () { self.setState({ consentimiento: !self.state.consentimiento }); },
+      aprobar: function () { if (self.state.consentimiento) { self.setState({ aprobado: true }); } },
+      deshacer: function () { self.setState({ aprobado: false, consentimiento: false }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -46,7 +46,7 @@ public class LinkedinClient {
                 .retrieve()
                 .onStatus(estado -> !estado.is2xxSuccessful(), (req, resp) -> {
                     log.error("LinkedIn API respondió HTTP {}", resp.getStatusCode().value());
-                    throw new RuntimeException("LinkedIn respondió HTTP " + resp.getStatusCode().value());
+                    throw new LinkedinHttpException(resp.getStatusCode().value());
                 })
                 .toBodilessEntity();
 

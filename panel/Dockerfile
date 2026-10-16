@@ -14,7 +14,7 @@ COPY requirements.txt /tmp/requirements-panel.txt
 RUN pip install -r /tmp/requirements-panel.txt
 
 COPY .streamlit/ .streamlit/
-COPY app.py auth.py cliente_java.py ui.py ./
+COPY app.py auth.py cliente_java.py estilo.py logros.py ui.py ./
 COPY paginas/ paginas/
 
 USER panel

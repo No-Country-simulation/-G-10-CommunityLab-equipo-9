@@ -10,6 +10,7 @@ Streamlit, no del navegador (por eso Java no necesita CORS, S6).
 from __future__ import annotations
 
 import os
+import re
 from datetime import date
 
 import httpx
@@ -43,6 +44,10 @@ class ClienteJava:
             params["tipo"] = tipo
         return self._pedir("GET", "/api/v1/borradores", params=params)["borradores"]
 
+    def listar_con_modo(self, estado: str = "PENDIENTE", limite: int = 100) -> dict:
+        """T13: la lista y, junto a ella, linkedinModo (APAGADO, SIMULADO o REAL): qué pasa al aprobar un post."""
+        return self._pedir("GET", "/api/v1/borradores", params={"estado": estado, "limite": limite})
+
     def detalle(self, borrador_id: int) -> dict:
         return self._pedir("GET", f"/api/v1/borradores/{int(borrador_id)}")
 
@@ -74,6 +79,12 @@ class ClienteJava:
         if etapa not in ("clasificacion", "generacion"):
             raise ValueError(f"Etapa desconocida: {etapa}")
         return self._pedir("POST", f"/api/v1/errores/{etapa}/{int(mensaje_id)}/reintentar", usuario=usuario, cuerpo={})
+
+    def reintentar_faq(self, semana: str, usuario: str) -> dict:
+        """T13 (DEC-161): la FAQ de la semana vuelve a la cola y Java la arma enseguida, en segundo plano."""
+        if not re.fullmatch(r"[0-9]{4}-W[0-9]{2}", semana or ""):
+            raise ValueError(f"Semana con otra forma: {semana!r}")
+        return self._pedir("POST", f"/api/v1/errores/faq/{semana}/reintentar", usuario=usuario, cuerpo={})
 
     # ── Dashboard (T08, solo lectura: sin X-Usuario) ──
 
