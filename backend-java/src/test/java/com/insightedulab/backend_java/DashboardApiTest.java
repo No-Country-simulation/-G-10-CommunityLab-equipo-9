@@ -496,7 +496,7 @@ class DashboardApiTest {
     // ── Caso 6: claves ──
 
     @ParameterizedTest
-    @ValueSource(strings = {"totales", "comunidad", "contenido"})
+    @ValueSource(strings = {"totales", "comunidad", "contenido", "ingesta"})
     void sinClaveEs401(String ruta) throws Exception {
         assertThat(estado("/api/v1/dashboard/" + ruta, null)).isEqualTo(401);
     }
@@ -505,7 +505,7 @@ class DashboardApiTest {
     @ValueSource(strings = {CLAVE_BOT, CLAVE_INGESTA})
     void lasClavesDelBotYDeLaIngestaNoAbrenElDashboard(String clave) throws Exception {
         for (String ruta : List.of("totales", "sentimiento", "temas", "desercion", "frustracion", "dudas-sin-responder",
-                "comunidad", "contenido")) {
+                "comunidad", "contenido", "ingesta")) {
             assertThat(estado("/api/v1/dashboard/" + ruta, clave)).as(ruta).isEqualTo(403);
         }
     }
@@ -513,9 +513,17 @@ class DashboardApiTest {
     @ParameterizedTest
     @ValueSource(strings = {"/api/v1/dashboard;x=1/totales", "/api/v1/dashboar%64/totales", "/api//v1/dashboard/totales",
             "/api/v1/dashboard/dudas-sin-responder;x=1", "/api/v1/dashboard;x=1/comunidad",
-            "/api/v1/dashboar%64/contenido", "/api//v1/dashboard/contenido"})
+            "/api/v1/dashboar%64/contenido", "/api//v1/dashboard/contenido",
+            "/api/v1/dashboard;x=1/ingesta", "/api/v1/dashboard/ingesta;x=1", "/api/v1/dashboard/ingest%61",
+            "/api/v1/d%61shboard/ingesta", "/api//v1/dashboard/ingesta"})
     void laClaveDelBotNoEntraConUnaRutaDisfrazada(String ruta) throws Exception {
         assertThat(estado(ruta, CLAVE_BOT)).as(ruta).isEqualTo(403);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/v1/dashboard;x=1/ingesta", "/api/v1/dashboard/ingest%61", "/api/v1/d%61shboard/ingesta"})
+    void laClaveDeLaIngestaTampocoEntraConUnaRutaDisfrazada(String ruta) throws Exception {
+        assertThat(estado(ruta, CLAVE_INGESTA)).as(ruta).isEqualTo(403);
     }
 
     @Test
@@ -526,6 +534,36 @@ class DashboardApiTest {
                 .isInstanceOf(ProhibidoException.class);
         assertThatThrownBy(() -> controlador.comunidad("bot", null, null)).isInstanceOf(ProhibidoException.class);
         assertThatThrownBy(() -> controlador.contenido("ingesta", null, null)).isInstanceOf(ProhibidoException.class);
+        assertThatThrownBy(() -> controlador.ingesta("ingesta")).isInstanceOf(ProhibidoException.class);
+        assertThatThrownBy(() -> controlador.ingesta(null)).isInstanceOf(ProhibidoException.class);
+    }
+
+    // ── Caso 8 (T14): el estado de los datos ──
+
+    @Test
+    void sinLotesElUltimoLoteEsNull() throws Exception {
+        JsonNode r = pedir("/api/v1/dashboard/ingesta");
+
+        assertThat(r.has("ultimoLote")).isTrue();
+        assertThat(r.get("ultimoLote").isNull()).isTrue();
+    }
+
+    @Test
+    void elUltimoLoteEsElMasRecienteDeLaIngesta() throws Exception {
+        lote("lote-viejo", "historial", Instant.parse("2026-10-16T13:00:00Z"), 70, 1, 0);
+        lote("lote-nuevo", "historial", Instant.parse("2026-10-16T15:00:00.123Z"), 67, 0, 2);
+        lote("lote-medio", "historial", Instant.parse("2026-10-16T14:00:00Z"), 68, 3, 1);
+        // Un lote en vivo más reciente no cuenta: el aviso mide la ingesta (hoy el bot no registra lotes)
+        lote("lote-en-vivo", "tiempoReal", Instant.parse("2026-10-16T15:30:00Z"), 1, 1, 0);
+
+        JsonNode u = pedir("/api/v1/dashboard/ingesta").get("ultimoLote");
+
+        assertThat(Instant.parse(u.get("recibidoEn").asText())).isEqualTo(Instant.parse("2026-10-16T15:00:00.123Z"));
+        assertThat(u.get("modo").asText()).isEqualTo("historial");
+        assertThat(u.get("total").asInt()).isEqualTo(67);
+        assertThat(u.get("nuevos").asInt()).isZero();
+        assertThat(u.get("actualizados").asInt()).isEqualTo(2);
+        assertThat(u.has("loteId")).as("solo números y la fecha").isFalse();
     }
 
     // ── Caso 7: parámetros inválidos ──
@@ -563,6 +601,12 @@ class DashboardApiTest {
         MvcResult r = mvc.perform(get(URI.create(ruta)).header("X-Api-Key", CLAVE_PANEL)).andReturn();
         assertThat(r.getResponse().getStatus()).as(ruta).isEqualTo(200);
         return json.readTree(r.getResponse().getContentAsByteArray());
+    }
+
+    private void lote(String loteId, String modo, Instant recibidoEn, int total, int nuevos, int actualizados) {
+        jdbc.update("INSERT INTO lotes_recibidos (lote_id, modo, version_contrato, recibido_en, total, nuevos, "
+                + "actualizados) VALUES (?, ?, '1.0', ?, ?, ?, ?)", loteId, modo, java.sql.Timestamp.from(recibidoEn),
+                total, nuevos, actualizados);
     }
 
     private int estado(String ruta, String clave) throws Exception {

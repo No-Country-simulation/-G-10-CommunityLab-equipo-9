@@ -6,6 +6,7 @@ import com.insightedulab.backend_java.dashboard.VistasDashboard.Contenido;
 import com.insightedulab.backend_java.dashboard.VistasDashboard.Desercion;
 import com.insightedulab.backend_java.dashboard.VistasDashboard.DudasSinResponder;
 import com.insightedulab.backend_java.dashboard.VistasDashboard.Frustracion;
+import com.insightedulab.backend_java.dashboard.VistasDashboard.Ingesta;
 import com.insightedulab.backend_java.dashboard.VistasDashboard.Sentimiento;
 import com.insightedulab.backend_java.dashboard.VistasDashboard.Temas;
 import com.insightedulab.backend_java.dashboard.VistasDashboard.Totales;
@@ -106,5 +107,12 @@ public class DashboardController {
                                @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
         ClientePermitido.exigir(ClientePermitido.PANEL, cliente);
         return dashboard.contenido(desde, hasta);
+    }
+
+    /** T14 (DEC-168): el último lote de la ingesta, para el aviso "Datos al día" de la barra lateral. */
+    @GetMapping("/ingesta")
+    public Ingesta ingesta(@RequestAttribute(name = ApiKeyFilter.ATRIBUTO_CLIENTE, required = false) String cliente) {
+        ClientePermitido.exigir(ClientePermitido.PANEL, cliente);
+        return dashboard.ingesta();
     }
 }

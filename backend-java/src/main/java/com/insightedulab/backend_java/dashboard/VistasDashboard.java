@@ -99,4 +99,12 @@ public final class VistasDashboard {
     public record Contenido(Periodo periodo, PorRevisar porRevisar, List<Revision> revision, Aprobacion aprobacion,
                             Embudo embudo, List<SemanaCantidad> aprobadosPorSemana, LogroAAprobacion logroAAprobacion,
                             long mensajesDePersonas, long activosOci) {}
+
+    // ── Estado de los datos (T14, DEC-168) ──
+
+    /** El último lote de la ingesta, tal como lo guardó lotes_recibidos. Solo números: nunca textos. */
+    public record UltimoLote(Instant recibidoEn, String modo, int total, int nuevos, int actualizados) {}
+
+    /** ultimoLote es null si todavía no llegó ningún lote: el panel dice "Todavía no hay lotes". */
+    public record Ingesta(UltimoLote ultimoLote) {}
 }
