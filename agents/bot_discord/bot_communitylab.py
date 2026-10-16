@@ -39,8 +39,8 @@ from transform import Contexto, a_contrato, armar_lote  # noqa: E402
 log = logging.getLogger("bot")
 
 RUTA_EN_VIVO = "/api/v1/mensajes/en-vivo"
-# D4 y F8: modelo 20 s < Java → IA 30 s < bot → Java 40 s
-TIEMPO_JAVA_S = 40
+# D4, F8 y DEC-166: modelo 20 s < tope de la IA 40 s < Java → IA 45 s < bot → Java 55 s
+TIEMPO_JAVA_S = float(os.getenv("TIEMPO_JAVA_S", "55"))
 ORDENES = frozenset({"RESPONDER", "DERIVAR", "REACCIONAR", "NADA"})
 MAX_CARACTERES_DISCORD = 2000
 SIN_MENCIONES = discord.AllowedMentions.none()  # ni @everyone, ni roles, ni usuarios, ni al autor (S8)

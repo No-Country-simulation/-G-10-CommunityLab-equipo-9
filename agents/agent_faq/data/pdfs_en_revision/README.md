@@ -1,7 +1,16 @@
 # PDF en revisión: el manual de servicio al cliente
 
 > **Qué es esta carpeta:** documentos que todavía **no** usa el bot. La IA solo lee `agents/agent_faq/data/pdfs/*.pdf`; lo que está aquí no entra al índice de búsqueda.
-> **Decisión:** DEC-152 · **Autor del manual:** Juan Sebastián Rodríguez · **Revisado:** 2026-10-14
+> **Decisión:** DEC-152 · **Autor del manual:** Juan Sebastián Rodríguez · **Revisado:** 2026-10-14 · **Estado al día:** 2026-10-16 (T15)
+
+## Estado
+
+| Archivo | Dónde está | Resultado |
+|---|---|---|
+| `12_Preguntas_Frecuentes_CommunityLab.pdf` (Juan Sebastián Rodríguez, 2026-10-15) | **Salió de esta carpeta y entró a `pdfs/`** el 2026-10-16 (T15, DEC-163) | 🧪 Ocupa 22 de los 80 fragmentos del índice (28 %). Las oficiales siguen ganándolas los documentos oficiales. Responde clases grabadas, estudiar trabajando, qué computador hace falta y qué es una API. Nota final, ChatGPT y LinkedIn el bot las deriva a un mentor ("debilidad conocida", DEC-164). Detalle en el [informe de T15](../../../../docs/historico/tareas/T15-informe.md) |
+| `Manual_Maestro_Servicio_Cliente_Universidad_Programacion.pdf` | **Se queda aquí**, donde la IA no lo lee | Es de Juan Sebastián: no se borra. El PDF 12 se hizo a partir de él |
+
+Las secciones 1 a 4 son la revisión original del manual (2026-10-14), y se conservan como registro. El script de revisión ya no es el de la sección 3: hoy revisa varios PDF y tiene la categoría "debilidad conocida" ([OPERACION.md §14](../../../../docs/OPERACION.md)).
 
 ## 1. Por qué está aquí y no en `pdfs/`
 

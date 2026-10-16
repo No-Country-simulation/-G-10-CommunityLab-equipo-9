@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from langchain_core.runnables import Runnable
 
 from agents.orquestador import api, contrato_ia
 from agents.orquestador import config as config_orq
@@ -21,6 +22,7 @@ from agents.orquestador.clasificadores.etiquetador import (
     EtiquetadorPalabrasClave,
     EtiquetasLLM,
 )
+from agents.orquestador.clasificadores.llm_models import con_respaldo
 from agents.orquestador.contrato_ia import RespuestaFaq
 from agents.orquestador.grafo_v1 import ProcesadorV1, responder_con_agente_faq
 from agents.orquestador.nodos import invocador_faq
@@ -534,3 +536,104 @@ def test_health_no_pide_clave():
 def test_el_json_schema_incluye_el_error_no_autorizado():
     codigos = contrato_ia.generar_esquema()["error"]["properties"]["codigo"]["enum"]
     assert codigos == ["CONTRATO_INVALIDO", "NO_AUTORIZADO", "ERROR_INTERNO"]
+
+
+# ── DEC-165: modelo de respaldo si Gemini rechaza el principal (503) ─────────────
+
+class ChatFalso(Runnable):
+    """Un chat model mínimo de LangChain: with_fallbacks y with_structured_output funcionan como en Gemini."""
+
+    def __init__(self, error: Exception | None = None):
+        self.error = error
+        self.llamadas = 0
+
+    def with_structured_output(self, esquema, include_raw=False) -> Runnable:
+        return self
+
+    def invoke(self, entrada, config=None, **kwargs):
+        self.llamadas += 1
+        if self.error:
+            raise self.error
+        etiquetas = EtiquetasLLM(intencion="PREGUNTA_FAQ", confianza=0.9, razon="pregunta",
+                                 sentimiento="NEUTRO", tema="otro")
+        return {"raw": UsoFalso(), "parsed": etiquetas, "parsing_error": None}
+
+
+SATURADO = RuntimeError("503 UNAVAILABLE. This model is currently experiencing high demand.")
+
+
+def test_si_el_modelo_principal_esta_saturado_clasifica_el_de_respaldo():
+    principal, respaldo = ChatFalso(SATURADO), ChatFalso()
+
+    etiquetado = EtiquetadorLLM(con_respaldo(principal, respaldo), reintentos=0).etiquetar(_mensaje_contrato())
+
+    assert etiquetado.etiquetas.intencion == "PREGUNTA_FAQ" and etiquetado.error is None
+    assert principal.llamadas == 1 and respaldo.llamadas == 1
+
+
+def test_si_los_dos_modelos_fallan_es_error_y_nunca_una_etiqueta_inventada():
+    principal, respaldo = ChatFalso(SATURADO), ChatFalso(SATURADO)
+
+    etiquetado = EtiquetadorLLM(con_respaldo(principal, respaldo), reintentos=1).etiquetar(_mensaje_contrato())
+
+    assert etiquetado.etiquetas is None and "El LLM falló" in etiquetado.error
+    assert principal.llamadas == 2 and respaldo.llamadas == 2  # cada intento prueba los dos
+
+
+def test_sin_respaldo_el_modelo_queda_igual():
+    principal = ChatFalso()
+
+    assert con_respaldo(principal, None) is principal
+
+
+@pytest.fixture
+def gemini_configurado(monkeypatch):
+    pytest.importorskip("langchain_google_genai")
+    from agents.orquestador.clasificadores import llm_models
+    monkeypatch.setattr(llm_models, "CLASIFICADOR_PROVIDER", "google")
+    monkeypatch.setattr(llm_models, "GEMINI_API_KEY", "clave-falsa")
+    monkeypatch.setattr(llm_models, "CLASIFICADOR_MODEL", "modelo-principal")
+    return llm_models
+
+
+def test_el_clasificador_usa_el_respaldo_y_el_agente_mod_no(gemini_configurado, monkeypatch):
+    from langchain_core.runnables import RunnableWithFallbacks
+    monkeypatch.setattr(gemini_configurado, "MODELO_RESPALDO", "modelo-respaldo")
+
+    clasificador = gemini_configurado.build_llm(usar_respaldo=True)
+    agente_mod = gemini_configurado.build_llm(modelo="modelo-mod")
+
+    assert isinstance(clasificador, RunnableWithFallbacks)
+    assert clasificador.runnable.model == "modelo-principal"
+    assert [f.model for f in clasificador.fallbacks] == ["modelo-respaldo"]
+    # La salida estructurada del clasificador se arma sobre los dos modelos
+    assert isinstance(clasificador.with_structured_output(EtiquetasLLM, include_raw=True), RunnableWithFallbacks)
+    assert not isinstance(agente_mod, RunnableWithFallbacks) and agente_mod.model == "modelo-mod"
+
+
+@pytest.mark.parametrize("respaldo", ["", "modelo-principal"], ids=["vacio", "igual-al-principal"])
+def test_sin_respaldo_o_con_el_mismo_modelo_no_hay_segunda_llamada(gemini_configurado, monkeypatch, respaldo):
+    from langchain_core.runnables import RunnableWithFallbacks
+    monkeypatch.setattr(gemini_configurado, "MODELO_RESPALDO", respaldo)
+
+    llm = gemini_configurado.build_llm(usar_respaldo=True)
+
+    assert not isinstance(llm, RunnableWithFallbacks) and llm.model == "modelo-principal"
+
+
+def test_el_agente_faq_responde_y_revisa_con_el_respaldo(monkeypatch):
+    pytest.importorskip("langchain_google_genai")
+    from langchain_core.runnables import RunnableWithFallbacks
+    from agents.agent_faq import llm_models as faq_llm
+    from agents.agent_faq.contratos import EvaluacionFidelidad
+    monkeypatch.setattr(faq_llm, "FAQ_PROVIDER", "google")
+    monkeypatch.setattr(faq_llm, "GEMINI_API_KEY", "clave-falsa")
+    monkeypatch.setattr(faq_llm, "FAQ_MODEL_NAME", "modelo-principal")
+    monkeypatch.setattr(faq_llm, "FAQ_MODELO_RESPALDO", "modelo-respaldo")
+
+    llm = faq_llm.select_llm()
+
+    assert isinstance(llm, RunnableWithFallbacks)
+    assert [f.model for f in llm.fallbacks] == ["modelo-respaldo"]
+    # La revisión anti-alucinación (BuscadorTool.guardrail) también pasa al respaldo
+    assert isinstance(llm.with_structured_output(EvaluacionFidelidad), RunnableWithFallbacks)

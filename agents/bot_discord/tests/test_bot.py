@@ -194,7 +194,7 @@ def test_el_contrato_de_un_mentor_real_que_menciona_al_bot_es_igual_al_de_la_ing
 
 # ── Lo que se envía a Java ────────────────────────────────────────────────────
 
-def test_envia_a_java_el_contrato_con_la_clave_y_espera_40_s():
+def test_envia_a_java_el_contrato_con_la_clave_y_espera_55_s():
     mensaje, sesion = Mensaje(dp.crudo()), SesionFalsa(cuerpo=orden("NADA"))
 
     atender(mensaje, sesion)
@@ -203,7 +203,7 @@ def test_envia_a_java_el_contrato_con_la_clave_y_espera_40_s():
     assert pedido["url"] == "http://api-java:8080/api/v1/mensajes/en-vivo"
     assert pedido["headers"]["X-Api-Key"] == "clave-bot-falsa"
     assert pedido["headers"]["X-Id-Correlacion"] == pedido["json"]["loteId"]
-    assert pedido["timeout"].total == 40
+    assert pedido["timeout"].total == 55  # DEC-166: más que los 45 s que Java espera a la IA
     assert pedido["json"]["modo"] == "tiempoReal"
     assert [m["id"] for m in pedido["json"]["mensajes"]] == ["1554205178671009863"]
     assert mensaje.channel.escribiendo == 1  # "escribiendo…" mientras espera

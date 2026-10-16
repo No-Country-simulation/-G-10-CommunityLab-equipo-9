@@ -132,9 +132,11 @@ Además, Java exige `Content-Length` (observación de T03). `aiohttp` lo envía 
 | Pieza | Tiempo máximo |
 |---|---|
 | Cada llamada al LLM | 20 s |
-| Todo el pedido dentro de la IA en `tiempoReal` | **25 s** (`TIEMPO_REAL_TOPE_S`, DEC-54) |
-| Java → IA | 30 s |
-| **Bot → Java** | **40 s**. Mientras espera, el bot muestra "escribiendo…" en el canal |
+| Todo el pedido dentro de la IA en `tiempoReal` | **40 s** (`TIEMPO_REAL_TOPE_S`; antes 25 s, DEC-54 y DEC-166) |
+| Java → IA | 45 s (`IA_TIEMPO_LECTURA_S`; antes 30 s) |
+| **Bot → Java** | **55 s** (`TIEMPO_JAVA_S`; antes 40 s). Mientras espera, el bot muestra "escribiendo…" en el canal |
+
+**Cambio de T15 (2026-10-16, DEC-166, autorizado por Harrison):** solo cambian estos tiempos, porque Gemini saturado tardaba hasta 17 s por llamada. Los campos, las órdenes y los errores no cambian.
 
 ## 8. Fuera de este contrato
 

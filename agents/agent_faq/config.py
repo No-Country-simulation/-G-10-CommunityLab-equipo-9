@@ -15,6 +15,8 @@ RUTA_HISTORIAL_PREGUNTAS = BASE_DIR / "data" / "historial_preguntas.json"
 # --- LLM (cambiar FAQ_PROVIDER para alternar) ---
 FAQ_PROVIDER: str = os.getenv("FAQ_PROVIDER", "google")  # "google" | "openai" | "cohere"
 FAQ_MODEL_NAME: str = os.getenv("FAQ_MODEL_NAME", "gemini-3.1-flash-lite")
+# DEC-165: si el modelo principal falla (por ejemplo, 503 por demanda alta), la misma llamada va a este. Vacío = sin respaldo
+FAQ_MODELO_RESPALDO: str = os.getenv("GEMINI_MODELO_RESPALDO", "").strip()
 FAQ_TEMPERATURE: float = 0.1
 # Tiempo máximo de cada llamada al LLM (D4, F8); la misma variable que usa el orquestador
 FAQ_LLM_TIMEOUT_S: float = float(os.getenv("LLM_TIMEOUT_S", "20"))

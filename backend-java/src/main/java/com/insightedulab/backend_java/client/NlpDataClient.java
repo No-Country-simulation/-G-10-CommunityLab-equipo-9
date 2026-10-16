@@ -21,7 +21,7 @@ import java.util.Map;
  * <ul>
  *   <li>200 → {@link RespuestaIa}, {@link RespuestaGenerar} o {@link RespuestaFaqSemanal}.</li>
  *   <li>422 → {@link IaRechazoException}: el lote está mal armado (error nuestro, no pasajero).</li>
- *   <li>Otro error HTTP, tiempo agotado (30 s; 150 s en /v1/faq) o IA caída → {@link IaNoDisponibleException} (pasajero).</li>
+ *   <li>Otro error HTTP, tiempo agotado (45 s, DEC-166; 150 s en /v1/faq) o IA caída → {@link IaNoDisponibleException} (pasajero).</li>
  * </ul>
  */
 @Component
@@ -35,7 +35,7 @@ public class NlpDataClient {
     private final RestClient iaRestClientFaq;
     private final ObjectMapper objectMapper;
 
-    /** iaRestClientFaq: el mismo armado, con un tiempo de lectura mayor (la FAQ puede tardar más de 30 s). */
+    /** iaRestClientFaq: el mismo armado, con un tiempo de lectura mayor (la FAQ puede tardar más de 45 s). */
     public NlpDataClient(@Qualifier("iaRestClient") RestClient iaRestClient,
                          @Qualifier("iaRestClientFaq") RestClient iaRestClientFaq, ObjectMapper objectMapper) {
         this.iaRestClient = iaRestClient;

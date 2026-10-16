@@ -3,13 +3,14 @@ Se configra un listado de modelos de llm con sus varaibles de configuración
 para brindar verstailidad a la configuracion del agente
 """
 from langchain_core.language_models import BaseChatModel
+from langchain_core.runnables import Runnable
 from .config import (
-    FAQ_PROVIDER, FAQ_MODEL_NAME, FAQ_TEMPERATURE, FAQ_LLM_TIMEOUT_S,
+    FAQ_PROVIDER, FAQ_MODEL_NAME, FAQ_TEMPERATURE, FAQ_LLM_TIMEOUT_S, FAQ_MODELO_RESPALDO,
     GEMINI_API_KEY, OPENAI_API_KEY, COHERE_API_KEY,
 )
 
 
-def select_llm() -> BaseChatModel:
+def select_llm() -> Runnable:
     """
     Permite configurar cada modelo de acuerdo al LLM_PROVIDER seleccionado
     """
@@ -17,14 +18,23 @@ def select_llm() -> BaseChatModel:
         if not GEMINI_API_KEY:
             raise ValueError("GEMINI_API_KEY no encontrada en .env")
         from langchain_google_genai import ChatGoogleGenerativeAI
-        return ChatGoogleGenerativeAI(
-            model=FAQ_MODEL_NAME,
-            temperature=FAQ_TEMPERATURE,
-            google_api_key=GEMINI_API_KEY,
-            # Sin esto Gemini espera sin límite y reintenta 6 veces por su cuenta (F8)
-            timeout=FAQ_LLM_TIMEOUT_S,
-            max_retries=0,
-        )
+
+        def gemini(nombre: str) -> BaseChatModel:
+            return ChatGoogleGenerativeAI(
+                model=nombre,
+                temperature=FAQ_TEMPERATURE,
+                google_api_key=GEMINI_API_KEY,
+                # Sin esto Gemini espera sin límite y reintenta 6 veces por su cuenta (F8)
+                timeout=FAQ_LLM_TIMEOUT_S,
+                max_retries=0,
+            )
+
+        llm = gemini(FAQ_MODEL_NAME)
+        if FAQ_MODELO_RESPALDO and FAQ_MODELO_RESPALDO != FAQ_MODEL_NAME:
+            # DEC-165: la respuesta y la revisión anti-alucinación pasan al respaldo si el principal falla.
+            # with_structured_output y bind_tools siguen funcionando: LangChain los aplica a los dos modelos
+            return llm.with_fallbacks([gemini(FAQ_MODELO_RESPALDO)])
+        return llm
 
     if FAQ_PROVIDER == "openai":
         if not OPENAI_API_KEY:

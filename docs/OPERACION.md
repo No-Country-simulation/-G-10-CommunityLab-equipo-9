@@ -1,7 +1,7 @@
 # Operación — levantar InsightEdu Lab con Docker
 
-> **Estado:** v0.6 · **Fecha:** 2026-10-14 · **Rama:** `main`
-> Cubre los servicios que ya están en `compose.yml`: base de datos, API Java, IA, bot de Discord (T05) y panel (T07, T08), la subida de borradores a OCI (T09, sección 12), la publicación en LinkedIn (sección 13) y cómo agregar un PDF al Agente FAQ (sección 14). La ingesta por lotes todavía se corre a mano (ver el [README](../README.md) §8.3); programarla en un servidor está pendiente ([ESTADO.md](ESTADO.md)). Cómo funciona cada pieza: [ARQUITECTURA.md](ARQUITECTURA.md). Las menciones a T01–T10 remiten a la traza de [historico/tareas/](historico/tareas/).
+> **Estado:** v0.7 · **Fecha:** 2026-10-16 · **Rama:** `main`
+> Cubre los servicios que ya están en `compose.yml`: base de datos, API Java, IA, bot de Discord (T05) y panel (T07, T08), la subida de borradores a OCI (T09, sección 12), la publicación en LinkedIn (sección 13) , cómo agregar un PDF al Agente FAQ (sección 14) y qué hacer si Gemini está lento o saturado (sección 15). La ingesta por lotes todavía se corre a mano (ver el [README](../README.md) §8.3); programarla en un servidor está pendiente ([ESTADO.md](ESTADO.md)). Cómo funciona cada pieza: [ARQUITECTURA.md](ARQUITECTURA.md). Las menciones a T01–T10 remiten a la traza de [historico/tareas/](historico/tareas/).
 
 Todos los comandos se ejecutan **desde la raíz del repositorio**, en PowerShell.
 
@@ -22,6 +22,9 @@ Abrir `.env` y completar:
 |---|---|---|
 | `POSTGRES_PASSWORD` | Sí | Una contraseña larga inventada. Sin ella, la base de datos no arranca |
 | `GEMINI_API_KEY` | No | La clave de Google AI Studio. Sin ella, la IA clasifica por palabras clave y el Agente FAQ no responde |
+| `GEMINI_MODEL` | No | El modelo de Gemini del clasificador, del Agente FAQ y del Agente-Mod. `gemini-3.5-flash-lite` por defecto. Si Google lo rechaza con 503, ver la sección 15 |
+| `GEMINI_MODELO_RESPALDO` | No | DEC-165 · Si Google rechaza `GEMINI_MODEL` (503), el clasificador y el Agente FAQ repiten la llamada con este modelo. Vacío: sin respaldo. Cómo elegirlo: sección 15 |
+| `TIEMPO_REAL_TOPE_S`, `IA_TIEMPO_LECTURA_S`, `TIEMPO_JAVA_S` | No | DEC-166 · Cuánto puede tardar una duda en vivo: tope de la IA (40 s), espera de Java a la IA (45 s) y espera del bot a Java (55 s). Si se cambian, **cada uno tiene que ser mayor que el anterior** |
 | `MOD_MODEL_NAME` | No | T06 · El modelo de Gemini que redacta los posts y casos de éxito (DEC-85). Vacío: el mismo de `GEMINI_MODEL` |
 | `GENERACION_HABILITADA` | No | T06 · `true` por defecto. Con `false`, Java no pide borradores al Agente-Mod (cada logro nuevo gasta una llamada a Gemini) |
 | `FAQ_SEMANAL_AL_ARRANCAR` | No | T06b · `false` por defecto. Con `true`, Java arma la FAQ semanal una vez al encender, para la demo (ver la sección 9) |
@@ -406,11 +409,47 @@ El bot responde **solo** con los PDF de `agents/agent_faq/data/pdfs/` (DEC-19). 
 
 | Paso | Comando o acción | Qué debería pasar |
 |---|---|---|
-| 1 | Copiar el PDF a `agents/agent_faq/data/pdfs/`, con un nombre que siga la numeración (`12_…`) | — |
+| 1 | Copiar el PDF a `agents/agent_faq/data/pdfs/`, con un nombre que siga la numeración (el próximo es `14_…`), y sumarlo a `PDFS_NUEVOS` y a `PREGUNTAS` en `scripts/revisar_buscador_faq.py`, con 3 o 4 preguntas que solo él responda | — |
 | 2 | `Remove-Item -Recurse -Force agents\agent_faq\data\vectorstore\faiss_pdfs` | Borra el índice viejo. La IA lo arma de nuevo al arrancar |
 | 3 | `docker compose up -d --no-deps --build ia` | Esperar a que `docker compose ps` muestre `ia` como `(healthy)` (1 o 2 minutos) |
-| 4 | `docker compose cp scripts/revisar_buscador_faq.py ia:/tmp/revisar_buscador_faq.py` y luego `docker compose exec -e PYTHONIOENCODING=utf-8 ia python /tmp/revisar_buscador_faq.py` | Prueba el buscador sin gastar Gemini: las preguntas que responden los documentos oficiales los siguen encontrando primero, y el PDF nuevo no ocupa más del 35 % del índice. Debe terminar con `Resultado: todo OK`. Si el PDF trae otros temas, se ajustan las preguntas del script |
+| 4 | `docker compose cp scripts/revisar_buscador_faq.py ia:/tmp/revisar_buscador_faq.py` y luego `docker compose exec -e PYTHONIOENCODING=utf-8 ia python /tmp/revisar_buscador_faq.py` | Prueba el buscador sin gastar Gemini: las preguntas que responden los documentos oficiales los siguen encontrando primero, las de cada PDF nuevo encuentran primero a su PDF, y **cada** PDF nuevo ocupa como máximo el 35 % del índice (también muestra el total). Debe terminar con `Resultado: todo OK` |
 | 5 | `docker compose cp ia:/app/agents/agent_faq/data/vectorstore/faiss_pdfs agents/agent_faq/data/vectorstore/` | Copia el índice nuevo a la carpeta del repositorio |
 | 6 | `git add -f agents/agent_faq/data/pdfs/<el PDF> agents/agent_faq/data/vectorstore/faiss_pdfs` | El `.gitignore` ignora `agents/*/data/`: por eso va `-f` |
 
 Si no se rehace el índice, el bot sigue sin ver el PDF nuevo. Un PDF que todavía no está listo va a `agents/agent_faq/data/pdfs_en_revision/`, que la IA no lee (DEC-152).
+
+**"Debilidad conocida" (DEC-164).** Tres preguntas oficiales (nota final, ChatGPT y publicar el nombre en LinkedIn) ya las resolvía mal el buscador **antes** de los PDF 12 y 13. El script las muestra como `DÉBIL` u `OK`, con el motivo escrito, pero no las cuenta como falla. Una pregunta nueva solo entra a esa categoría si se midió que ya fallaba sin el PDF nuevo y que el bot no responde peor. Cualquier otra falla sigue frenando el PDF.
+
+**El PDF 13** (programa del bootcamp) se genera desde `scripts/pdf_programa/`: para cambiarlo se edita el `.md` y se corre el comando del comienzo de `generar.py`, en un contenedor desechable. Después, los pasos 2 a 6.
+
+## 15. Gemini lento o saturado (DEC-165 y DEC-166)
+
+**Síntoma.** El bot responde "No encontré una respuesta segura en los documentos…" a dudas que antes respondía. El buscador no tiene la culpa: el registro de la IA dice por qué.
+
+```powershell
+docker compose logs ia --since 15m
+```
+
+| El registro dice | Qué pasa | Qué hacer |
+|---|---|---|
+| `503 UNAVAILABLE` … `high demand` | Google está saturado con ese modelo. A la cuenta gratuita la rechaza primero | Configurar un modelo de respaldo (abajo). Para la demo, usar una clave **con facturación** |
+| `se agotó el tope de 40 s` | Gemini responde, pero lento: las 3 llamadas de una duda no entran en el tope | Esperar a que baje la demanda, o subir los tres tiempos de la sección 2, manteniendo el orden |
+| `404 NOT_FOUND` | El nombre del modelo no existe para esa clave | Corregir `GEMINI_MODEL` o `GEMINI_MODELO_RESPALDO` |
+
+**Cambiar la clave no arregla un 503:** la saturación es del modelo, para todos. Una clave de **otro proyecto** de Google solo pone en cero la cuota diaria.
+
+**Elegir el modelo principal y el de respaldo.** Primero se listan los modelos que acepta la clave. El comando imprime solo nombres, nunca la clave, y no gasta cuota:
+
+```powershell
+docker compose exec ia python -c "import os; from google import genai; c = genai.Client(api_key=os.environ['GEMINI_API_KEY']); [print(m.name) for m in c.models.list() if 'generateContent' in (m.supported_actions or []) and 'lite' in m.name]"
+```
+
+Después se prueba cada candidato con **una** llamada mínima: unas pocas palabras, y un 503 o un 404 no se cobran.
+
+```powershell
+docker compose exec ia python -c "import os, time; from google import genai; c = genai.Client(api_key=os.environ['GEMINI_API_KEY']); t = time.time(); print(c.models.generate_content(model='NOMBRE', contents='Responde solo: ok').text, round(time.time() - t, 1), 's')"
+```
+
+Conviene un modelo "lite" que responda en menos de 5 s. Uno que tarde 20 s no sirve: una duda hace 3 llamadas. Se escriben `GEMINI_MODEL` y `GEMINI_MODELO_RESPALDO` en el `.env` (dos modelos **distintos**), y se aplica con `docker compose up -d ia`.
+
+⚠️ `GEMINI_MODEL` también cambia el modelo de la clasificación de todos los mensajes y de los borradores (D5).
