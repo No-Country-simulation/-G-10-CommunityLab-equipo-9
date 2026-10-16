@@ -6,7 +6,7 @@
 
 ## 1. En una frase
 
-**El MVP funciona de punta a punta en una computadora local**: los mensajes entran por el bot y por lotes, se clasifican, el bot responde dudas con la documentación oficial, se redactan borradores de LinkedIn, casos de éxito y una FAQ semanal, Marketing los aprueba en un panel con dashboard, todo se guarda en OCI y, si se enciende, los posts aprobados se publican solos en LinkedIn. **Falta desplegarlo en un servidor** y programar la ingesta cada hora.
+**El MVP funciona de punta a punta en una computadora local**: los mensajes entran por el bot y por lotes, se clasifican, el bot responde dudas con la documentación oficial, se redactan borradores de LinkedIn, casos de éxito y una FAQ semanal, Marketing los aprueba en un panel con dashboard, todo se guarda en OCI y, si se enciende, los posts aprobados se publican solos en LinkedIn. La ingesta corre sola cada hora (T14). **Falta desplegarlo en un servidor.**
 
 ## 2. Objetivos del proyecto
 
@@ -14,14 +14,14 @@
 
 | # | Objetivo específico | Necesidad | Estado |
 |---|---|---|---|
-| OE1 | Capturar los mensajes **en vivo** (bot) y **por lotes** (cada hora), sin duplicados | N1 | 🟡 Las dos capturas funcionan y no duplican. Falta que la ingesta corra sola cada hora en el servidor |
+| OE1 | Capturar los mensajes **en vivo** (bot) y **por lotes** (cada hora), sin duplicados | N1 | ✅ Las dos capturas funcionan y no duplican, y la ingesta corre sola al arrancar y cada hora en punto (T14, DEC-167) |
 | OE2 | Etiquetar cada mensaje con intención, sentimiento y tema, sin perder mensajes si la IA falla | N2 | ✅ |
 | OE3 | Un borrador de post de LinkedIn y un caso de éxito por cada logro, con la voz de la marca | N3 | ✅ Además, el post aprobado se puede publicar solo en LinkedIn (DEC-149; apagado por defecto), y desde T13 Java guarda si se publicó y el panel lo muestra (DEC-160) |
 | OE4 | Responder dudas en vivo con los PDF y convertir las repetidas en una FAQ | N4 | ✅ |
 | OE5 | Dashboard con sentimiento, temas y alertas | N5 | ✅ Desde T12, con una vista por rol (Comunidad y Contenido), la franja "Lo que hizo InsightEdu", la n en cada porcentaje y tema claro y oscuro, con el diseño del prototipo (DEC-153 a DEC-158) |
 | OE6 | Panel con inicio de sesión para revisar, editar, aprobar o rechazar, con consentimiento | N6 | ✅ Desde T13, Borradores es una cola de logros con el diseño del prototipo: una tarjeta por logro, botones por texto, un consentimiento y el aviso de LinkedIn antes de aprobar (DEC-159) |
 | OE7 | Guardar en OCI los activos generados y los aprobados | N7 | ✅ El 2026-10-09 se subieron 31 archivos sin errores, y el 2026-10-12 el dueño del bucket lo confirmó en su consola |
-| OE8 | Todo con un comando, seguro y con pruebas | Transversal | 🟡 5 de 6 servicios en Docker, con claves por cliente, inicio de sesión y pruebas automáticas en cada pieza. Falta la ingesta como servicio |
+| OE8 | Todo con un comando, seguro y con pruebas | Transversal | ✅ Los 6 servicios en Docker con un comando (la ingesta, desde T14), con claves por cliente, inicio de sesión y pruebas automáticas en cada pieza |
 | OE9 | Desplegarlo y ensayar la demo | Transversal | ⏸️ Diseñado, en pausa (sección 3, punto 3) |
 
 Si falta tiempo, lo último que se recorta es OE1, OE3 y OE6.
@@ -32,11 +32,11 @@ Si falta tiempo, lo último que se recorta es OE1, OE3 y OE6.
 |---|---|---|---|
 | 1 | ✅ **Hecho (T11, 2026-10-10):** se borró el código que ya no se usaba en `agents/orquestador/`, sus variables de `config.py` y el `requirements.txt` viejo de la raíz (DEC-145, DEC-146) | Confundía a quien lee el código (personas o asistentes de IA) | [Informe T11](historico/tareas/T11-informe.md): qué se borró, qué se conservó y por qué |
 | 2 | ✅ **Hecho (2026-10-12):** el dueño del bucket confirmó que están `generados/` y `aprobados/`, que los archivos no tienen datos de Discord, y que la PAR es de solo escritura y vence después de la entrega (DEC-129) | Cierra OE7 | — |
-| 3 | **Desplegar y ensayar la demo**: una VM gratis de Oracle Cloud, Caddy con HTTPS y un subdominio de DuckDNS, la ingesta cada hora con `cron`, respaldos diarios, claves nuevas del servidor y un guion de demo de 10 minutos | Cierra OE1, OE8 y OE9 | La propuesta completa está en [historico/tareas/T10-despliegue-demo.md](historico/tareas/T10-despliegue-demo.md), y las decisiones en DEC-137 a DEC-140 |
+| 3 | **Desplegar y ensayar la demo**: una VM gratis de Oracle Cloud, Caddy con HTTPS y un subdominio de DuckDNS, respaldos diarios, claves nuevas del servidor y un guion de demo de 10 minutos. Sigue en pausa (DEC-141). La ingesta cada hora ya no falta: corre sola como servicio (T14, DEC-167, reemplaza el `cron` de DEC-140) | Cierra OE9 | La propuesta completa está en [historico/tareas/T10-despliegue-demo.md](historico/tareas/T10-despliegue-demo.md), y las decisiones en DEC-137 a DEC-140 |
 | 4 | ✅ **Hecho (2026-10-12):** la PAR de OCI vence después de la entrega. Si la demo se corre más tarde, hay que revisarla de nuevo | Si vence, las subidas pasan a `ERROR` | [OPERACION.md](OPERACION.md) §12 |
 | 5 | **Antes de las pruebas finales y de la demo, encender LinkedIn**: acordar la cuenta (perfil o página), conseguir un token vigente, hacer una publicación de prueba y apagarlo al terminar | Viene apagado (DEC-149): sin este paso, aprobar un post no publica nada | [OPERACION.md](OPERACION.md) §13 |
 | 6 | ✅ **Hecho (T15, 2026-10-16):** entraron al bot el PDF 12, de preguntas frecuentes (de Juan Sebastián Rodríguez), y el PDF 13, con el programa del bootcamp. El script de revisión ahora revisa varios PDF y tiene la categoría "debilidad conocida" (DEC-163, DEC-164) | El bot responde dudas que antes derivaba a un mentor: clases grabadas, estudiar trabajando, preguntas técnicas y el contenido del curso | [Informe T15](historico/tareas/T15-informe.md) |
-| 7 | **Antes de la demo, asegurar Gemini**: el 2026-10-16, Google rechazó con 503 ("high demand") varios modelos de la cuenta gratuita, y el bot derivaba dudas que sabía responder. Ya están el modelo de respaldo (DEC-165) y los tiempos más largos (DEC-166). Falta elegir, ese mismo día, `GEMINI_MODEL` y `GEMINI_MODELO_RESPALDO` midiendo cuáles responden. Recomendado: una clave **con facturación** para la demo | Sin Gemini, el bot deriva todo a un mentor (seguro, pero la demo no muestra respuestas) | [OPERACION.md §15](OPERACION.md) |
+| 7 | **Antes de la demo, asegurar Gemini**: el 2026-10-16, Google rechazó con 503 ("high demand") varios modelos de la cuenta gratuita, y el bot derivaba dudas que sabía responder. Ya están el modelo de respaldo (DEC-165, `gemini-3.5-flash` por defecto desde T14), los tiempos más largos (DEC-166) y el reintento ante un 503 o un 504 mientras quede tiempo (DEC-170). La demo usa la cuenta **gratuita** (DEC-169, decisión de Harrison). Falta, el día del ensayo, elegir `GEMINI_MODEL` y `GEMINI_MODELO_RESPALDO` midiendo cuáles responden (OPERACION §15) | Sin Gemini, el bot deriva todo a un mentor (seguro, pero la demo no muestra respuestas) | [OPERACION.md §15](OPERACION.md) |
 
 ### Mejoras posibles (🟡), si sobra tiempo
 
@@ -46,7 +46,7 @@ Si falta tiempo, lo último que se recorta es OE1, OE3 y OE6.
 | Bot y Agente FAQ | Guardar la fuente que citó la IA (hoy se guarda el primer fragmento encontrado); no mostrar "escribiendo…" en `#logros`; liberar el hilo del Agente FAQ cuando se agota el tope; que la **Política de IA** (`04_…`) diga "ChatGPT" con todas sus letras, para que el buscador la encuentre (hoy el bot deriva "¿Puedo usar ChatGPT…?", DEC-164); que "¿Las clases quedan grabadas?" no cuente como **respondida** en el dashboard: el PDF 12 responde que se consulte a un mentor |
 | Agente-Mod | Exigir el largo que pide la guía de voz (los textos salen cortos); no mencionar reacciones que todavía no existen; probar otro modelo con `MOD_MODEL_NAME`; un botón "volver a generar" en el panel |
 | FAQ semanal | Tutoriales y tips. (El botón para reintentar una FAQ en `ERROR` se hizo en T13, DEC-161) |
-| Panel | Mantener la sesión al recargar la página; avisar si dos personas editan el mismo borrador; guardar el **tipo de logro** ("Contratación", "Beca"…) para mostrarlo como etiqueta en la tarjeta de Borradores, como en el prototipo (hoy se lee en el motivo de la IA: la base no lo guarda, decisión 3 de T13); que se vean los **íconos del dashboard** (los SVG dentro de `st.html` no se dibujan en Streamlit 1.65: cambiarlos por íconos de Material, como hizo Borradores; [informe de T13 §6](historico/tareas/T13-informe.md)); el **botón índigo** de DEC-109 no combina con el prototipo (se deja hasta después de la demo). (Las dos mejoras del dashboard, mostrar el tiempo de revisión y que la frustración ignore los mensajes viejos, se hicieron en T12) |
+| Panel | Mantener la sesión al recargar la página; avisar si dos personas editan el mismo borrador; guardar el **tipo de logro** ("Contratación", "Beca"…) para mostrarlo como etiqueta en la tarjeta de Borradores, como en el prototipo (hoy se lee en el motivo de la IA: la base no lo guarda, decisión 3 de T13); el **botón índigo** de DEC-109 no combina con el prototipo (se deja hasta después de la demo). (Las dos mejoras del dashboard, mostrar el tiempo de revisión y que la frustración ignore los mensajes viejos, se hicieron en T12. Los **íconos del dashboard**, que no se veían, se hicieron en T14 con la fuente de íconos de Material) |
 | Operación | Registros de la IA en nivel INFO; sus registros en OCI; integración continua (pruebas automáticas en cada PR) |
 
 Los **riesgos aceptados** (⚠️) están en [DECISIONES.md](DECISIONES.md): por ejemplo, una URL PAR vieja en el historial público de git (DEC-41) y la regla de "respondida" del bot (DEC-79).
@@ -86,6 +86,7 @@ Para recrear una rama retirada: `git branch <nombre> <commit>`.
 | `docs/estado-ramas-retiradas` | `a34c9d5` (fusionada en `main` por el PR #14 y borrada el 2026-10-14) | Esta tabla al día |
 | `tarea/T12-dashboard` | `68d223d` (fusionada en `main` por el PR #15 y borrada el 2026-10-15) | El dashboard por rol, con KPIs y tema claro y oscuro (T12) |
 | `tarea/T13-borradores` | `a224e58` (fusionada en `main` por el PR #17 y borrada el 2026-10-15) | Borradores por logro, estado en LinkedIn (`V9`) y reintento de la FAQ (T13) |
-| `tarea/T15-pdf-preguntas-frecuentes` | Activa: se fusiona en `main` por Pull Request | Los PDF 12 y 13 del Agente FAQ, el índice nuevo, el script de revisión con varios PDF, el modelo de respaldo de Gemini y los tiempos de 40/45/55 s (T15, DEC-163 a DEC-166) |
+| `tarea/T15-pdf-preguntas-frecuentes` | `abd5904` (fusionada en `main` por el PR #18 y borrada) | Los PDF 12 y 13 del Agente FAQ, el índice nuevo, el script de revisión con varios PDF, el modelo de respaldo de Gemini y los tiempos de 40/45/55 s (T15, DEC-163 a DEC-166) |
+| `tarea/T14-ingesta-automatica` | Activa: se fusiona en `main` por Pull Request | El servicio `ingesta` cada hora, la puerta y el aviso "Datos al día", los íconos del dashboard, el reintento ante un 503 y el respaldo por defecto (T14, DEC-167 a DEC-170) |
 
 La traza de cada tarea (qué se pidió, qué se hizo, cómo se probó y qué se decidió) está en [docs/historico/tareas/](historico/tareas/).

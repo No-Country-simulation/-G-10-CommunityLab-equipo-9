@@ -27,7 +27,7 @@
 InsightEdu Lab lee los mensajes de un servidor de Discord, los clasifica con IA, responde dudas en vivo y escribe borradores de posts de LinkedIn. **Una persona los aprueba en un panel antes de publicar nada.**
 
 ```
-Discord ⇄ Bot ──► API Java ⇄ IA (Gemini)        Ingesta por lotes ──► API Java
+Discord ⇄ Bot ──► API Java ⇄ IA (Gemini)        Ingesta (cada hora) ──► API Java
                      │                           Panel (navegador) ──► API Java
                      └──► PostgreSQL (la base de datos)
 ```
@@ -41,6 +41,7 @@ Todo corre en **contenedores de Docker**. Un contenedor es como una "caja" con u
 | `ia` | Clasifica mensajes, responde dudas con los PDF y redacta borradores | `http://127.0.0.1:8000/health` |
 | `bot` | Escucha `#dudas` y `#logros` en Discord y responde | En tu servidor de Discord |
 | `panel` | Página web para aprobar borradores y ver el dashboard | `http://127.0.0.1:8501` |
+| `ingesta` | Lee Discord sola al arrancar y cada hora en punto, y rescata los mensajes que el bot no vio. Solo lee: no es otro bot | `docker compose logs ingesta`, y en el panel, "Datos al día" |
 
 ## 2. ⚠️ Tres reglas antes de empezar
 
@@ -110,7 +111,7 @@ Copy-Item ingestion/discord/.env.example ingestion/discord/.env
 | `.env` | `GEMINI_API_KEY` | Tu clave de Google AI Studio |
 | `.env` y `ingestion/discord/.env` | `DISCORD_BOT_TOKEN` | El token de **tu** bot (paso 4) |
 | `.env` y `ingestion/discord/.env` | `DISCORD_CHANNEL_DUDAS_ID` y `DISCORD_CHANNEL_LOGROS_ID` | Los IDs de tus canales |
-| `ingestion/discord/.env` | `DISCORD_GUILD_ID` | El ID de tu servidor |
+| `.env` y `ingestion/discord/.env` | `DISCORD_GUILD_ID` | El ID de tu servidor (la ingesta lo necesita para leer los roles) |
 
 Las demás variables de Discord (webhooks, roles de mentor) **pueden quedar vacías** para probar.
 
@@ -146,7 +147,7 @@ Comprueba que todo esté bien:
 docker compose ps
 ```
 
-Después de uno o dos minutos, `postgres`, `api-java`, `ia` y `panel` deberían decir `(healthy)`, y `bot`, `Up`. En el navegador, `http://127.0.0.1:8008/actuator/health` debería mostrar `"status":"UP"`.
+Después de uno o dos minutos, `postgres`, `api-java`, `ia` y `panel` deberían decir `(healthy)`, y `bot` e `ingesta`, `Up` (son **6 servicios**). En el navegador, `http://127.0.0.1:8008/actuator/health` debería mostrar `"status":"UP"`.
 
 ## 8. Prueba el sistema (unos 20 minutos)
 
@@ -172,7 +173,16 @@ Escribe estos mensajes en tu servidor, uno por uno:
 
 ### 8.3 · La ingesta por lotes
 
-En producción, esto correrá solo cada hora y rescatará lo que el bot no vio. Aquí lo corres a mano, desde `ingestion/discord`, con un **entorno de Python propio** (una carpeta `.venv` con las librerías de la ingesta, separada del Python de tu PC).
+**Corre sola** (T14): el servicio `ingesta` lee Discord una vez al arrancar y después cada hora en punto, y rescata lo que el bot no vio. Para ver su última corrida y correrla ya, sin esperar a la hora:
+
+```powershell
+docker compose logs ingesta
+docker compose exec ingesta python programador.py --una-vez
+```
+
+El registro debería terminar con `Corrida terminada …`, con los números del lote (`nuevos`, `actualizados` y `sin cambios`). En el panel, la barra lateral dice **"Datos al día"**. Más detalle: [OPERACION.md §16](docs/OPERACION.md).
+
+**Correrla a mano (opcional).** Sigue funcionando, y no duplica nada aunque el servicio esté encendido: usa sus propios marcadores. Se corre desde `ingestion/discord`, con un **entorno de Python propio** (una carpeta `.venv` con las librerías de la ingesta, separada del Python de tu PC).
 
 **La primera vez** (crea el entorno e instala las librerías). Ejecuta **una línea a la vez**:
 

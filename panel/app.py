@@ -9,7 +9,7 @@ los edita, los aprueba o los rechaza. El panel habla solo con la API Java (DEC-1
 Páginas (DEC-114), en paginas/: Borradores (T07, rehecha en T13), Dashboard (T08 y T12) y Errores (T07).
 
 Barra lateral (T13, como el prototipo): "CommunityLab · Panel de curaduría" (el título del panel va aquí, no arriba
-de cada página), la navegación con el número de tarjetas por revisar y la sesión. Streamlit dibuja su navegación
+de cada página), la navegación con el número de tarjetas por revisar, el estado de los datos (T14) y la sesión. Streamlit dibuja su navegación
 arriba de todo lo demás de la barra lateral: por eso va oculta (position="hidden") y la reemplazan st.page_link
 propios, que se dibujan en el orden en que se llaman.
 """
@@ -18,6 +18,7 @@ from __future__ import annotations
 import logging
 import os
 import time
+from datetime import datetime, timezone
 
 import streamlit as st
 
@@ -32,6 +33,8 @@ log = logging.getLogger("panel")
 
 # Una sesión sin uso durante 8 horas se cierra sola
 SESION_MAX_INACTIVA_S = 8 * 3600
+# T14: cada cuánto se vuelve a pedir a Java el estado de los datos (la ingesta corre una vez por hora)
+ESTADO_DATOS_CADA_S = 60
 
 st.set_page_config(page_title="CommunityLab | Curaduría", layout="wide")
 st.markdown(ui.ESTILOS, unsafe_allow_html=True)  # solo los estilos fijos de ui.py, nunca datos
@@ -95,6 +98,34 @@ def _etiqueta_borradores() -> str:
     return f"Borradores :gray-badge[{n}]" if n else "Borradores"
 
 
+def _ultimo_lote() -> dict | None:
+    """Lo que dice Java del último lote de la ingesta (T14), pedido como mucho una vez por minuto, no en cada clic.
+
+    Se guarda en la sesión (no en st.cache_data) para que cada persona tenga lo suyo. None: Java no respondió.
+    """
+    guardado = st.session_state.get("_estado_datos")
+    if guardado and time.monotonic() - guardado[0] < ESTADO_DATOS_CADA_S:
+        return guardado[1]
+    cliente = ui.obtener_cliente()
+    ingesta = None
+    if cliente is not None:
+        try:
+            ingesta = cliente.dashboard_ingesta()
+        except Exception as e:  # el recuadro es un aviso: nunca rompe una página
+            log.warning("No se pudo leer el estado de los datos (%s)", type(e).__name__)
+    st.session_state["_estado_datos"] = (time.monotonic(), ingesta)
+    return ingesta
+
+
+def _estado_de_los_datos() -> None:
+    """El recuadro del prototipo (DEC-168): textos fijos y números, en markdown; el color lo pone estilo.ESTILOS."""
+    estado = estilo.estado_datos(_ultimo_lote(), datetime.now(timezone.utc))
+    with st.container(key=f"nav-datos-{estado['clave']}", gap=None):
+        st.markdown(f"{estado['icono']} **{estado['titulo']}**")
+        for linea in estado["lineas"]:
+            st.caption(linea)
+
+
 # Sesión vencida por inactividad
 if "usuario" in st.session_state:
     if time.monotonic() - st.session_state.get("ultimo_uso", 0) > SESION_MAX_INACTIVA_S:
@@ -121,6 +152,7 @@ with st.sidebar:
     st.page_link("paginas/borradores.py", label=_etiqueta_borradores(), icon=":material/edit_note:")
     st.page_link("paginas/dashboard.py", label="Dashboard", icon=":material/bar_chart:")
     st.page_link("paginas/errores.py", label="Errores", icon=":material/error_outline:")
+    _estado_de_los_datos()
     st.text(f"Sesión: {ui.usuario_actual()}")
     st.button("Cerrar sesión", on_click=_cerrar_sesion)
 

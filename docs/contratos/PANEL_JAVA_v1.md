@@ -10,6 +10,8 @@
 >
 > **Agregado en T13** (DEC-159 a DEC-161, solo agrega): en [listar borradores](#21-listar-borradores), `mensajeId`, `motivoIa` y `linkedin` en cada borrador, y `linkedinModo` junto a la lista; en [ver un borrador](#22-ver-un-borrador), `linkedin` (el estado guardado de la publicación en LinkedIn, migración `V9`); en [lo que quedó en `ERROR`](#26-lo-que-quedó-en-error), la lista `faq`; y la puerta 9, [reintentar la FAQ semanal](#28-reintentar-la-faq-semanal-t13). Ningún campo existente cambió de nombre ni de significado.
 
+> **Agregado en T14** (DEC-168, solo agrega): la puerta de solo lectura `GET /api/v1/dashboard/ingesta`, con el último lote de la ingesta, para el aviso "Datos al día" de la barra lateral ([sección 7](#7-dashboard-t08)). Nada de lo anterior cambió.
+
 ## 0. Sobre este documento
 
 **Qué es.** Las puertas de la API Java que usa el panel de curaduría para listar, editar, aprobar o rechazar borradores, y para reintentar lo que quedó en `ERROR`.
@@ -374,7 +376,7 @@ Java **no** responde cabeceras CORS: se quitó `CorsConfig`, que aceptaba cualqu
 
 ## 7. Dashboard (T08)
 
-Ocho puertas **de solo lectura** para la página "Dashboard" (N5, DEC-119 a DEC-123): seis de T08 y dos de T12 (`comunidad` y `contenido`, DEC-153), una para cada vista del dashboard por rol. Usan la misma clave `panel` (las protege el prefijo `/api/v1/dashboard`, con la ruta normalizada y la segunda revisión en el controlador). **No** piden `X-Usuario`: no cambian nada.
+Nueve puertas **de solo lectura**: ocho para la página "Dashboard" (N5, DEC-119 a DEC-123), seis de T08 y dos de T12 (`comunidad` y `contenido`, DEC-153), una para cada vista del dashboard por rol; y una de T14 (`ingesta`, DEC-168) para el aviso "Datos al día" que la barra lateral muestra en todas las páginas. Usan la misma clave `panel` (las protege el prefijo `/api/v1/dashboard`, con la ruta normalizada y la segunda revisión en el controlador). **No** piden `X-Usuario`: no cambian nada.
 
 **Java calcula y el panel solo dibuja** (DEC-123). No usan IA: todo sale de las etiquetas que ya guardaron la clasificación (T04) y el bot (T05).
 
@@ -419,6 +421,7 @@ Un período al revés, de más de 366 días o con una fecha mal escrita, o un va
 | `GET /api/v1/dashboard/dudas-sin-responder` | `desde`, `hasta`, `horas` (0 a 2160; **24** por defecto), `excluirOtro` | Las `PREGUNTA_FAQ` de alumnos, del período, con más de `horas` horas y **no atendidas** (DEC-123): el bot no la respondió (`RESPONDIDA`) y ninguna **persona distinta del autor** le contestó con "Responder" de Discord (`respondeA`). Una `DERIVADA` sigue sin responder. Con el texto de la duda (hasta 1000 caracteres), para que el CM la conteste, y (T12) `servidorId` y `canalId`, para armar el enlace `https://discord.com/channels/<servidorId>/<canalId>/<discordId>`. `total` puede ser mayor que la lista (tope de 200). La más antigua primero |
 | `GET /api/v1/dashboard/comunidad` (T12) | `desde`, `hasta` | **Vista Comunidad.** `alumnos`: cuántos alumnos escribieron alguna vez hasta el fin del período (`total`) cuántos escribieron en los 7 y en los 30 días que terminan en `hasta` (`activos7Dias`, `activos30Dias`), y sus `PREGUNTA_FAQ` del período (`dudas`). `bot`: las `PREGUNTA_FAQ` del período que el bot respondió (`respondidas`), las que derivó a un mentor (`derivadas`), las que llegaron por lote sin pasar por él (`sinPasarPorElBot`) y la mediana de segundos del mensaje a su decisión (`segundosMediana`). `derivadasPorTema`: las derivadas del período por tema, de mayor a menor: lo que falta en los documentos |
 | `GET /api/v1/dashboard/contenido` (T12) | `desde`, `hasta` | **Vista Contenido.** `porRevisar`: los borradores pendientes **hoy** (no dependen del período), por tipo (los tres, también en 0) y la fecha del más antiguo. `revision`: por tipo, la mediana de `tiempoCuraduriaSeg` de lo aprobado o rechazado en el período, con su `n`. `aprobacion`: aprobados y rechazados en el período. `embudo`: los logros del período (por la fecha de su mensaje), cuántos son publicables según la IA, cuántos no y cuántos tienen su post aprobado. `aprobadosPorSemana`: lo aprobado en el período por semana de aprobación (por su lunes, en hora de Bogotá, también las semanas en 0). `logroAAprobacion`: la mediana de horas del mensaje del logro a la aprobación de su post, de los posts aprobados en el período, con su `n`. `mensajesDePersonas`: los mensajes de personas del período. `activosOci`: los archivos ya guardados en OCI (subidas `SUBIDO`, sin importar el período) |
+| `GET /api/v1/dashboard/ingesta` (T14) | Ninguno | **El estado de los datos.** `ultimoLote`: el lote de la ingesta (`modo = historial`) más reciente por `recibidoEn`, con `recibidoEn`, `modo`, `total`, `nuevos` y `actualizados` (tal como los guardó `lotes_recibidos`). `null` si todavía no llegó ninguno. Solo números y la fecha: ni textos ni `loteId`. El panel decide el color y el texto (DEC-168) |
 
 ### 7.4 Ejemplos
 
@@ -564,6 +567,17 @@ GET /api/v1/dashboard/contenido?desde=2026-09-15&hasta=2026-10-14
   "activosOci": 36
 }
 ```
+
+`GET /api/v1/dashboard/ingesta` (T14):
+
+```json
+{
+  "ultimoLote": { "recibidoEn": "2026-10-16T20:00:03.412Z", "modo": "historial", "total": 67, "nuevos": 0,
+                  "actualizados": 2 }
+}
+```
+
+Si todavía no llegó ningún lote: `{ "ultimoLote": null }` (200, no es un error).
 
 Sin datos, los conteos vienen en 0 y las medianas en `null` (no es un error).
 

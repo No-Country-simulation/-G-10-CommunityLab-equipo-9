@@ -9,6 +9,7 @@ import com.insightedulab.backend_java.dashboard.VistasDashboard.PersonaFrustraci
 import com.insightedulab.backend_java.dashboard.VistasDashboard.SemanaCantidad;
 import com.insightedulab.backend_java.dashboard.VistasDashboard.TemaCantidad;
 import com.insightedulab.backend_java.dashboard.VistasDashboard.TemaTendencia;
+import com.insightedulab.backend_java.dashboard.VistasDashboard.UltimoLote;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -20,6 +21,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * SQL del dashboard (T08, N5). Solo lectura: nada aquí cambia la base.
@@ -231,6 +233,16 @@ public class DashboardRepository {
     // Todo lo que ya está en el bucket, sin importar el período
     private static final String ACTIVOS_OCI = "SELECT count(*) FROM subidas_oci WHERE estado = 'SUBIDO'";
 
+    // T14: solo los lotes de la ingesta (historial). Hoy el bot no registra lotes, pero si algún día lo hiciera,
+    // el aviso "Datos al día" seguiría midiendo la ingesta y no la actividad en vivo
+    private static final String ULTIMO_LOTE = """
+            SELECT recibido_en, modo, total, nuevos, actualizados
+            FROM lotes_recibidos
+            WHERE modo = 'historial'
+            ORDER BY recibido_en DESC, id DESC
+            LIMIT 1
+            """;
+
     private final NamedParameterJdbcTemplate jdbc;
 
     public DashboardRepository(NamedParameterJdbcTemplate jdbc) {
@@ -364,6 +376,13 @@ public class DashboardRepository {
     public long activosOci() {
         Long n = jdbc.queryForObject(ACTIVOS_OCI, new MapSqlParameterSource(), Long.class);
         return n == null ? 0 : n;
+    }
+
+    /** El lote de la ingesta más reciente, o vacío si todavía no llegó ninguno (T14). */
+    public Optional<UltimoLote> ultimoLote() {
+        return jdbc.query(ULTIMO_LOTE, new MapSqlParameterSource(), (rs, i) -> new UltimoLote(
+                instante(rs, "recibido_en"), rs.getString("modo"), rs.getInt("total"), rs.getInt("nuevos"),
+                rs.getInt("actualizados"))).stream().findFirst();
     }
 
     private static MapSqlParameterSource periodo(Instant desde, Instant hasta) {

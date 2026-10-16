@@ -1,7 +1,7 @@
 # AGENTS.md — guía para asistentes de IA
 
 > Para cualquier asistente de IA o agente de código (de cualquier proveedor) que trabaje en este repositorio. También sirve a una persona que llega por primera vez.
-> **Rama:** `main` · **Actualizado:** 2026-10-15
+> **Rama:** `main` · **Actualizado:** 2026-10-16
 
 ## 1. El proyecto en tres líneas
 
@@ -39,16 +39,17 @@
 | `agents/agent_mod/` | Agente-Mod: borradores, FAQ semanal y `guia_de_voz.md` | Python, Gemini |
 | `agents/bot_discord/` | Bot de Discord en vivo | discord.py |
 | `panel/` | Panel web: inicio de sesión, curaduría y dashboard | Streamlit |
-| `ingestion/discord/` | Ingesta por lotes y **contrato v1** (`contract.py`, `transform.py`) | Python, httpx, pydantic |
+| `ingestion/discord/` | Ingesta por lotes, que corre sola cada hora como el servicio `ingesta` (`programador.py`, T14), y **contrato v1** (`contract.py`, `transform.py`) | Python, httpx, pydantic |
+| `agents/reintento_llm.py` | El reintento de Gemini en vivo ante un 503 o un 504 (DEC-170), común al clasificador y al Agente FAQ | Python, LangChain |
 | `scripts/` | Generar claves y usuarios del panel sin mostrarlos; revisar el buscador del Agente FAQ (`revisar_buscador_faq.py`); probar LinkedIn (ver la regla **LinkedIn**) | Python |
-| `compose.yml` | Los 5 servicios de Docker | Docker Compose |
+| `compose.yml` | Los 6 servicios de Docker (el sexto, `ingesta`, desde T14) | Docker Compose |
 
 ## 4. Reglas que no se rompen
 
 | Regla | Detalle |
 |---|---|
 | **Secretos** | Nunca leer, imprimir, copiar a un chat ni subir a git un archivo `.env`, una clave, un token de Discord o de LinkedIn, una URL PAR de OCI ni una contraseña. Para revisar un `.env`, mostrar solo los nombres de las variables. Las claves se crean con `scripts/generar_api_key.py` y los usuarios con `scripts/crear_usuario_panel.py` |
-| **Discord** | **Nunca ejecutar `ingestion/discord/simulate_students.py`**: publica mensajes falsos y los duplica. **Nunca dos bots encendidos** con el mismo token o en el mismo canal: cada mensaje se respondería dos veces |
+| **Discord** | **Nunca ejecutar `ingestion/discord/simulate_students.py`**: publica mensajes falsos y los duplica. **Nunca dos bots encendidos** con el mismo token o en el mismo canal: cada mensaje se respondería dos veces. El servicio `ingesta` usa el mismo token, pero solo **lee** (GET): no cuenta como un segundo bot |
 | **Migraciones** | Una migración de Flyway ya aplicada **nunca se edita**. Cada cambio de base va en un archivo nuevo; el siguiente es `V10__…` |
 | **Contratos** | Solo crecen con cambios que **agregan**. Cambiar o quitar un campo exige una versión nueva y avisar a todas las piezas. El contrato v1 tiene una sola implementación: `ingestion/discord/contract.py` |
 | **Una sola puerta** | Solo `api-java` lee y escribe la base. La IA no guarda el estado del sistema y solo la llama Java. El panel, el bot y la ingesta hablan solo con Java |

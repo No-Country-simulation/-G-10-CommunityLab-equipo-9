@@ -3,6 +3,8 @@ from __future__ import annotations
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import Runnable
 
+from agents.reintento_llm import ReintentoEnVivo
+
 from ..config import (
     CLASIFICADOR_PROVIDER, CLASIFICADOR_MODEL, CLASIFICADOR_TEMPERATURE,
     GEMINI_API_KEY, OPENAI_API_KEY, COHERE_API_KEY, ANTHROPIC_API_KEY,
@@ -24,8 +26,8 @@ def build_llm(modelo: str | None = None, temperatura: float | None = None,
 
     Sin argumentos, el del clasificador. El Agente-Mod (T06) pasa su modelo, su temperatura y su tiempo
     máximo, pero usa el mismo proveedor y la misma clave (D5).
-    usar_respaldo: el clasificador lo pide (DEC-165). El Agente-Mod no: una segunda llamada no cabría en su tiempo,
-    y si falla, Java reintenta.
+    usar_respaldo: el clasificador lo pide (DEC-165), y con él, el reintento en vivo ante un 503 o un 504 (DEC-170).
+    El Agente-Mod no: una segunda llamada no cabría en su tiempo, y si falla, Java reintenta.
     """
     provider = CLASIFICADOR_PROVIDER.lower()
 
@@ -47,7 +49,8 @@ def build_llm(modelo: str | None = None, temperatura: float | None = None,
 
         principal = modelo or CLASIFICADOR_MODEL
         respaldo = MODELO_RESPALDO if usar_respaldo and MODELO_RESPALDO not in ("", principal) else None
-        return con_respaldo(gemini(principal), gemini(respaldo) if respaldo else None)
+        llm = con_respaldo(gemini(principal), gemini(respaldo) if respaldo else None)
+        return ReintentoEnVivo(llm, timeout_s or LLM_TIMEOUT_S) if usar_respaldo else llm
 
     if provider == "openai":
         if not OPENAI_API_KEY:

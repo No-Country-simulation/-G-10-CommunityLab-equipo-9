@@ -13,7 +13,7 @@ o peso, se ponen en un st.container(key=…) y una regla fija de ESTILOS los alc
 from __future__ import annotations
 
 import html
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import streamlit as st
 
@@ -41,16 +41,18 @@ DESTINOS = {
 TIPOS_PLURAL = {"POST_LINKEDIN": ("post", "posts"), "CASO_EXITO": ("caso de éxito", "casos de éxito"),
                 "FAQ": ("FAQ", "FAQ")}
 
-# Íconos de trazo (fijos), como en el prototipo
-ICONO_RELOJ = ('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2.2" '
-               'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9">'
-               '</circle><path d="M12 7v5l3 2"></path></svg>')
-ICONO_ALERTA = ('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2.2" '
-                'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9.5 17h-19z">'
-                '</path><path d="M12 10v4"></path><path d="M12 17.5v.5"></path></svg>')
-ICONO_DOCUMENTO = ('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2.2" '
-                   'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z">'
-                   '</path><path d="M14 3v5h5"></path><path d="M9 13h6"></path><path d="M9 17h4"></path></svg>')
+# Íconos (T14): los <svg> dentro de st.html no se dibujan en Streamlit 1.65 (informe de T13 §6). Estos usan la
+# fuente de íconos de Material que Streamlit ya carga (la misma de :material/…:): el texto es el nombre del ícono
+_FUENTE_ICONOS = ("font-family: 'Material Symbols Rounded'; font-weight: normal; font-style: normal; "
+                  "font-size: 20px; line-height: 1; letter-spacing: normal; text-transform: none; white-space: nowrap; "
+                  "font-feature-settings: 'liga'; -webkit-font-feature-settings: 'liga'; user-select: none")
+ICONO_RELOJ = '<span aria-hidden="true" style="' + _FUENTE_ICONOS + '; color: {color}">schedule</span>'
+ICONO_ALERTA = '<span aria-hidden="true" style="' + _FUENTE_ICONOS + '; color: {color}">warning</span>'
+ICONO_DOCUMENTO = '<span aria-hidden="true" style="' + _FUENTE_ICONOS + '; color: {color}">description</span>'
+
+# Estado de los datos (T14, DEC-168): el recuadro de la barra lateral
+VERDE_DATOS = "#0ca30c"  # el del prototipo. Es un ícono (no texto): contraste ≥ 3:1 en el fondo claro y en el oscuro
+HORAS_AL_DIA = 2         # el último lote llegó hace menos: "Datos al día"; si no, "Datos atrasados"
 
 # Los estilos fijos del panel. Nunca llevan datos. dash-*: el Dashboard (T12); bor-*: Borradores (T13);
 # nav-*: la barra lateral (T13)
@@ -70,6 +72,17 @@ ESTILOS = f"""<style>
 [class*="st-key-nav-titulo"] p {{ margin: 0; }}
 [class*="st-key-nav-titulo"] [data-testid="stMarkdownContainer"] p strong {{ font-size: 19px; font-weight: 700; }}
 [class*="st-key-nav-subtitulo"] p {{ margin: 0; font-size: 14px; {SUAVE}; }}
+/* T14: el recuadro "Estado de los datos", como el prototipo. El color del ícono depende del estado, no del tema */
+[class*="st-key-nav-datos"] {{
+    border: 1px solid {BORDE}; border-radius: 8px; padding: 12px 14px; background: {FONDO_TARJETA}; gap: 4px;
+}}
+[class*="st-key-nav-datos"] [data-testid="stMarkdownContainer"] p {{ font-size: 15px; }}
+[class*="st-key-nav-datos"] [data-testid="stCaptionContainer"] p {{ font-size: 14px; }}
+/* El ícono de un markdown (:material/…:) es un span con role="img" */
+[class*="st-key-nav-datos"] span[role="img"] {{ font-size: 18px; vertical-align: -3px; }}
+[class*="st-key-nav-datos-al-dia"] span[role="img"] {{ color: {VERDE_DATOS}; }}
+[class*="st-key-nav-datos-atrasados"] span[role="img"] {{ color: {ESPERA}; }}
+[class*="st-key-nav-datos-sin-info"] span[role="img"] {{ {SUAVE}; }}
 
 [class*="st-key-bor-tarjeta"], [class*="st-key-bor-elegida"] {{
     position: relative; border: 1px solid {BORDE}; border-radius: 10px; padding: 14px 16px;
@@ -121,6 +134,46 @@ def hace(iso: str | None) -> str:
         return "—"
     dias = (datetime.now(ui.ZONA) - datetime.fromisoformat(iso.replace("Z", "+00:00"))).days
     return "hoy" if dias < 1 else ("hace 1 día" if dias == 1 else f"hace {dias} días")
+
+
+def hace_minutos(iso: str, ahora: datetime) -> str:
+    """Cuánto pasó desde una fecha de Java, con minutos y horas (el recuadro de los datos se mira por hora)."""
+    minutos = max(int((ahora - datetime.fromisoformat(iso.replace("Z", "+00:00"))).total_seconds() // 60), 0)
+    if minutos < 60:
+        return f"hace {minutos} min"
+    horas = minutos // 60
+    if horas < 24:
+        return f"hace {horas} h"
+    dias = horas // 24
+    return "hace 1 día" if dias == 1 else f"hace {dias} días"
+
+
+def proxima_hora(ahora: datetime) -> str:
+    """La próxima corrida de la ingesta: la hora en punto siguiente, en hora de Bogotá (DEC-167)."""
+    local = ahora.astimezone(ui.ZONA).replace(minute=0, second=0, microsecond=0)
+    return (local + timedelta(hours=1)).strftime("%H:00")
+
+
+def estado_datos(ingesta: dict | None, ahora: datetime) -> dict:
+    """El recuadro "Estado de los datos" (DEC-168): clave del estilo, ícono, título y líneas.
+
+    ingesta: lo que devolvió GET /api/v1/dashboard/ingesta, o None si Java no respondió. Todo lo que devuelve son
+    textos fijos y números: se puede mostrar en markdown (DEC-158).
+    """
+    if ingesta is None:
+        return {"clave": "sin-info", "icono": ":material/cloud_off:",
+                "titulo": "Estado de los datos: sin información", "lineas": ["No se pudo consultar a la API Java."]}
+    proxima = f"Próxima: {proxima_hora(ahora)} (cada hora, sola)"
+    lote = ingesta.get("ultimoLote")
+    if not lote:
+        return {"clave": "atrasados", "icono": ":material/schedule:", "titulo": "Todavía no hay lotes",
+                "lineas": [proxima]}
+    recibido = datetime.fromisoformat(lote["recibidoEn"].replace("Z", "+00:00"))
+    al_dia = ahora - recibido < timedelta(hours=HORAS_AL_DIA)
+    return {"clave": "al-dia" if al_dia else "atrasados",
+            "icono": ":material/check_circle:" if al_dia else ":material/warning:",
+            "titulo": "Datos al día" if al_dia else "Datos atrasados",
+            "lineas": [f"Última actualización: {hace_minutos(lote['recibidoEn'], ahora)}", proxima]}
 
 
 def corto(texto: str | None, largo: int = 240) -> str:

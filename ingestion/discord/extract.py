@@ -24,7 +24,7 @@ from pathlib import Path
 
 import httpx
 
-from config import ConfigError, cargar_config
+from config import Config, ConfigError, cargar_config
 from discord_api import DiscordAPI, DiscordAPIError, snowflake_desde_fecha
 
 CARPETA_DATOS = Path(__file__).parent / "data"
@@ -114,29 +114,26 @@ def extraer_contexto(api: DiscordAPI, servidor_id: str, mensajes: list[dict]) ->
     }
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Extrae los mensajes de Discord a data/raw/.")
-    parser.add_argument("--todo", action="store_true", help="extraer todo el historial, sin usar el marcador")
-    args = parser.parse_args()
-
-    try:
-        config = cargar_config()
-    except ConfigError as e:
-        print(f"❌ {e}")
-        return 1
-
+def ids_faltantes(config: Config) -> list[str]:
+    """Qué IDs faltan en el .env para poder extraer (los canales y el servidor)."""
     canales = {"dudas": config.canal_dudas_id, "logros": config.canal_logros_id}
     faltantes = [canal for canal, canal_id in canales.items() if canal_id is None]
     if config.guild_id is None:
         faltantes.append("servidor (DISCORD_GUILD_ID)")
-    if faltantes:
-        print(f"❌ Falta el ID de: {', '.join(faltantes)}. Corre verify_connection.py y cópialos al .env.")
-        return 1
+    return faltantes
 
-    marcadores = {} if args.todo else leer_marcadores()
-    ahora = datetime.now(timezone.utc)
+
+def extraer(config: Config, todo: bool = False, ahora: datetime | None = None) -> dict:
+    """Extrae los dos canales y el contexto a data/raw/. Devuelve solo números y estados (sin textos).
+
+    La usan main() y el programador de la ingesta (programador.py, T14).
+    """
+    canales = {"dudas": config.canal_dudas_id, "logros": config.canal_logros_id}
+    marcadores = {} if todo else leer_marcadores()
+    ahora = ahora or datetime.now(timezone.utc)
     CARPETA_CRUDOS.mkdir(parents=True, exist_ok=True)
     todos = []
+    resumen = {"canales": {}}
     with DiscordAPI(config.bot_token) as api:
         for canal, canal_id in canales.items():
             desde = desde_donde(marcadores.get(canal_id), config.dias_relectura, ahora)
@@ -155,13 +152,37 @@ def main() -> int:
             }
             archivo = CARPETA_CRUDOS / f"{canal}.json"
             archivo.write_text(json.dumps(extraccion, ensure_ascii=False, indent=2), encoding="utf-8")
-            alcance = "todo el historial" if desde is None else f"últimos {config.dias_relectura} días o desde el marcador"
-            print(f"✅ #{canal:<7} {len(mensajes)} mensajes ({alcance}) → data/raw/{archivo.name}")
+            resumen["canales"][canal] = {"mensajes": len(mensajes), "todo_el_historial": desde is None}
 
         contexto = extraer_contexto(api, config.guild_id, todos)
     ARCHIVO_CONTEXTO.write_text(json.dumps(contexto, ensure_ascii=False, indent=2), encoding="utf-8")
-    rol_bot = "encontrado" if contexto["rol_bot_id"] else "no encontrado"
-    print(f"✅ Contexto: rol del bot {rol_bot}, roles de {len(contexto['roles_por_autor'])} autores reales → data/raw/context.json")
+    resumen["rol_bot_encontrado"] = contexto["rol_bot_id"] is not None
+    resumen["autores_reales"] = len(contexto["roles_por_autor"])
+    return resumen
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Extrae los mensajes de Discord a data/raw/.")
+    parser.add_argument("--todo", action="store_true", help="extraer todo el historial, sin usar el marcador")
+    args = parser.parse_args()
+
+    try:
+        config = cargar_config()
+    except ConfigError as e:
+        print(f"❌ {e}")
+        return 1
+
+    faltantes = ids_faltantes(config)
+    if faltantes:
+        print(f"❌ Falta el ID de: {', '.join(faltantes)}. Corre verify_connection.py y cópialos al .env.")
+        return 1
+
+    resumen = extraer(config, todo=args.todo)
+    for canal, datos in resumen["canales"].items():
+        alcance = "todo el historial" if datos["todo_el_historial"] else f"últimos {config.dias_relectura} días o desde el marcador"
+        print(f"✅ #{canal:<7} {datos['mensajes']} mensajes ({alcance}) → data/raw/{canal}.json")
+    rol_bot = "encontrado" if resumen["rol_bot_encontrado"] else "no encontrado"
+    print(f"✅ Contexto: rol del bot {rol_bot}, roles de {resumen['autores_reales']} autores reales → data/raw/context.json")
     return 0
 
 

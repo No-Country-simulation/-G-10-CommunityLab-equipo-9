@@ -15,7 +15,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from config import ConfigError, cargar_config
+from config import Config, ConfigError, cargar_config
 from contract import Lote, Mensaje
 from transform import Contexto, a_contrato, armar_lote
 
@@ -46,17 +46,26 @@ def mostrar_resumen(lote: Lote) -> None:
           f" · mencionan al bot: {sum(m.menciona_al_bot for m in mensajes)}")
 
 
-def main() -> int:
-    try:
-        config = cargar_config()
-    except ConfigError as e:
-        print(f"❌ {e}")
-        return 1
+class SinExtraccion(Exception):
+    """Falta data/raw/context.json: todavía no se corrió extract.py."""
 
+
+class LoteInvalido(Exception):
+    """Algún mensaje no cumple el contrato: no se escribe el lote."""
+
+    def __init__(self, errores: list[tuple[str, str | None, ValidationError]]):
+        super().__init__(f"{len(errores)} mensajes no cumplen el contrato")
+        self.errores = errores  # (canal, id del mensaje, error de pydantic)
+
+
+def construir_lote(config: Config) -> tuple[Lote, Path] | None:
+    """Lee data/raw/, arma el lote y lo escribe en data/batches/. None si no hay mensajes.
+
+    La usan main() y el programador de la ingesta (programador.py, T14).
+    """
     archivo_contexto = CARPETA_CRUDOS / "context.json"
     if not archivo_contexto.exists():
-        print("❌ Falta data/raw/context.json. Corre primero extract.py.")
-        return 1
+        raise SinExtraccion("Falta data/raw/context.json. Corre primero extract.py.")
     contexto_crudo = leer_json(archivo_contexto)
     contexto = Contexto(
         webhooks_propios=config.webhooks_propios,
@@ -79,23 +88,44 @@ def main() -> int:
                 errores.append((canal, crudo.get("id"), e))
 
     if errores:
-        print(f"❌ {len(errores)} mensajes no cumplen el contrato. No se escribió el lote.")
-        for canal, mensaje_id, error in errores:
-            print(f"\n   #{canal} · mensaje {mensaje_id}:")
-            for detalle in error.errors():
-                campo = ".".join(str(p) for p in detalle["loc"])
-                print(f"     - {campo}: {detalle['msg']}")
-        return 1
+        raise LoteInvalido(errores)
     if not mensajes:
-        print("ℹ️  No hay mensajes nuevos: no se armó ningún lote.")
-        return 0
+        return None
 
     lote = armar_lote(mensajes, modo="historial", servidor_id=contexto_crudo["servidor_id"])
     CARPETA_LOTES.mkdir(parents=True, exist_ok=True)
     nombre = "batch_" + lote.generado_en.replace(":", "").replace("-", "").replace(".", "") + ".json"
     archivo = CARPETA_LOTES / nombre
     archivo.write_text(lote.model_dump_json(indent=2) + "\n", encoding="utf-8")
-    print(f"✅ {len(lote.mensajes)} mensajes cumplen el contrato v{lote.version_contrato} → data/batches/{nombre}")
+    return lote, archivo
+
+
+def main() -> int:
+    try:
+        config = cargar_config()
+    except ConfigError as e:
+        print(f"❌ {e}")
+        return 1
+
+    try:
+        resultado = construir_lote(config)
+    except SinExtraccion as e:
+        print(f"❌ {e}")
+        return 1
+    except LoteInvalido as e:
+        print(f"❌ {len(e.errores)} mensajes no cumplen el contrato. No se escribió el lote.")
+        for canal, mensaje_id, error in e.errores:
+            print(f"\n   #{canal} · mensaje {mensaje_id}:")
+            for detalle in error.errors():
+                campo = ".".join(str(p) for p in detalle["loc"])
+                print(f"     - {campo}: {detalle['msg']}")
+        return 1
+    if resultado is None:
+        print("ℹ️  No hay mensajes nuevos: no se armó ningún lote.")
+        return 0
+
+    lote, archivo = resultado
+    print(f"✅ {len(lote.mensajes)} mensajes cumplen el contrato v{lote.version_contrato} → data/batches/{archivo.name}")
     mostrar_resumen(lote)
     return 0
 

@@ -11,6 +11,7 @@ import com.insightedulab.backend_java.dashboard.VistasDashboard.Contenido;
 import com.insightedulab.backend_java.dashboard.VistasDashboard.Desercion;
 import com.insightedulab.backend_java.dashboard.VistasDashboard.DudasSinResponder;
 import com.insightedulab.backend_java.dashboard.VistasDashboard.Frustracion;
+import com.insightedulab.backend_java.dashboard.VistasDashboard.Ingesta;
 import com.insightedulab.backend_java.dashboard.VistasDashboard.Periodo;
 import com.insightedulab.backend_java.dashboard.VistasDashboard.PorRevisar;
 import com.insightedulab.backend_java.dashboard.VistasDashboard.PuntoSentimiento;
@@ -136,6 +137,11 @@ public class DashboardService {
         // Los 7 y los 30 días que terminan en "hasta", incluido
         long[] a = repo.alumnos(inicio(p.hasta().minusDays(6)), inicio(p.hasta().minusDays(29)), d, h);
         return new Comunidad(p, new Alumnos(a[0], a[1], a[2], a[3]), repo.bot(d, h), repo.derivadasPorTema(d, h));
+    }
+
+    /** El estado de los datos (T14, DEC-168): el último lote de la ingesta, para la barra lateral del panel. */
+    public Ingesta ingesta() {
+        return new Ingesta(repo.ultimoLote().orElse(null));
     }
 
     /** Vista Contenido (T12): lo pendiente, la revisión, el embudo de los logros y lo aprobado. */

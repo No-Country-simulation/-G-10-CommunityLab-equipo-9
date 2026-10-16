@@ -118,6 +118,11 @@ class ClienteJava:
     def dashboard_contenido(self, desde: date, hasta: date) -> dict:
         return self._pedir("GET", "/api/v1/dashboard/contenido", params=_periodo(desde, hasta))
 
+    # T14 (DEC-168): el último lote de la ingesta, para el recuadro "Estado de los datos" de la barra lateral
+
+    def dashboard_ingesta(self) -> dict:
+        return self._pedir("GET", "/api/v1/dashboard/ingesta")
+
     # ── Común ──
 
     def _pedir(self, metodo: str, ruta: str, usuario: str | None = None, cuerpo: dict | None = None,

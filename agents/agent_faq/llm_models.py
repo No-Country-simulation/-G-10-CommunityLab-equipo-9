@@ -4,6 +4,7 @@ para brindar verstailidad a la configuracion del agente
 """
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import Runnable
+from agents.reintento_llm import ReintentoEnVivo
 from .config import (
     FAQ_PROVIDER, FAQ_MODEL_NAME, FAQ_TEMPERATURE, FAQ_LLM_TIMEOUT_S, FAQ_MODELO_RESPALDO,
     GEMINI_API_KEY, OPENAI_API_KEY, COHERE_API_KEY,
@@ -33,8 +34,10 @@ def select_llm() -> Runnable:
         if FAQ_MODELO_RESPALDO and FAQ_MODELO_RESPALDO != FAQ_MODEL_NAME:
             # DEC-165: la respuesta y la revisión anti-alucinación pasan al respaldo si el principal falla.
             # with_structured_output y bind_tools siguen funcionando: LangChain los aplica a los dos modelos
-            return llm.with_fallbacks([gemini(FAQ_MODELO_RESPALDO)])
-        return llm
+            llm = llm.with_fallbacks([gemini(FAQ_MODELO_RESPALDO)])
+        # DEC-170: en vivo, si los dos dieron 503 o 504, reintenta mientras quede tiempo del tope. Fuera de vivo
+        # (la FAQ semanal) no cambia nada
+        return ReintentoEnVivo(llm, FAQ_LLM_TIMEOUT_S)
 
     if FAQ_PROVIDER == "openai":
         if not OPENAI_API_KEY:

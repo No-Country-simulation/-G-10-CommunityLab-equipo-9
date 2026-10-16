@@ -34,7 +34,7 @@ La institución del proyecto es ficticia: **CommunityLab**. Sus documentos (regl
 
 | # | Necesidad | Cómo se cumple hoy | Estado |
 |---|---|---|---|
-| N1 | Capturar la actividad sin esfuerzo manual | El **bot** envía cada mensaje en vivo y la **ingesta por lotes** rescata lo que el bot no vio. Java guarda una fila por mensaje, sin duplicados | ✅ (falta programar la ingesta cada hora en el servidor: [ESTADO.md](ESTADO.md)) |
+| N1 | Capturar la actividad sin esfuerzo manual | El **bot** envía cada mensaje en vivo y la **ingesta por lotes**, que corre sola cada hora en punto, rescata lo que el bot no vio. Java guarda una fila por mensaje, sin duplicados | ✅ La ingesta corre sola cada hora (T14, DEC-167) |
 | N2 | Identificar al instante logros y dudas | La IA etiqueta cada mensaje con **intención, sentimiento y tema** | ✅ |
 | N3 | Posts de LinkedIn con la voz de la marca | El **Agente-Mod** decide si un logro es publicable y redacta un post y un caso de éxito. Si se enciende, Java publica en LinkedIn el post que Marketing aprueba (§4.9) | ✅ |
 | N4 | FAQ y bot que responde dudas | El bot responde con el **Agente FAQ** (solo con respaldo en los PDF) y cada semana se arma un borrador de **FAQ** con las dudas repetidas | ✅ |
@@ -52,7 +52,7 @@ Fuera del MVP, por decisión del equipo: X/Twitter, newsletters, el resumen *Com
                        ┌──────────────────── red interna de Docker ─────────────────────┐
  Discord ⇄ bot ────────┼──► api-java ◄──► ia (clasifica, responde, redacta)              │
  (#dudas, #logros)     │      │  ▲                                                       │
-                       │      │  └──── ingesta por lotes (extract → build → send)        │
+                       │      │  └──── ingesta (sola: al arrancar y cada hora en punto)  │
  Navegador ──► panel ──┼──────┘                                                          │
  (Marketing, CM)       │      │                                                          │
                        │      ├──► postgres (registro oficial)                           │
@@ -78,9 +78,9 @@ Fuera del MVP, por decisión del equipo: X/Twitter, newsletters, el resumen *Com
 | `ia` | `agents/` | Python 3.12, FastAPI, LangGraph, Gemini | Clasifica mensajes (Etiquetador), responde dudas (Agente FAQ, con búsqueda en los PDF) y redacta borradores y la FAQ semanal (Agente-Mod) | `127.0.0.1:8000` |
 | `bot` | `agents/bot_discord/` | Python, discord.py | Escucha `#dudas` y `#logros`, envía cada mensaje a Java y cumple la orden que recibe | Ninguno (sale hacia Discord y Java) |
 | `panel` | `panel/` | Python, Streamlit | Inicio de sesión, curaduría de borradores, errores y dashboard. Habla solo con Java | `127.0.0.1:8501` |
-| Ingesta | `ingestion/discord/` | Python, httpx | Lee el historial de Discord por la API REST, arma un lote del contrato v1 y lo envía a Java | — (se corre a mano hoy) |
+| `ingesta` (T14) | `ingestion/discord/` | Python, httpx | Corre sola al arrancar y después cada hora en punto (hora de Bogotá): lee el historial de Discord por la API REST (solo lectura), arma un lote del contrato v1 y lo envía a Java. Rescata lo que el bot no vio | Ninguno (sale hacia Discord y Java) |
 
-Todos los puertos escuchan solo en `127.0.0.1`: funcionan desde la misma máquina. En un servidor, el único servicio que debe quedar abierto a internet es el panel, con HTTPS ([ESTADO.md](ESTADO.md), despliegue pendiente).
+Son **seis servicios** en `compose.yml`. Todos los puertos escuchan solo en `127.0.0.1`: funcionan desde la misma máquina. En un servidor, el único servicio que debe quedar abierto a internet es el panel, con HTTPS ([ESTADO.md](ESTADO.md), despliegue pendiente).
 
 ---
 
@@ -88,13 +88,15 @@ Todos los puertos escuchan solo en `127.0.0.1`: funcionan desde la misma máquin
 
 ### 4.1 Mensajes por lotes (la ingesta)
 
+El servicio `ingesta` (T14, DEC-167) corre estos pasos **solo**: una vez al arrancar y después **cada hora en punto**, en hora de Bogotá (`programador.py`). Nunca corre dos a la vez (un bloqueo en su volumen); si una corrida falla (Discord o Java caídos), lo registra y espera a la hora siguiente. Su registro lleva solo números y estados. Solo **lee** Discord: no es un segundo bot y convive con el bot encendido. Una corrida en la que nada cambió no gasta Gemini: Java solo vuelve a clasificar un mensaje si cambió su texto. Se puede correr ya con `--una-vez`, y apagar el reloj con `INGESTA_HABILITADA=false` ([OPERACION.md](OPERACION.md) §16).
+
 1. `extract.py` pide a Discord los mensajes de `#dudas` y `#logros` de los últimos días (`INGEST_REREAD_DAYS`).
 2. `build_batch.py` los convierte al contrato v1 y los valida.
 3. `send_batch.py` envía el lote a `POST /api/v1/lotes` con la clave de la ingesta.
 4. Java valida el lote, quita el carácter NUL y hace un **upsert** por `discord_id`: si el mensaje es nuevo, lo inserta; si cambió, lo actualiza; si es idéntico, no hace nada. Si cambió el texto, el mensaje vuelve a `PENDIENTE` para clasificarse otra vez. Las etiquetas existentes no se pisan.
 5. El lote es **idempotente** por `loteId`: si se reenvía, Java devuelve el mismo recibo.
 
-Código: `ingestion/discord/`, `backend-java/.../controller/LoteController.java`, `service/LoteService.java` y `repository/MensajeUpsertRepository.java`.
+Código: `ingestion/discord/` (`programador.py`, el servicio; `extract.py`, `build_batch.py` y `send_batch.py`, sus pasos), `backend-java/.../controller/LoteController.java`, `service/LoteService.java` y `repository/MensajeUpsertRepository.java`.
 
 ### 4.2 Clasificación en segundo plano
 
@@ -124,6 +126,7 @@ Código: `backend-java/.../clasificacion/` y `agents/orquestador/grafo_v1.py` y 
 1. Un alumno escribe en `#dudas` o `#logros`. El bot pide el JSON del mensaje a Discord, lo convierte al contrato v1 con `transform.py` y lo envía a `POST /api/v1/mensajes/en-vivo` (máximo 55 s, mostrando "escribiendo…"; DEC-166).
 2. Java guarda el mensaje **ya reservado**, así la clasificación en segundo plano no lo toma dos veces. Después llama a la IA en modo `tiempoReal`, que tiene un tope total de 40 s (DEC-166).
 3. Si es una duda, la IA consulta al **Agente FAQ**, que busca en los PDF y responde **solo si encuentra respaldo**.
+   Si Gemini responde 503 o 504 (saturado), cada llamada (clasificar, responder y revisar) pasa enseguida al modelo de respaldo (DEC-165); si los dos fallan, espera 1,5 s y reintenta, como mucho 2 veces y **solo si lo que queda del tope alcanza para una llamada completa** (DEC-170). Nunca ante un 400 o un 429. Si no alcanza, el bot deriva.
 4. Java guarda las etiquetas y la respuesta, y le devuelve al bot una **orden**:
 
 | Caso | Orden | Lo que ve el alumno |
@@ -193,7 +196,9 @@ Java calcula y el panel dibuja (DEC-123), con ocho consultas de solo lectura (`/
 
 Reglas (DEC-155): solo cuentan los mensajes `OK`; la vista Comunidad separa a los alumnos de los mentores (`rol=alumnos`); cada porcentaje o índice lleva su **n**, y los tiempos se resumen con la **mediana**. Todo se calcula en hora de Bogotá. El panel tiene **tema claro y oscuro** (menú ⋮ → Settings), y los gráficos cambian de paleta con el tema (DEC-156). Los archivos guardados en OCI se ven en la barra lateral.
 
-Código: `panel/paginas/dashboard.py` y `backend-java/.../dashboard/`.
+**Estado de los datos (T14, DEC-168).** En **todas las páginas**, la barra lateral muestra un recuadro, como el prototipo: "Datos al día" (verde) si el último lote de la ingesta llegó hace menos de 2 horas, "Datos atrasados" (ámbar) si llegó hace más, o "Todavía no hay lotes"; debajo, "Última actualización: hace N min" y "Próxima: HH:00 (cada hora, sola)". Sale de la puerta de solo lectura `GET /api/v1/dashboard/ingesta`, pedida como mucho una vez por minuto; si Java no responde, dice "sin información" y la página sigue funcionando.
+
+Código: `panel/paginas/dashboard.py`, `panel/app.py` (la barra lateral) y `backend-java/.../dashboard/`.
 
 ### 4.8 Guardado en OCI
 
@@ -260,7 +265,7 @@ Las tablas las crea **Flyway** al arrancar Java, con los archivos de `backend-ja
 | [Contrato v1](../ingestion/discord/docs/CONTRACT.md) ([JSON Schema](../ingestion/discord/schema/contract_v1.schema.json), código en `ingestion/discord/contract.py`) | Ingesta y bot → Java → IA | El formato de un lote y de cada mensaje |
 | [JAVA_IA_v1](contratos/JAVA_IA_v1.md) ([JSON Schema](contratos/JAVA_IA_v1.schema.json)) | Java → IA | `POST /v1/procesar` (clasificar), `POST /v1/generar` (borradores) y `POST /v1/faq` (FAQ semanal) |
 | [BOT_JAVA_v1](contratos/BOT_JAVA_v1.md) | Bot → Java | `POST /api/v1/mensajes/en-vivo` y la orden que Java devuelve |
-| [PANEL_JAVA_v1](contratos/PANEL_JAVA_v1.md) | Panel → Java | Borradores, errores y dashboard |
+| [PANEL_JAVA_v1](contratos/PANEL_JAVA_v1.md) | Panel → Java | Borradores, errores, dashboard y el estado de la ingesta (T14) |
 
 **Regla de cambio:** un contrato solo crece con cambios que **agregan** (un campo o una puerta nueva). Cambiar o quitar algo existente exige una versión nueva y avisar a todas las piezas que lo usan.
 
@@ -287,8 +292,9 @@ Todas las piezas usan el mismo formato de error: `{codigo, mensaje, errores, idC
 
 | Tema | Detalle |
 |---|---|
-| Proveedor | **Un solo proveedor: Google Gemini.** Modelo por defecto: `gemini-3.5-flash-lite` (`GEMINI_MODEL`). El Agente-Mod puede usar otro con `MOD_MODEL_NAME`. Este modelo ignora `temperature`. Si Google rechaza el modelo principal (503, demanda alta), el clasificador y el Agente FAQ repiten la llamada con `GEMINI_MODELO_RESPALDO`, si está configurado (DEC-165). El Agente-Mod no: si falla, Java reintenta |
+| Proveedor | **Un solo proveedor: Google Gemini.** Modelo por defecto: `gemini-3.5-flash-lite` (`GEMINI_MODEL`), con `gemini-3.5-flash` de respaldo (`GEMINI_MODELO_RESPALDO`, DEC-169). El Agente-Mod puede usar otro con `MOD_MODEL_NAME`. Este modelo ignora `temperature`. Si Google rechaza el modelo principal (503, demanda alta), el clasificador y el Agente FAQ repiten la llamada con `GEMINI_MODELO_RESPALDO`, si está configurado (DEC-165). El Agente-Mod no: si falla, Java reintenta |
 | Tiempos (de adentro hacia afuera) | Cada llamada al LLM: 20 s · tope en vivo: 40 s · Java → IA: 45 s · bot → Java: 55 s (DEC-166; se configuran con `TIEMPO_REAL_TOPE_S`, `IA_TIEMPO_LECTURA_S` y `TIEMPO_JAVA_S`). El Agente-Mod tiene 25 s; la FAQ semanal tiene un tope de 120 s y Java la espera 150 s |
+| Reintento en vivo (DEC-170) | `agents/reintento_llm.py` envuelve al modelo y su respaldo en el clasificador y el Agente FAQ. Ante un 503 o un 504 de los dos, espera 1,5 s y reintenta (como mucho 2 veces) solo si lo que queda del tope de 40 s alcanza para una llamada de 20 s. Nunca ante 400, 401, 403, 404 ni 429. Fuera de vivo (historial, FAQ semanal) no reintenta; el Agente-Mod no lo usa |
 | Búsqueda en los PDF (Agente FAQ) | Embeddings `intfloat/multilingual-e5-small` y reordenador `cross-encoder/ms-marco-MiniLM-L-6-v2`, descargados al construir la imagen (la IA arranca sin internet). Una respuesta con fidelidad media cuenta como **no encontrada** |
 | El índice de los PDF | Está construido y guardado en git, en `agents/agent_faq/data/vectorstore/faiss_pdfs/`. Si se agregan o cambian PDF en `data/pdfs/`, hay que reconstruirlo: 🧪 borrar `faiss_pdfs/` y volver a construir la imagen `ia`; al arrancar, la IA lo arma de nuevo. Antes de guardarlo, `scripts/revisar_buscador_faq.py` comprueba que los PDF agregados (hoy el 12 y el 13) no tapen a los oficiales ([OPERACION.md](OPERACION.md) §14). Un PDF que todavía no está listo va a `data/pdfs_en_revision/`, que la IA no lee (DEC-152) |
 | Lo que la IA nunca hace | Guardar el estado del sistema, publicar nada o hablar con la base de datos |
@@ -304,7 +310,7 @@ Todas las piezas usan el mismo formato de error: `{codigo, mensaje, errores, idC
 | FAQ semanal | Lunes 8:00 (Bogotá); reintento cada 30 min | Las dudas de los últimos 7 días |
 | Subida a OCI | 30 s, de a 10 | Borradores sin subir |
 
-Las cuatro corren en paralelo (4 hilos), cada una con su propia reserva en la base. Todo se configura en `backend-java/src/main/resources/application.properties` y en variables del `.env` ([OPERACION.md](OPERACION.md) §2).
+Las cuatro corren en paralelo (4 hilos), cada una con su propia reserva en la base. La ingesta de cada hora **no** es una tarea de Java: es el servicio `ingesta`, que le envía los lotes por `POST /api/v1/lotes` (§4.1). Todo se configura en `backend-java/src/main/resources/application.properties` y en variables del `.env` ([OPERACION.md](OPERACION.md) §2).
 
 ---
 
@@ -322,7 +328,8 @@ Las cuatro corren en paralelo (4 hilos), cada una con su propia reserva en la ba
 | El Agente-Mod, la FAQ semanal y la guía de voz | `agents/agent_mod/` |
 | El bot | `agents/bot_discord/` |
 | El panel | `panel/` (`app.py`, `paginas/`, `auth.py`, `cliente_java.py`, `estilo.py` con las piezas de diseño comunes y `logros.py` con la lógica de Borradores) |
-| La ingesta y el contrato v1 | `ingestion/discord/` |
+| La ingesta y el contrato v1 | `ingestion/discord/` (el servicio: `programador.py` y su `Dockerfile`) |
+| El respaldo y el reintento de Gemini | `agents/reintento_llm.py`, `agents/orquestador/clasificadores/llm_models.py` y `agents/agent_faq/llm_models.py` |
 | Los scripts de claves y usuarios, la revisión del buscador y las pruebas de LinkedIn | `scripts/` |
 
 Las pruebas viven junto a cada pieza: `backend-java/src/test/`, `agents/orquestador/tests/`, `agents/bot_discord/tests/`, `panel/tests/` e `ingestion/discord/tests/`. Cómo correrlas: [AGENTS.md](../AGENTS.md).
@@ -351,7 +358,8 @@ La traza detallada de cómo se integró cada pieza (fichas de trabajo, informes 
 
 ## 12. Límites conocidos
 
-- La ingesta todavía se corre a mano, y el despliegue en un servidor con HTTPS está diseñado pero no hecho ([ESTADO.md](ESTADO.md)).
+- El despliegue en un servidor con HTTPS está diseñado pero no hecho ([ESTADO.md](ESTADO.md)).
+- La ingesta sin marcadores (la primera vez, o con su volumen borrado) lee **todo el historial**, y Java acepta hasta 1.000 mensajes por lote: con más, el lote se rechaza. Hoy hay unos 110 mensajes; cada hora se releen solo los últimos 7 días.
 - No hay roles ni permisos distintos por usuario en el panel; todos los usuarios pueden aprobar.
 - No se leen hilos ni foros de Discord, y la IA no sube sus registros a OCI.
 - El dashboard muestra "dudas sin responder" contando solo las respuestas del bot y las hechas con "Responder" de Discord.

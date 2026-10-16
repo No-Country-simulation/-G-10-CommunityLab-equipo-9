@@ -92,8 +92,9 @@ services:
       FAQ_PROVIDER: google
       FAQ_MODEL_NAME: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      # DEC-165: si Gemini rechaza el modelo principal (503), el clasificador y el Agente FAQ usan este. Vacío = sin respaldo
-      GEMINI_MODELO_RESPALDO: ${GEMINI_MODELO_RESPALDO:-}
+      # DEC-165 y DEC-169: si Gemini rechaza el modelo principal (503), el clasificador y el Agente FAQ usan este.
+      # gemini-3.5-flash por defecto. Para no usar respaldo, se pone el mismo modelo de GEMINI_MODEL
+      GEMINI_MODELO_RESPALDO: ${GEMINI_MODELO_RESPALDO:-gemini-3.5-flash}
       # S2: /v1/procesar exige esta clave en X-Api-Key. Vacía = /v1/procesar rechaza todo con 401
       API_KEY_IA: ${API_KEY_IA:-}
       # DEC-54 y DEC-166: tope total de un pedido en tiempoReal, para responder antes de los 45 s de Java
@@ -162,6 +163,41 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # T14 · La ingesta por lotes corre sola: al arrancar y cada hora en punto, hora de Bogotá (DEC-167).
+  # Rescata lo que el bot no vio. Solo LEE Discord: no es un segundo bot y convive con el bot (docs/OPERACION.md §16)
+  ingesta:
+    build:
+      context: .
+      dockerfile: ingestion/discord/Dockerfile
+    environment:
+      # Las mismas variables que el bot (DEC-74), más el servidor, que la ingesta necesita para leer los roles
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
+      DISCORD_CHANNEL_DUDAS_ID: ${DISCORD_CHANNEL_DUDAS_ID:-}
+      DISCORD_CHANNEL_LOGROS_ID: ${DISCORD_CHANNEL_LOGROS_ID:-}
+      DISCORD_WEBHOOK_DUDAS_URL: ${DISCORD_WEBHOOK_DUDAS_URL:-}
+      DISCORD_WEBHOOK_LOGROS_URL: ${DISCORD_WEBHOOK_LOGROS_URL:-}
+      DISCORD_MENTOR_ROLE_IDS: ${DISCORD_MENTOR_ROLE_IDS:-}
+      DISCORD_STAFF_ROLE_IDS: ${DISCORD_STAFF_ROLE_IDS:-}
+      SIMULATED_MENTORS: ${SIMULATED_MENTORS:-sim-andres-mentor}
+      # Dentro de Docker, Java se encuentra por el nombre de su servicio (la URL completa de la puerta de lotes)
+      BACKEND_INGEST_URL: http://api-java:8080/api/v1/lotes
+      # S1: la clave de la ingesta, la misma API_KEY_INGESTA que exige Java: no se copia a otra variable
+      BACKEND_API_KEY: ${API_KEY_INGESTA:-}
+      # Días que se releen cada hora, para captar reacciones y ediciones
+      INGEST_REREAD_DAYS: ${INGEST_REREAD_DAYS:-7}
+      # false apaga el reloj sin quitar el servicio (python programador.py --una-vez sigue funcionando)
+      INGESTA_HABILITADA: ${INGESTA_HABILITADA:-true}
+    volumes:
+      # Marcadores, crudos y lotes: sobreviven a un reinicio. Traen datos de Discord: nunca salen de Docker
+      - ingesta-datos:/app/ingestion/discord/data
+    # Sin puertos publicados: la ingesta solo sale hacia Discord y hacia la API Java
+    depends_on:
+      api-java:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres-datos:
   ia-preguntas:
+  ingesta-datos:
