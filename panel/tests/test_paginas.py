@@ -240,7 +240,9 @@ def test_la_barra_lateral_tiene_el_titulo_la_navegacion_con_las_tarjetas_por_rev
     at = _con_sesion()
 
     assert not at.title  # el título del panel ya no va arriba de cada página
-    assert [m.value for m in at.sidebar.markdown] == ["**CommunityLab**", "Panel de curaduría"]
+    # T14: el tercer markdown es el título del recuadro "Estado de los datos" (este Java simulado no lo tiene)
+    assert [m.value for m in at.sidebar.markdown] == ["**CommunityLab**", "Panel de curaduría",
+                                                      ":material/cloud_off: **Estado de los datos: sin información**"]
     assert [p.proto.label for p in at.sidebar.get("page_link")] == ["Borradores :gray-badge[3]", "Dashboard",
                                                                     "Errores"]
     assert at.sidebar.text[0].value == "Sesión: harrison"
