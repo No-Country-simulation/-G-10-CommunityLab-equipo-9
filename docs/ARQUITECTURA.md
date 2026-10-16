@@ -1,7 +1,7 @@
 # Arquitectura de InsightEdu Lab
 
 > **Qué es este documento:** la descripción de **cómo funciona hoy** el sistema: sus piezas, sus flujos, sus datos y sus reglas. Es la **fuente de verdad** sobre el funcionamiento.
-> **Actualizado:** 2026-10-15 · **Rama:** `main`
+> **Actualizado:** 2026-10-16 · **Rama:** `main`
 > Reemplaza a la propuesta de arquitectura 3 en PDF del 2026-10-02, que se conserva en [docs/historico/propuesta-3/](historico/propuesta-3/) como registro. Si algo de este documento choca con el código, manda el código, y hay que corregir este documento.
 
 ## Cómo leerlo
@@ -28,7 +28,7 @@ Los equipos de marketing y de comunidad de una institución educativa pierden ho
 
 **Nada se publica sin que una persona lo revise y lo apruebe.**
 
-La institución del proyecto es ficticia: **CommunityLab**. Sus documentos (reglamentos, manual del estudiante, calendario) están en `agents/agent_faq/data/pdfs/`. El brief del cliente está resumido en [ingestion/discord/docs/PROJECT_BRIEF.md](../ingestion/discord/docs/PROJECT_BRIEF.md).
+La institución del proyecto es ficticia: **CommunityLab**. Sus documentos (reglamentos, manual del estudiante, calendario, preguntas frecuentes y el programa del bootcamp) están en `agents/agent_faq/data/pdfs/`. El brief del cliente está resumido en [ingestion/discord/docs/PROJECT_BRIEF.md](../ingestion/discord/docs/PROJECT_BRIEF.md).
 
 ### Las 7 necesidades (N1 a N7) y dónde se cumplen
 
@@ -290,7 +290,7 @@ Todas las piezas usan el mismo formato de error: `{codigo, mensaje, errores, idC
 | Proveedor | **Un solo proveedor: Google Gemini.** Modelo por defecto: `gemini-3.5-flash-lite` (`GEMINI_MODEL`). El Agente-Mod puede usar otro con `MOD_MODEL_NAME`. Este modelo ignora `temperature` |
 | Tiempos (de adentro hacia afuera) | Cada llamada al LLM: 20 s · tope en vivo: 25 s · Java → IA: 30 s · bot → Java: 40 s. El Agente-Mod tiene 25 s; la FAQ semanal tiene un tope de 120 s y Java la espera 150 s |
 | Búsqueda en los PDF (Agente FAQ) | Embeddings `intfloat/multilingual-e5-small` y reordenador `cross-encoder/ms-marco-MiniLM-L-6-v2`, descargados al construir la imagen (la IA arranca sin internet). Una respuesta con fidelidad media cuenta como **no encontrada** |
-| El índice de los PDF | Está construido y guardado en git, en `agents/agent_faq/data/vectorstore/faiss_pdfs/`. Si se agregan o cambian PDF en `data/pdfs/`, hay que reconstruirlo: 🧪 borrar `faiss_pdfs/` y volver a construir la imagen `ia`; al arrancar, la IA lo arma de nuevo. Antes de guardarlo, `scripts/revisar_buscador_faq.py` comprueba que el PDF nuevo no tape a los oficiales ([OPERACION.md](OPERACION.md) §14). Un PDF que todavía no está listo va a `data/pdfs_en_revision/`, que la IA no lee (DEC-152) |
+| El índice de los PDF | Está construido y guardado en git, en `agents/agent_faq/data/vectorstore/faiss_pdfs/`. Si se agregan o cambian PDF en `data/pdfs/`, hay que reconstruirlo: 🧪 borrar `faiss_pdfs/` y volver a construir la imagen `ia`; al arrancar, la IA lo arma de nuevo. Antes de guardarlo, `scripts/revisar_buscador_faq.py` comprueba que los PDF agregados (hoy el 12 y el 13) no tapen a los oficiales ([OPERACION.md](OPERACION.md) §14). Un PDF que todavía no está listo va a `data/pdfs_en_revision/`, que la IA no lee (DEC-152) |
 | Lo que la IA nunca hace | Guardar el estado del sistema, publicar nada o hablar con la base de datos |
 
 ---
@@ -341,7 +341,9 @@ InsightEdu Lab se construyó **sobre piezas que el equipo ya había desarrollado
 | Ingesta y contrato v1 | `feature/discord-ingestion` | Harrison Tutalcha | Se reutilizó su conversión al contrato v1 también en el bot |
 | Integración en esta arquitectura | `feature/integracion-arquitectura-3` | El equipo, con asistencia de IA | Agente-Mod, FAQ semanal y la conexión de todas las piezas |
 | Publicación en LinkedIn | `feature/automatizacion-linkedin` | MaxxyGuti3rr3z, cevallosgabriel | Se integró con `integracion/linkedin`: apagada por defecto, apagada en las pruebas de Java y sin el texto del post en el registro (DEC-149) |
-| Manual de servicio al cliente | Directo en `main` | Juan Sebastián Rodríguez | En revisión, fuera del índice del bot, hasta convertirlo en preguntas frecuentes de CommunityLab (DEC-152) |
+| Manual de servicio al cliente | Directo en `main` | Juan Sebastián Rodríguez | Sigue en revisión, fuera del índice del bot (DEC-152). De él salió el PDF 12 |
+| PDF 12 · Preguntas frecuentes de CommunityLab | Directo en `main` (`3c8768a`) | Juan Sebastián Rodríguez | Se integró tal como está: pasó de `pdfs_en_revision/` a `pdfs/` y entró al índice del bot (DEC-163) |
+| PDF 13 · Programa del bootcamp | `tarea/T15-pdf-preguntas-frecuentes` | Harrison Tutalcha y el orquestador, con asistencia de IA | Texto y generador nuevos en `scripts/pdf_programa/` (DEC-163) |
 
 La traza detallada de cómo se integró cada pieza (fichas de trabajo, informes y decisiones con su contexto) está en [docs/historico/](historico/).
 
@@ -355,3 +357,4 @@ La traza detallada de cómo se integró cada pieza (fichas de trabajo, informes 
 - El dashboard muestra "dudas sin responder" contando solo las respuestas del bot y las hechas con "Responder" de Discord.
 - La publicación en LinkedIn no se reintenta si falla (DEC-160): el panel muestra el motivo y Marketing lo publica a mano. Los posts aprobados antes de la `V9` no tienen dato.
 - La tarjeta de un logro no dice el tipo de logro ("Contratación"): la base no lo guarda; se ve en el motivo de la IA.
+- El reordenador del Agente FAQ está entrenado en inglés, y un cambio pequeño en la pregunta puede mover el documento elegido. Por ejemplo, "¿Qué computador necesito para el bootcamp?" lleva al PDF 13 en lugar del 12, y el bot la deriva a un mentor. "Nota final", "ChatGPT" y "publicar mi nombre en LinkedIn" también se derivan (DEC-164).

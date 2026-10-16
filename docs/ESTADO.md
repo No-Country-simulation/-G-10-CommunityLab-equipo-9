@@ -1,7 +1,7 @@
 # Estado del proyecto y cómo continuar
 
 > **Qué es este documento:** qué está hecho, qué falta y cómo seguir trabajando sin romper lo que existe.
-> **Actualizado:** 2026-10-15 · **Rama:** `main` · **Entrega de la hackatón:** 2026-10-26
+> **Actualizado:** 2026-10-16 · **Rama:** `main` · **Entrega de la hackatón:** 2026-10-26
 > Cómo funciona el sistema: [ARQUITECTURA.md](ARQUITECTURA.md). Por qué se decidió cada cosa: [DECISIONES.md](DECISIONES.md).
 
 ## 1. En una frase
@@ -35,14 +35,14 @@ Si falta tiempo, lo último que se recorta es OE1, OE3 y OE6.
 | 3 | **Desplegar y ensayar la demo**: una VM gratis de Oracle Cloud, Caddy con HTTPS y un subdominio de DuckDNS, la ingesta cada hora con `cron`, respaldos diarios, claves nuevas del servidor y un guion de demo de 10 minutos | Cierra OE1, OE8 y OE9 | La propuesta completa está en [historico/tareas/T10-despliegue-demo.md](historico/tareas/T10-despliegue-demo.md), y las decisiones en DEC-137 a DEC-140 |
 | 4 | ✅ **Hecho (2026-10-12):** la PAR de OCI vence después de la entrega. Si la demo se corre más tarde, hay que revisarla de nuevo | Si vence, las subidas pasan a `ERROR` | [OPERACION.md](OPERACION.md) §12 |
 | 5 | **Antes de las pruebas finales y de la demo, encender LinkedIn**: acordar la cuenta (perfil o página), conseguir un token vigente, hacer una publicación de prueba y apagarlo al terminar | Viene apagado (DEC-149): sin este paso, aprobar un post no publica nada | [OPERACION.md](OPERACION.md) §13 |
-| 6 | **PDF de preguntas frecuentes de CommunityLab**: convertir el manual de servicio al cliente en un PDF corto y probarlo con `scripts/revisar_buscador_faq.py` | El bot podría responder dudas que hoy deriva a un mentor (clases grabadas, estudiar trabajando, preguntas técnicas) | [README de pdfs_en_revision](../agents/agent_faq/data/pdfs_en_revision/README.md) (DEC-152) |
+| 6 | ✅ **Hecho (T15, 2026-10-16):** entraron al bot el PDF 12, de preguntas frecuentes (de Juan Sebastián Rodríguez), y el PDF 13, con el programa del bootcamp. El script de revisión ahora revisa varios PDF y tiene la categoría "debilidad conocida" (DEC-163, DEC-164) | El bot responde dudas que antes derivaba a un mentor: clases grabadas, estudiar trabajando, preguntas técnicas y el contenido del curso | [Informe T15](historico/tareas/T15-informe.md) |
 
 ### Mejoras posibles (🟡), si sobra tiempo
 
 | Área | Mejora |
 |---|---|
 | Clasificación | Guardar en la base la razón de un `ERROR` (hoy solo queda en el registro); medir la calidad del clasificador con un conjunto de mensajes etiquetados a mano |
-| Bot y Agente FAQ | Guardar la fuente que citó la IA (hoy se guarda el primer fragmento encontrado); no mostrar "escribiendo…" en `#logros`; liberar el hilo del Agente FAQ cuando se agota el tope |
+| Bot y Agente FAQ | Guardar la fuente que citó la IA (hoy se guarda el primer fragmento encontrado); no mostrar "escribiendo…" en `#logros`; liberar el hilo del Agente FAQ cuando se agota el tope; que la **Política de IA** (`04_…`) diga "ChatGPT" con todas sus letras, para que el buscador la encuentre (hoy el bot deriva "¿Puedo usar ChatGPT…?", DEC-164); que "¿Las clases quedan grabadas?" no cuente como **respondida** en el dashboard: el PDF 12 responde que se consulte a un mentor |
 | Agente-Mod | Exigir el largo que pide la guía de voz (los textos salen cortos); no mencionar reacciones que todavía no existen; probar otro modelo con `MOD_MODEL_NAME`; un botón "volver a generar" en el panel |
 | FAQ semanal | Tutoriales y tips. (El botón para reintentar una FAQ en `ERROR` se hizo en T13, DEC-161) |
 | Panel | Mantener la sesión al recargar la página; avisar si dos personas editan el mismo borrador; guardar el **tipo de logro** ("Contratación", "Beca"…) para mostrarlo como etiqueta en la tarjeta de Borradores, como en el prototipo (hoy se lee en el motivo de la IA: la base no lo guarda, decisión 3 de T13); que se vean los **íconos del dashboard** (los SVG dentro de `st.html` no se dibujan en Streamlit 1.65: cambiarlos por íconos de Material, como hizo Borradores; [informe de T13 §6](historico/tareas/T13-informe.md)); el **botón índigo** de DEC-109 no combina con el prototipo (se deja hasta después de la demo). (Las dos mejoras del dashboard, mostrar el tiempo de revisión y que la frustración ignore los mensajes viejos, se hicieron en T12) |
@@ -84,5 +84,7 @@ Para recrear una rama retirada: `git branch <nombre> <commit>`.
 | `docs/cierre-oe7-dec144` | `092415e` (fusionada en `main` por el PR #11 y borrada el 2026-10-12) | El cierre de OE7, DEC-144 aplicada y la regla de ramas (DEC-148) |
 | `docs/estado-ramas-retiradas` | `a34c9d5` (fusionada en `main` por el PR #14 y borrada el 2026-10-14) | Esta tabla al día |
 | `tarea/T12-dashboard` | `68d223d` (fusionada en `main` por el PR #15 y borrada el 2026-10-15) | El dashboard por rol, con KPIs y tema claro y oscuro (T12) |
+| `tarea/T13-borradores` | `a224e58` (fusionada en `main` por el PR #17 y borrada el 2026-10-15) | Borradores por logro, estado en LinkedIn (`V9`) y reintento de la FAQ (T13) |
+| `tarea/T15-pdf-preguntas-frecuentes` | Activa: se fusiona en `main` por Pull Request | Los PDF 12 y 13 del Agente FAQ, el índice nuevo y el script de revisión con varios PDF (T15) |
 
 La traza de cada tarea (qué se pidió, qué se hizo, cómo se probó y qué se decidió) está en [docs/historico/tareas/](historico/tareas/).

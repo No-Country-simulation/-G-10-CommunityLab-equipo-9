@@ -1,6 +1,6 @@
 # Operación — levantar InsightEdu Lab con Docker
 
-> **Estado:** v0.6 · **Fecha:** 2026-10-14 · **Rama:** `main`
+> **Estado:** v0.7 · **Fecha:** 2026-10-16 · **Rama:** `main`
 > Cubre los servicios que ya están en `compose.yml`: base de datos, API Java, IA, bot de Discord (T05) y panel (T07, T08), la subida de borradores a OCI (T09, sección 12), la publicación en LinkedIn (sección 13) y cómo agregar un PDF al Agente FAQ (sección 14). La ingesta por lotes todavía se corre a mano (ver el [README](../README.md) §8.3); programarla en un servidor está pendiente ([ESTADO.md](ESTADO.md)). Cómo funciona cada pieza: [ARQUITECTURA.md](ARQUITECTURA.md). Las menciones a T01–T10 remiten a la traza de [historico/tareas/](historico/tareas/).
 
 Todos los comandos se ejecutan **desde la raíz del repositorio**, en PowerShell.
@@ -406,11 +406,15 @@ El bot responde **solo** con los PDF de `agents/agent_faq/data/pdfs/` (DEC-19). 
 
 | Paso | Comando o acción | Qué debería pasar |
 |---|---|---|
-| 1 | Copiar el PDF a `agents/agent_faq/data/pdfs/`, con un nombre que siga la numeración (`12_…`) | — |
+| 1 | Copiar el PDF a `agents/agent_faq/data/pdfs/`, con un nombre que siga la numeración (el próximo es `14_…`), y sumarlo a `PDFS_NUEVOS` y a `PREGUNTAS` en `scripts/revisar_buscador_faq.py`, con 3 o 4 preguntas que solo él responda | — |
 | 2 | `Remove-Item -Recurse -Force agents\agent_faq\data\vectorstore\faiss_pdfs` | Borra el índice viejo. La IA lo arma de nuevo al arrancar |
 | 3 | `docker compose up -d --no-deps --build ia` | Esperar a que `docker compose ps` muestre `ia` como `(healthy)` (1 o 2 minutos) |
-| 4 | `docker compose cp scripts/revisar_buscador_faq.py ia:/tmp/revisar_buscador_faq.py` y luego `docker compose exec -e PYTHONIOENCODING=utf-8 ia python /tmp/revisar_buscador_faq.py` | Prueba el buscador sin gastar Gemini: las preguntas que responden los documentos oficiales los siguen encontrando primero, y el PDF nuevo no ocupa más del 35 % del índice. Debe terminar con `Resultado: todo OK`. Si el PDF trae otros temas, se ajustan las preguntas del script |
+| 4 | `docker compose cp scripts/revisar_buscador_faq.py ia:/tmp/revisar_buscador_faq.py` y luego `docker compose exec -e PYTHONIOENCODING=utf-8 ia python /tmp/revisar_buscador_faq.py` | Prueba el buscador sin gastar Gemini: las preguntas que responden los documentos oficiales los siguen encontrando primero, las de cada PDF nuevo encuentran primero a su PDF, y **cada** PDF nuevo ocupa como máximo el 35 % del índice (también muestra el total). Debe terminar con `Resultado: todo OK` |
 | 5 | `docker compose cp ia:/app/agents/agent_faq/data/vectorstore/faiss_pdfs agents/agent_faq/data/vectorstore/` | Copia el índice nuevo a la carpeta del repositorio |
 | 6 | `git add -f agents/agent_faq/data/pdfs/<el PDF> agents/agent_faq/data/vectorstore/faiss_pdfs` | El `.gitignore` ignora `agents/*/data/`: por eso va `-f` |
 
 Si no se rehace el índice, el bot sigue sin ver el PDF nuevo. Un PDF que todavía no está listo va a `agents/agent_faq/data/pdfs_en_revision/`, que la IA no lee (DEC-152).
+
+**"Debilidad conocida" (DEC-164).** Tres preguntas oficiales (nota final, ChatGPT y publicar el nombre en LinkedIn) ya las resolvía mal el buscador **antes** de los PDF 12 y 13. El script las muestra como `DÉBIL` u `OK`, con el motivo escrito, pero no las cuenta como falla. Una pregunta nueva solo entra a esa categoría si se midió que ya fallaba sin el PDF nuevo y que el bot no responde peor. Cualquier otra falla sigue frenando el PDF.
+
+**El PDF 13** (programa del bootcamp) se genera desde `scripts/pdf_programa/`: para cambiarlo se edita el `.md` y se corre el comando del comienzo de `generar.py`, en un contenedor desechable. Después, los pasos 2 a 6.
