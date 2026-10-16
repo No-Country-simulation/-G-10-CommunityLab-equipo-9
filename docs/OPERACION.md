@@ -1,7 +1,7 @@
 # Operación — levantar InsightEdu Lab con Docker
 
-> **Estado:** v0.7 · **Fecha:** 2026-10-16 · **Rama:** `main`
-> Cubre los servicios que ya están en `compose.yml`: base de datos, API Java, IA, bot de Discord (T05) y panel (T07, T08), la subida de borradores a OCI (T09, sección 12), la publicación en LinkedIn (sección 13) , cómo agregar un PDF al Agente FAQ (sección 14) y qué hacer si Gemini está lento o saturado (sección 15). La ingesta por lotes todavía se corre a mano (ver el [README](../README.md) §8.3); programarla en un servidor está pendiente ([ESTADO.md](ESTADO.md)). Cómo funciona cada pieza: [ARQUITECTURA.md](ARQUITECTURA.md). Las menciones a T01–T10 remiten a la traza de [historico/tareas/](historico/tareas/).
+> **Estado:** v0.8 · **Fecha:** 2026-10-16 · **Rama:** `main`
+> Cubre los servicios que ya están en `compose.yml`: base de datos, API Java, IA, bot de Discord (T05), panel (T07, T08) e ingesta automática (T14, sección 16), la subida de borradores a OCI (T09, sección 12), la publicación en LinkedIn (sección 13), cómo agregar un PDF al Agente FAQ (sección 14) y qué hacer si Gemini está lento o saturado (sección 15). Cómo funciona cada pieza: [ARQUITECTURA.md](ARQUITECTURA.md). Las menciones a T01–T10 remiten a la traza de [historico/tareas/](historico/tareas/).
 
 Todos los comandos se ejecutan **desde la raíz del repositorio**, en PowerShell.
 
@@ -23,7 +23,9 @@ Abrir `.env` y completar:
 | `POSTGRES_PASSWORD` | Sí | Una contraseña larga inventada. Sin ella, la base de datos no arranca |
 | `GEMINI_API_KEY` | No | La clave de Google AI Studio. Sin ella, la IA clasifica por palabras clave y el Agente FAQ no responde |
 | `GEMINI_MODEL` | No | El modelo de Gemini del clasificador, del Agente FAQ y del Agente-Mod. `gemini-3.5-flash-lite` por defecto. Si Google lo rechaza con 503, ver la sección 15 |
-| `GEMINI_MODELO_RESPALDO` | No | DEC-165 · Si Google rechaza `GEMINI_MODEL` (503), el clasificador y el Agente FAQ repiten la llamada con este modelo. Vacío: sin respaldo. Cómo elegirlo: sección 15 |
+| `GEMINI_MODELO_RESPALDO` | No | DEC-165 · Si Google rechaza `GEMINI_MODEL` (503), el clasificador y el Agente FAQ repiten la llamada con este modelo. Vacío: `gemini-3.5-flash` (DEC-169). Para no usar respaldo, el mismo valor de `GEMINI_MODEL`. Si los dos dan 503 o 504, en vivo se reintenta mientras quede tiempo (DEC-170). Cómo elegirlo: sección 15 |
+| `DISCORD_GUILD_ID` | Sí, para la ingesta | T14 · El ID de tu servidor de Discord: el mismo valor de `ingestion/discord/.env`. Es un ID, no un secreto. Sin él, la ingesta automática registra "Faltan IDs" y no envía nada (sección 16) |
+| `INGESTA_HABILITADA`, `INGEST_REREAD_DAYS` | No | T14 · `true` y `7` por defecto. `INGESTA_HABILITADA=false` apaga el reloj de la ingesta sin quitar el servicio; `INGEST_REREAD_DAYS` son los días que se releen cada hora (sección 16) |
 | `TIEMPO_REAL_TOPE_S`, `IA_TIEMPO_LECTURA_S`, `TIEMPO_JAVA_S` | No | DEC-166 · Cuánto puede tardar una duda en vivo: tope de la IA (40 s), espera de Java a la IA (45 s) y espera del bot a Java (55 s). Si se cambian, **cada uno tiene que ser mayor que el anterior** |
 | `MOD_MODEL_NAME` | No | T06 · El modelo de Gemini que redacta los posts y casos de éxito (DEC-85). Vacío: el mismo de `GEMINI_MODEL` |
 | `GENERACION_HABILITADA` | No | T06 · `true` por defecto. Con `false`, Java no pide borradores al Agente-Mod (cada logro nuevo gasta una llamada a Gemini) |
@@ -48,12 +50,12 @@ El `.env` nunca se sube a git (está en `.gitignore`) ni entra a una imagen de D
 
 | Para… | Comando | Qué debería pasar |
 |---|---|---|
-| Levantar todo | `docker compose up -d --build` | La primera vez tarda (descarga PyTorch y los modelos de la IA). Termina con los 5 servicios en `Started`. ⚠️ **Enciende el bot**: antes, leer la sección 7 |
-| Ver el estado | `docker compose ps` | `postgres`, `api-java`, `ia` y `panel` con `(healthy)` después de uno o dos minutos; `bot` en `Up` (no tiene prueba de salud) |
+| Levantar todo | `docker compose up -d --build` | La primera vez tarda (descarga PyTorch y los modelos de la IA). Termina con los 6 servicios en `Started`. ⚠️ **Enciende el bot**: antes, leer la sección 7. También enciende la ingesta automática (sección 16) |
+| Ver el estado | `docker compose ps` | `postgres`, `api-java`, `ia` y `panel` con `(healthy)` después de uno o dos minutos; `bot` e `ingesta` en `Up` (no tienen prueba de salud) |
 | Probar la API Java | `Invoke-RestMethod http://127.0.0.1:8008/actuator/health` | `status: UP` |
 | Probar la IA | `Invoke-RestMethod http://127.0.0.1:8000/health` | `status: ok` |
 | Abrir el panel | `http://127.0.0.1:8501` en el navegador | La pantalla "Iniciar sesión" (sección 10) |
-| Ver los registros de un servicio | `docker compose logs -f ia` (o `api-java`, `postgres`, `bot`, `panel`) | Se cortan con `Ctrl+C` |
+| Ver los registros de un servicio | `docker compose logs -f ia` (o `api-java`, `postgres`, `bot`, `panel`, `ingesta`) | Se cortan con `Ctrl+C` |
 | Entrar a la base de datos | `docker compose exec postgres psql -U insightedu -d insightedu` | Se sale con `\q` |
 | Detener todo | `docker compose down` | Los datos se conservan en los volúmenes |
 | ⚠️ Detener y **borrar los datos** | `docker compose down -v` | Borra la base de datos y el estado de la IA. No tiene vuelta atrás |
@@ -67,6 +69,7 @@ El `.env` nunca se sube a git (está en `.gitignore`) ni entra a una imagen de D
 | `ia` | `127.0.0.1:8000` | `ia:8000` | `ia-preguntas`, `ia-chroma` |
 | `bot` | ninguno (no recibe conexiones: solo sale hacia Discord y hacia `api-java`) | — | — |
 | `panel` | `127.0.0.1:8501` | — | — (no guarda nada: todo pasa por `api-java`) |
+| `ingesta` (T14) | ninguno (solo sale hacia Discord, para leer, y hacia `api-java`) | — | `ingesta-datos` (marcadores, crudos y los lotes de las últimas 24 horas) |
 
 Los puertos escuchan solo en `127.0.0.1`: funcionan desde esta misma máquina y no quedan abiertos a la red. Si uno está ocupado por otro programa, se cambia el número de la izquierda en `compose.yml` (por ejemplo, `127.0.0.1:8009:8080`).
 
@@ -453,3 +456,24 @@ docker compose exec ia python -c "import os, time; from google import genai; c =
 Conviene un modelo "lite" que responda en menos de 5 s. Uno que tarde 20 s no sirve: una duda hace 3 llamadas. Se escriben `GEMINI_MODEL` y `GEMINI_MODELO_RESPALDO` en el `.env` (dos modelos **distintos**), y se aplica con `docker compose up -d ia`.
 
 ⚠️ `GEMINI_MODEL` también cambia el modelo de la clasificación de todos los mensajes y de los borradores (D5).
+
+## 16. La ingesta automática (T14, DEC-167)
+
+El servicio `ingesta` corre la ingesta por lotes (extraer → armar → enviar) **una vez al arrancar** y después **cada hora en punto**, en hora de Bogotá. Rescata los mensajes que el bot no vio: si el bot estuvo apagado, o si Java o la IA fallaron en vivo.
+
+| Para… | Comando | Qué debería pasar |
+|---|---|---|
+| Ver qué hizo | `docker compose logs ingesta` | Una línea por corrida: `Corrida terminada en N s: leídos #dudas N, #logros N; lote …: total N, nuevos N, actualizados N, sin cambios N`, y `Próxima corrida: AAAA-MM-DD HH:00`. Solo números y estados: nunca el texto de un mensaje |
+| Correrla ya, sin esperar a la hora | `docker compose exec ingesta python programador.py --una-vez` | Termina con código 0 si salió bien, 1 si falló y 2 si ya había otra corrida en curso (nunca corren dos a la vez) |
+| Apagar el reloj sin quitar el servicio | `INGESTA_HABILITADA=false` en el `.env` y `docker compose up -d ingesta` | El registro dice que el reloj está apagado. `--una-vez` sigue funcionando |
+| Ver el estado en el panel | La barra lateral, en cualquier página | "Datos al día" (el último lote llegó hace menos de 2 horas), "Datos atrasados" o "Todavía no hay lotes" (DEC-168) |
+
+**Necesita** `DISCORD_GUILD_ID` en el `.env` de la raíz (el mismo valor de `ingestion/discord/.env`), además de las variables de Discord del bot y `API_KEY_INGESTA`. Sin él, cada corrida registra `Faltan IDs en el .env` y no envía nada.
+
+**No es un segundo bot.** Usa el mismo token, pero solo **lee** Discord por la API REST (GET): nunca escribe en un canal. Puede quedar encendido junto con el bot. Lo que AGENTS.md prohíbe son dos bots que **respondan**.
+
+**Si una corrida falla** (Discord o Java caídos), lo registra, no mueve sus marcadores y espera a la hora siguiente: el servicio no se cae. La primera corrida con el volumen vacío lee **todo el historial** del servidor; después, lo nuevo y los últimos `INGEST_REREAD_DAYS` días. Nada se duplica: Java guarda por `discord_id` y reconoce un lote repetido. Una corrida en la que nada cambió no gasta Gemini: solo se reclasifica un mensaje si cambió su texto.
+
+**Correrla a mano** (README §8.3) sigue funcionando, y no duplica nada: usa los marcadores de `ingestion/discord/data/`, no los del volumen `ingesta-datos`.
+
+⚠️ El volumen `ingesta-datos` guarda mensajes de Discord (datos personales): nunca se copia fuera de Docker. Los lotes de más de 24 horas se borran solos. `docker compose down -v` también lo borra.
